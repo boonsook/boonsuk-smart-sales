@@ -16,9 +16,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-STORE_NAME  = "ร้านบุญสุขอิเล็กทรอนิกส์"
-STORE_PHONE = "086-2613829"
-STORE_WEB   = "https://www.facebook.com/boonsukele/"
+STORE_NAME    = "ร้านบุญสุขอิเล็กทรอนิกส์"
+STORE_PHONE   = "086-2613829"
+STORE_WEB     = "https://www.facebook.com/boonsukele/"
+STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
 
 INSTALL_CONDITIONS = (
     "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
@@ -303,6 +304,7 @@ def build_pdf(q: dict) -> bytes:
     go_left(); pdf.cell(CW, 7, STORE_NAME, ln=1, align="C")
     pdf.set_font(font, "", 12)
     go_left(); pdf.cell(CW, 6, f"มือถือ/Line: {STORE_PHONE}", ln=1, align="C")
+    go_left(); pdf.cell(CW, 6, f"ที่อยู่: {STORE_ADDRESS}", ln=1, align="C")
     go_left(); pdf.cell(CW, 6, f"Website: {STORE_WEB}", ln=1, align="C")
     pdf.ln(3)
     pdf.line(L, pdf.get_y(), PAGE_W - R, pdf.get_y())
@@ -465,6 +467,7 @@ with st.sidebar:
     if os.path.exists(logo_path):
         st.image(logo_path, use_container_width=True)
     st.markdown(f"## ❄️ {STORE_NAME}")
+    st.markdown(f"📍 {STORE_ADDRESS}")
     st.markdown(f"📞 **{STORE_PHONE}**")
     st.markdown(f"🌐 [Facebook]({STORE_WEB})")
     st.divider()
