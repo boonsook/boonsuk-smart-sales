@@ -2,7 +2,7 @@ import os
 import zipfile
 import pandas as pd
 import streamlit as st
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import quote as urlquote
 from fpdf import FPDF
 
@@ -11,7 +11,6 @@ st.set_page_config(page_title="Boonsuk Smart Sales PRO v2", layout="centered")
 STORE_NAME = "ร้านบุญสุขอิเล็กทรอนิกส์"
 STORE_PHONE = "086-2613829"
 STORE_WEB = "https://www.facebook.com/boonsukele/"
-STORE_LINE_ID = ""
 
 INSTALL_CONDITIONS = (
     "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
@@ -29,13 +28,15 @@ LOG_CSV = os.path.join(DATA_DIR, "boonsuk_customer_log.csv")
 
 
 # =========================================================
-# ใช้ PRODUCTS ของคุณเดิมได้เลย
-# ถ้ามี stock_qty จะดีมาก ถ้าไม่มีระบบจะใส่ 0 ให้อัตโนมัติ
+# วาง PRODUCTS เดิมของคุณตรงนี้ทั้งก้อน
+# เอาจาก app.py เดิมของคุณ มาแทนที่ด้านล่างนี้
 # =========================================================
-PRODUCTS = [{"section": "Midea ฟิกส์speed", "model": "Asmg09c", "btu": 9000, "price_install": 19000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Midea ฟิกส์speed", "model": "Asmg12j", "btu": 12000, "price_install": 21500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Midea ฟิกส์speed", "model": "Asaa18j", "btu": 18000, "price_install": 27500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Midea ฟิกส์speed", "model": "Asaa24j", "btu": 24000, "price_install": 37500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Midea ฟิกส์speed", "model": "Asaa30j", "btu": 30000, "price_install": 43000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu dc Inverter ipower ll r410a\nฟูจิสึ ระบบ อินเวอร์เตอร์", "model": "Asmg09jl", "btu": 8500, "price_install": 15500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu dc Inverter ipower ll r410a\nฟูจิสึ ระบบ อินเวอร์เตอร์", "model": "Asmg12jl", "btu": 11900, "price_install": 16500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu dc Inverter ipower ll r410a\nฟูจิสึ ระบบ อินเวอร์เตอร์", "model": "Asaa18jc", "btu": 17700, "price_install": 23500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu dc Inverter ipower ll r410a\nฟูจิสึ ระบบ อินเวอร์เตอร์", "model": "Asaa24jc", "btu": 24200, "price_install": 34500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu dc Inverter ipower ll r410a\nฟูจิสึ ระบบ อินเวอร์เตอร์", "model": "Asaa30cm", "btu": 27300, "price_install": 40000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "Asma09r32", "btu": 9100, "price_install": 13800, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "Asma12r32", "btu": 11500, "price_install": 14500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "Asma13r3", "btu": 13906, "price_install": 16700, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "Asma18r410", "btu": 18745, "price_install": 23000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "Asma24r410", "btu": 24508, "price_install": 32000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "Asma30r4", "btu": 28800, "price_install": 35500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี"}, {"section": "Fujitsu Excellence Fix speed r32\nฟูจิสึ ระบบ ธรรมดา", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "Carrierรุ่น explorer inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvgs010", "btu": 9000, "price_install": 15800, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น explorer inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvgs013", "btu": 12000, "price_install": 18500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น explorer inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvgs016", "btu": 15000, "price_install": 22500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น explorer inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvgs018", "btu": 18000, "price_install": 26500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น explorer inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvgs024", "btu": 22000, "price_install": 29500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น gimini inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvegb010", "btu": 9000, "price_install": 15000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น gimini inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvegb013", "btu": 12000, "price_install": 17000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น gimini inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvegb018", "btu": 18000, "price_install": 23500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น gimini inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvegb024", "btu": 22000, "price_install": 27000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น gimini inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "Tvegb025", "btu": 24000, "price_install": 31500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Carrierรุ่น gimini inverter\nแคเรีย ระบบอินเวอร์เตอร์", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "Carrierรุ่น astrony r32 รุ่นใหม่\nแคเรีย ระบบธรรมดา", "model": "AAF010", "btu": 9000, "price_install": 13000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น astrony r32 รุ่นใหม่\nแคเรีย ระบบธรรมดา", "model": "AAF013", "btu": 12000, "price_install": 14000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น astrony r32 รุ่นใหม่\nแคเรีย ระบบธรรมดา", "model": "AAF018", "btu": 18000, "price_install": 20500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น astrony r32 รุ่นใหม่\nแคเรีย ระบบธรรมดา", "model": "AAF025", "btu": 25000, "price_install": 26500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น everest r32 \nแคเรีย ระบบธรรมดา", "model": "Tsgs010", "btu": 9000, "price_install": 14000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น everest r32 \nแคเรีย ระบบธรรมดา", "model": "Tsgs013", "btu": 12000, "price_install": 15000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น everest r32 \nแคเรีย ระบบธรรมดา", "model": "Tsgs018", "btu": 18000, "price_install": 21000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น everest r32 \nแคเรีย ระบบธรรมดา", "model": "Tsgs025", "btu": 24000, "price_install": 27000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "7 ปี"}, {"section": "Carrierรุ่น everest r32 \nแคเรีย ระบบธรรมดา", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "Mitsubishi heavy duty 2019แอร์ญี่ปุ่น100%\nDeluxe r32 Jetflow 3d auto ระบบธรรมดา", "model": "Srk10cvs", "btu": 9444, "price_install": 15500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019แอร์ญี่ปุ่น100%\nDeluxe r32 Jetflow 3d auto ระบบธรรมดา", "model": "Srk13cvs", "btu": 12039, "price_install": 18000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019แอร์ญี่ปุ่น100%\nDeluxe r32 Jetflow 3d auto ระบบธรรมดา", "model": "Srk19cvs", "btu": 19127, "price_install": 29000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019แอร์ญี่ปุ่น100%\nDeluxe r32 Jetflow 3d auto ระบบธรรมดา", "model": "Srk25cvs", "btu": 25085, "price_install": 38800, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard r32               \n มิตซูบิชิเฮฟวี่ดิวตี้ ระบบธรรมดา", "model": "Srk10cvv", "btu": 9239, "price_install": 15000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard r32               \n มิตซูบิชิเฮฟวี่ดิวตี้ ระบบธรรมดา", "model": "Srk13cvv", "btu": 11634, "price_install": 17500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard r32               \n มิตซูบิชิเฮฟวี่ดิวตี้ ระบบธรรมดา", "model": "Srk15cvv", "btu": 14457, "price_install": 20800, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard r32               \n มิตซูบิชิเฮฟวี่ดิวตี้ ระบบธรรมดา", "model": "Srk18cvv", "btu": 17305, "price_install": 25500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard inverter r32 \n    มิตซูบิชิเฮฟวี่ดิวตี้ ระบบอินเวอร์เตอร์", "model": "Srk10yw", "btu": 8683, "price_install": 16800, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard inverter r32 \n    มิตซูบิชิเฮฟวี่ดิวตี้ ระบบอินเวอร์เตอร์", "model": "Srk13yw", "btu": 11098, "price_install": 21000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard inverter r32 \n    มิตซูบิชิเฮฟวี่ดิวตี้ ระบบอินเวอร์เตอร์", "model": "Srk15yw", "btu": 14457, "price_install": 24000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard inverter r32 \n    มิตซูบิชิเฮฟวี่ดิวตี้ ระบบอินเวอร์เตอร์", "model": "Srk18yw", "btu": 17276, "price_install": 28300, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard inverter r32 \n    มิตซูบิชิเฮฟวี่ดิวตี้ ระบบอินเวอร์เตอร์", "model": "Srk24yw", "btu": 23021, "price_install": 38000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "5 ปี"}, {"section": "Mitsubishi heavy duty 2019Standard inverter r32 \n    มิตซูบิชิเฮฟวี่ดิวตี้ ระบบอินเวอร์เตอร์", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "Greeรุ่น fairy series r32 รุ่นใหม่ล่าสุดมาตฐาน ส่งออกทั่วโลก  ระบบธรรมดา", "model": "Gwc09acc", "btu": 9000, "price_install": 13500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น fairy series r32 รุ่นใหม่ล่าสุดมาตฐาน ส่งออกทั่วโลก  ระบบธรรมดา", "model": "Gwc12acc", "btu": 12000, "price_install": 14700, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น fairy series r32 รุ่นใหม่ล่าสุดมาตฐาน ส่งออกทั่วโลก  ระบบธรรมดา", "model": "Gwc18acc", "btu": 18000, "price_install": 22500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น fairy series r32 รุ่นใหม่ล่าสุดมาตฐาน ส่งออกทั่วโลก  ระบบธรรมดา", "model": "Gwc24acc", "btu": 24000, "price_install": 26500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น Amberlll series r32 มาตฐาน ส่งออกทั่วโลก\nกรี ระบบธรรมดา", "model": "Gwc09yb3", "btu": 9000, "price_install": 11800, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น Amberlll series r32 มาตฐาน ส่งออกทั่วโลก\nกรี ระบบธรรมดา", "model": "Gwc12yc3", "btu": 12000, "price_install": 13500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น Amberlll series r32 มาตฐาน ส่งออกทั่วโลก\nกรี ระบบธรรมดา", "model": "Gwc18yc3", "btu": 18000, "price_install": 20500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "Greeรุ่น Amberlll series r32 มาตฐาน ส่งออกทั่วโลก\nกรี ระบบธรรมดา", "model": "Gwc24yc3", "btu": 24000, "price_install": 24000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "รุ่น Amberlll inverter series r32 มีระบบฟอกอากาศ plasma killerระบบอินเวอร์ทำงานได้ต่ำสุดเพียง1HZ\nมาตรฐาน ส่งออกทั่วโลก", "model": "Gwc09qb", "btu": 9000, "price_install": 16000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "รุ่น Amberlll inverter series r32 มีระบบฟอกอากาศ plasma killerระบบอินเวอร์ทำงานได้ต่ำสุดเพียง1HZ\nมาตรฐาน ส่งออกทั่วโลก", "model": "Gwc12qb", "btu": 12000, "price_install": 17000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "รุ่น Amberlll inverter series r32 มีระบบฟอกอากาศ plasma killerระบบอินเวอร์ทำงานได้ต่ำสุดเพียง1HZ\nมาตรฐาน ส่งออกทั่วโลก", "model": "Gwc18qb", "btu": 18000, "price_install": 24000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "รุ่น Amberlll inverter series r32 มีระบบฟอกอากาศ plasma killerระบบอินเวอร์ทำงานได้ต่ำสุดเพียง1HZ\nมาตรฐาน ส่งออกทั่วโลก", "model": "Gwc24qb", "btu": 24000, "price_install": 27300, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "10 ปี"}, {"section": "รุ่น Amberlll inverter series r32 มีระบบฟอกอากาศ plasma killerระบบอินเวอร์ทำงานได้ต่ำสุดเพียง1HZ\nมาตรฐาน ส่งออกทั่วโลก", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "MAVELL  ระบบธรรมดา", "model": "MVF-09", "btu": 9000, "price_install": 11500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบธรรมดา", "model": "MVF-12", "btu": 12000, "price_install": 13000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบธรรมดา", "model": "MVF-18", "btu": 18000, "price_install": 18000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบธรรมดา", "model": "MVF-25", "btu": 24000, "price_install": 22500, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบอินเวอร์เตอร์", "model": "MWF-09INV", "btu": 9000, "price_install": 14000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบอินเวอร์เตอร์", "model": "MWF-12 INV", "btu": 12000, "price_install": 15000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบอินเวอร์เตอร์", "model": "MWF-18 INV", "btu": 18000, "price_install": 19800, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบอินเวอร์เตอร์", "model": "MWF-25 INV", "btu": 24000, "price_install": 26000, "w_install": "1 ปี", "w_parts": "5 ปี", "w_comp": "12 ปี"}, {"section": "MAVELL  ระบบอินเวอร์เตอร์", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "DAIKIN SMASH  ( 2018)\n ระบบธรรมดา", "model": "FTM 09 PV2S", "btu": 9000, "price_install": 14500, "w_install": "1 ปี", "w_parts": "1 ปี", "w_comp": "3 ปี"}, {"section": "DAIKIN SMASH  ( 2018)\n ระบบธรรมดา", "model": "FTM 13 PV2S", "btu": 12000, "price_install": 17000, "w_install": "1 ปี", "w_parts": "1 ปี", "w_comp": "3 ปี"}, {"section": "DAIKIN SMASH  ( 2018)\n ระบบธรรมดา", "model": "FTM 15 PV2S", "btu": 15000, "price_install": 20000, "w_install": "1 ปี", "w_parts": "1 ปี", "w_comp": "3 ปี"}, {"section": "DAIKIN SMASH  ( 2018)\n ระบบธรรมดา", "model": "FTM 18 PV2S", "btu": 18000, "price_install": 25500, "w_install": "1 ปี", "w_parts": "1 ปี", "w_comp": "3 ปี"}, {"section": "DAIKIN SMASH  ( 2018)\n ระบบธรรมดา", "model": "FTM 24 PV2S", "btu": 24000, "price_install": 35500, "w_install": "1 ปี", "w_parts": "1 ปี", "w_comp": "3 ปี"}, {"section": "DAIKIN SMASH  ( 2018)\n ระบบธรรมดา", "model": "FTM 28 PV2S", "btu": 28000, "price_install": 37000, "w_install": "", "w_parts": "", "w_comp": ""}, {"section": "DAIKIN SABAI  INVERTER ( 2019)\nระบบอินเวอร์เตอร์", "model": "FTKQ 09 TV2S", "btu": 9000, "price_install": 15500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN SABAI  INVERTER ( 2019)\nระบบอินเวอร์เตอร์", "model": "FTKQ 13 TV2S", "btu": 12000, "price_install": 18500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN SABAI  INVERTER ( 2019)\nระบบอินเวอร์เตอร์", "model": "FTKQ 15 TV2S", "btu": 15000, "price_install": 21000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN SABAI  INVERTER ( 2019)\nระบบอินเวอร์เตอร์", "model": "FTKQ 18 TV2S", "btu": 18000, "price_install": 27000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN SABAI  INVERTER ( 2019)\nระบบอินเวอร์เตอร์", "model": "FTKQ 24 TV2S", "btu": 24000, "price_install": 37000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN  INVERTER ( SUPER SMILE)\nระบบอินเวอร์เตอร์", "model": "FTKC 09 TV2S", "btu": 9000, "price_install": 19000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN  INVERTER ( SUPER SMILE)\nระบบอินเวอร์เตอร์", "model": "FTKC 13 TV2S", "btu": 12000, "price_install": 21000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN  INVERTER ( SUPER SMILE)\nระบบอินเวอร์เตอร์", "model": "FTKC 15 TV2S", "btu": 18000, "price_install": 28500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN  INVERTER ( SUPER SMILE)\nระบบอินเวอร์เตอร์", "model": "FTKC 18 TV2S", "btu": 24000, "price_install": 40500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN  INVERTER ( SUPER SMILE)\nระบบอินเวอร์เตอร์", "model": "FTKC 24 TV2S", "btu": 28000, "price_install": 43500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "DAIKIN  INVERTER ( SUPER SMILE)\nระบบอินเวอร์เตอร์", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}, {"section": "MITSUBISHI (Mr.SLIM)\n ระบบธรรมดา", "model": "MS-GN 09 VF", "btu": 9000, "price_install": 15500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI (Mr.SLIM)\n ระบบธรรมดา", "model": "MS-GN 13 VF", "btu": 13000, "price_install": 18500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI (Mr.SLIM)\n ระบบธรรมดา", "model": "MS-GN 15 VF", "btu": 15000, "price_install": 22500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI (Mr.SLIM)\n ระบบธรรมดา", "model": "MS-GN 18 VF", "btu": 18000, "price_install": 27000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI (Mr.SLIM)\n ระบบธรรมดา", "model": "MS-GN 24 VF", "btu": 24000, "price_install": 40000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI   HAPPY  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-KP 09 VF", "btu": 9000, "price_install": 16800, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI   HAPPY  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-KP 13 VF", "btu": 13000, "price_install": 19800, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI   HAPPY  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-KP 15 VF", "btu": 15000, "price_install": 23500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI   HAPPY  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-KP 18 VF", "btu": 18000, "price_install": 28500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI  SLIM  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-JP 09 VF", "btu": 9000, "price_install": 17700, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI  SLIM  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-JP 13 VF", "btu": 13000, "price_install": 21000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI  SLIM  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-JP 15 VF", "btu": 15000, "price_install": 24500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI  SLIM  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-JP 18 VF", "btu": 18000, "price_install": 28500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI  SLIM  INVERTER \nระบบอินเวอร์เตอร์", "model": "MSY-JP 24 VF", "btu": 24000, "price_install": 43500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "5 ปี"}, {"section": "MITSUBISHI  SLIM  INVERTER \nระบบอินเวอร์เตอร์", "model": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "btu": 86, "price_install": 86, "w_install": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_parts": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/", "w_comp": "ร้านบุญสุขอิเล็กทรอนิกส์\nมือถือ/Line  086-2613829\nhttp://www.bse-eletronics.com/"}]
+PRODUCTS = [
+    # วางลิสต์ PRODUCTS เดิมของคุณที่นี่
+]
 
 
-def format_baht(x):
+def format_baht(x) -> str:
     try:
         return f"{int(x):,}"
     except Exception:
@@ -73,6 +74,7 @@ def clean_products_df(df: pd.DataFrame) -> pd.DataFrame:
     df["price_install"] = pd.to_numeric(df["price_install"], errors="coerce").fillna(0).astype(int)
     df["stock_qty"] = pd.to_numeric(df["stock_qty"], errors="coerce").fillna(0).astype(int)
 
+    # กรองแถวข้อมูลเสีย/แถวหลุด
     df = df[(df["btu"] >= 1000) & (df["price_install"] >= 1000)].copy()
     df = df[df["section"] != ""]
     df = df[df["model"] != ""]
@@ -109,6 +111,7 @@ def _load_thai_font(pdf: FPDF) -> str:
     zip_path = "THSarabunNew.zip"
     extract_dir = "fonts"
 
+    # ถ้ามี zip และยังไม่มี ttf ให้แตกไฟล์
     if os.path.exists(zip_path):
         has_ttf = False
         for root, _, files in os.walk(extract_dir):
@@ -146,90 +149,186 @@ def _load_thai_font(pdf: FPDF) -> str:
     return "THSarabun"
 
 
+def safe_text(value):
+    if value is None:
+        return "-"
+    return str(value).replace("\r", "").strip() or "-"
+
+
+def draw_wrapped_block(pdf, font, title, value, x, label_w, y, full_w):
+    pdf.set_xy(x, y)
+    pdf.set_font(font, "B", 12)
+    pdf.cell(label_w, 6, title, border=0)
+    pdf.set_font(font, "", 12)
+
+    current_x = pdf.get_x()
+    current_y = pdf.get_y()
+    available_w = full_w - label_w
+    pdf.set_xy(current_x, current_y)
+    pdf.multi_cell(available_w, 6, safe_text(value))
+    return pdf.get_y()
+
+
 def build_pdf(quote: dict) -> bytes:
     pdf = FPDF(unit="mm", format="A4")
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=12)
 
     font = _load_thai_font(pdf)
+    page_w = 210
+    left = 12
+    right = 12
+    content_w = page_w - left - right
 
-    pdf.set_font(font, "B", 18)
-    pdf.cell(0, 10, "QUOTATION / ใบเสนอราคา", new_x="LMARGIN", new_y="NEXT", align="C")
+    def section_title(text):
+        pdf.ln(2)
+        pdf.set_font(font, "B", 15)
+        pdf.cell(0, 8, text, ln=1)
+
+    def money_line(label, value, bold=False):
+        pdf.set_font(font, "B" if bold else "", 12)
+        pdf.cell(120, 7, label, border=0)
+        pdf.cell(0, 7, f"{format_baht(value)} บาท", ln=1, align="R")
+
+    # Header
+    logo_path = os.path.join("assets", "logo.png")
+    if os.path.exists(logo_path):
+        try:
+            pdf.image(logo_path, x=12, y=10, w=24)
+        except Exception:
+            pass
+
+    pdf.set_font(font, "B", 20)
+    pdf.cell(0, 8, "ใบเสนอราคา / QUOTATION", ln=1, align="C")
 
     pdf.set_font(font, "B", 14)
-    pdf.cell(0, 7, STORE_NAME, new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font(font, "", 12)
-    pdf.cell(0, 6, f"มือถือ/Line: {STORE_PHONE}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"Website: {STORE_WEB}", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(2)
+    pdf.cell(0, 7, STORE_NAME, ln=1, align="C")
 
     pdf.set_font(font, "", 12)
-    pdf.cell(0, 6, f"วันที่: {quote['date']}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"ลูกค้า: {quote['customer_name']}   โทร: {quote['customer_phone']}", new_x="LMARGIN", new_y="NEXT")
-    pdf.multi_cell(0, 6, f"ที่อยู่: {quote['customer_address']}")
-    pdf.ln(1)
+    pdf.cell(0, 6, f"มือถือ/Line: {STORE_PHONE}", ln=1, align="C")
+    pdf.cell(0, 6, f"Website: {STORE_WEB}", ln=1, align="C")
 
-    pdf.set_font(font, "B", 14)
-    pdf.cell(0, 7, "รายละเอียดห้อง / Room Details", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font(font, "", 12)
-    pdf.cell(0, 6, f"ขนาดห้อง: {quote['room_w']} x {quote['room_l']} ม.  สูง {quote['room_h']} ม.", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"โดนแดด: {quote['sun']}   จำนวนคน: {quote['people']}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"BTU ที่แนะนำ: {quote['btu']:,}  (แนะนำไซส์: {quote['suggest_cap']:,})", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(1)
+    pdf.ln(3)
+    pdf.line(left, pdf.get_y(), page_w - right, pdf.get_y())
+    pdf.ln(4)
 
-    pdf.set_font(font, "B", 14)
-    pdf.cell(0, 7, "รายการสินค้า / Item", new_x="LMARGIN", new_y="NEXT")
+    # Meta
+    pdf.set_font(font, "B", 12)
+    pdf.cell(28, 7, "วันที่", border=0)
     pdf.set_font(font, "", 12)
-    pdf.multi_cell(0, 6, f"รุ่น/ซีรีส์: {quote['section']}")
-    pdf.cell(0, 6, f"Model: {quote['model']}   BTU: {quote['model_btu']:,}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(
-        0,
-        6,
-        f"ประกัน (ติดตั้ง/อะไหล่/คอมฯ): {quote['w_install']} / {quote['w_parts']} / {quote['w_comp']}",
-        new_x="LMARGIN",
-        new_y="NEXT",
+    pdf.cell(62, 7, safe_text(quote["date"]), border=0)
+
+    pdf.set_font(font, "B", 12)
+    pdf.cell(30, 7, "เลขที่เอกสาร", border=0)
+    pdf.set_font(font, "", 12)
+    doc_no = f"QT-{datetime.today().strftime('%Y%m%d')}"
+    pdf.cell(0, 7, doc_no, ln=1)
+
+    # Customer
+    section_title("ข้อมูลลูกค้า")
+    y = pdf.get_y()
+    y = draw_wrapped_block(pdf, font, "ชื่อลูกค้า", quote["customer_name"], left, 28, y, content_w)
+    y = draw_wrapped_block(pdf, font, "เบอร์โทร", quote["customer_phone"], left, 28, y, content_w)
+    y = draw_wrapped_block(pdf, font, "ที่อยู่", quote["customer_address"], left, 28, y, content_w)
+    pdf.set_y(y)
+
+    # Room details
+    section_title("รายละเอียดห้อง")
+    y = pdf.get_y()
+    y = draw_wrapped_block(
+        pdf, font, "ขนาดห้อง",
+        f"{quote['room_w']} x {quote['room_l']} เมตร  สูง {quote['room_h']} เมตร",
+        left, 28, y, content_w
     )
-    pdf.cell(0, 6, f"ราคาพร้อมติดตั้ง: {format_baht(quote['base_price'])} บาท", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(1)
+    y = draw_wrapped_block(pdf, font, "โดนแดด", quote["sun"], left, 28, y, content_w)
+    y = draw_wrapped_block(pdf, font, "จำนวนคน", str(quote["people"]), left, 28, y, content_w)
+    y = draw_wrapped_block(pdf, font, "BTU คำนวณ", f"{quote['btu']:,} BTU", left, 28, y, content_w)
+    y = draw_wrapped_block(pdf, font, "ขนาดแนะนำ", f"{quote['suggest_cap']:,} BTU", left, 28, y, content_w)
+    pdf.set_y(y)
 
-    pdf.set_font(font, "B", 14)
-    pdf.cell(0, 7, "สรุปราคา / Price Summary", new_x="LMARGIN", new_y="NEXT")
+    # Product
+    section_title("รายการสินค้า")
+
+    product_top = pdf.get_y()
+    pdf.rect(left, product_top, content_w, 36)
+
+    pdf.set_xy(left + 3, product_top + 3)
+    pdf.set_font(font, "B", 13)
+    pdf.multi_cell(content_w - 6, 6, safe_text(quote["section"]))
+
+    pdf.set_x(left + 3)
     pdf.set_font(font, "", 12)
-    pdf.cell(0, 6, f"ราคาพร้อมติดตั้ง: {format_baht(quote['base_price'])} บาท", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"ส่วนลด: -{format_baht(quote['discount'])} บาท", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 6, f"ค่าติดตั้งเพิ่ม: +{format_baht(quote['extra_install'])} บาท", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font(font, "B", 14)
-    pdf.cell(0, 8, f"รวมสุทธิ: {format_baht(quote['net_total'])} บาท", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(2)
+    pdf.multi_cell(content_w - 6, 6, f"Model: {safe_text(quote['model'])}   |   BTU: {quote['model_btu']:,}")
 
-    pdf.set_font(font, "B", 14)
-    pdf.cell(0, 7, "เงื่อนไขการติดตั้ง", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(left + 3)
+    pdf.multi_cell(
+        content_w - 6,
+        6,
+        f"ประกัน: ติดตั้ง {safe_text(quote['w_install'])} / อะไหล่ {safe_text(quote['w_parts'])} / คอมเพรสเซอร์ {safe_text(quote['w_comp'])}"
+    )
+
+    pdf.set_y(product_top + 38)
+
+    # Price
+    section_title("สรุปราคา")
+    summary_y = pdf.get_y()
+    pdf.rect(left, summary_y, content_w, 30)
+
+    pdf.set_xy(left + 4, summary_y + 4)
+    money_line("ราคาพร้อมติดตั้ง", quote["base_price"])
+    money_line("ส่วนลด", -int(quote["discount"]))
+    money_line("ค่าติดตั้งเพิ่ม", int(quote["extra_install"]))
+
+    pdf.line(left + 4, pdf.get_y(), page_w - right - 4, pdf.get_y())
+    pdf.ln(2)
+    money_line("รวมสุทธิ", quote["net_total"], bold=True)
+
+    pdf.set_y(summary_y + 32)
+
+    # Conditions
+    section_title("เงื่อนไขการติดตั้ง")
     pdf.set_font(font, "", 11)
     for line in INSTALL_CONDITIONS.split("\n"):
         if line.strip():
-            pdf.multi_cell(0, 5, line.strip())
-    pdf.ln(2)
+            pdf.multi_cell(0, 5.5, line.strip())
 
+    # Signatures
+    pdf.ln(4)
     pdf.set_font(font, "", 12)
-    pdf.cell(0, 8, "ลงชื่อผู้รับใบเสนอราคา: ____________________________", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, "วันที่: ____ / ____ / ______", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(85, 8, "ลงชื่อผู้เสนอราคา .................................................", border=0)
+    pdf.cell(10, 8, "", border=0)
+    pdf.cell(0, 8, "ลงชื่อผู้รับใบเสนอราคา .................................................", ln=1)
 
-    return bytes(pdf.output())
+    pdf.cell(85, 8, f"({STORE_NAME})", border=0, align="C")
+    pdf.cell(10, 8, "", border=0)
+    pdf.cell(0, 8, "(..............................................................)", ln=1, align="C")
+
+    pdf.cell(85, 8, "วันที่ ........../........../..........", border=0, align="C")
+    pdf.cell(10, 8, "", border=0)
+    pdf.cell(0, 8, "วันที่ ........../........../..........", ln=1, align="C")
+
+    out = pdf.output(dest="S")
+    if isinstance(out, (bytes, bytearray)):
+        return bytes(out)
+    return out.encode("latin-1")
 
 
 def make_line_message_text(quote: dict) -> str:
     lines = [
         f"ใบเสนอราคา - {STORE_NAME}",
         f"วันที่: {quote['date']}",
-        f"ลูกค้า: {quote['customer_name']}  โทร: {quote['customer_phone']}",
-        f"รุ่น: {quote['section']} / {quote['model']} ({quote['model_btu']:,} BTU)",
-        f"ราคา: {format_baht(quote['base_price'])} บาท",
+        f"ลูกค้า: {safe_text(quote['customer_name'])}",
+        f"โทร: {safe_text(quote['customer_phone'])}",
+        f"รุ่น: {safe_text(quote['model'])}",
+        f"ซีรีส์: {safe_text(quote['section']).replace(chr(10), ' / ')}",
+        f"BTU รุ่น: {quote['model_btu']:,} BTU",
+        f"ราคาพร้อมติดตั้ง: {format_baht(quote['base_price'])} บาท",
         f"ส่วนลด: {format_baht(quote['discount'])} บาท",
-        f"ติดตั้งเพิ่ม: {format_baht(quote['extra_install'])} บาท",
+        f"ค่าติดตั้งเพิ่ม: {format_baht(quote['extra_install'])} บาท",
         f"รวมสุทธิ: {format_baht(quote['net_total'])} บาท",
         "",
-        f"ติดต่อ: {STORE_PHONE}",
-        f"เพจ: {STORE_WEB}",
+        f"ติดต่อร้าน: {STORE_PHONE}",
+        f"{STORE_WEB}",
     ]
     return "\n".join(lines)
 
@@ -251,6 +350,7 @@ def log_customer_job(quote: dict):
     )
 
 
+# Header UI
 logo_path = os.path.join("assets", "logo.png")
 if os.path.exists(logo_path):
     st.image(logo_path, use_container_width=True)
@@ -304,7 +404,7 @@ if q:
 
 sections = sorted(df_view["section"].dropna().unique().tolist())
 if not sections:
-    st.warning("ไม่พบข้อมูลสินค้า")
+    st.warning("ไม่พบข้อมูลสินค้า ให้ตรวจว่าใส่ PRODUCTS ครบหรือยัง")
     st.stop()
 
 section = st.selectbox("เลือกซีรีส์/หมวดรุ่น", options=sections)
@@ -325,10 +425,15 @@ st.markdown(
     f"""
 **BTU รุ่นนี้:** {int(row['btu']):,}  
 **ราคา(พร้อมติดตั้ง):** {format_baht(row['price_install'])} บาท  
-**สต๊อกคงเหลือ:** {int(row.get('stock_qty', 0))} เครื่อง  
+**สต๊อกคงเหลือ:** {int(row.get('stock_qty', 0))} เครื่อง
 """
 )
-st.caption(f"ประกัน: ติดตั้ง {row.get('w_install', '')} | อะไหล่ {row.get('w_parts', '')} | คอมฯ {row.get('w_comp', '')}")
+
+st.caption(
+    f"ประกัน: ติดตั้ง {safe_text(row.get('w_install', ''))} | "
+    f"อะไหล่ {safe_text(row.get('w_parts', ''))} | "
+    f"คอมฯ {safe_text(row.get('w_comp', ''))}"
+)
 
 with st.expander("📋 ตารางสินค้า (ดู/เช็คสต๊อก)", expanded=False):
     show_cols = ["section", "model", "btu", "price_install", "stock_qty", "w_install", "w_parts", "w_comp"]
@@ -385,7 +490,7 @@ if c2.button("📄 สร้าง PDF ใบเสนอราคา", use_cont
     try:
         pdf_bytes = build_pdf(quote_data)
         pdf_name = f"ใบเสนอราคา_{(customer_name or 'ลูกค้า')}_{today_str.replace('/', '-')}.pdf"
-        st.success("สร้าง PDF สำเร็จ ✅ กดดาวน์โหลดได้เลย")
+        st.success("สร้าง PDF สำเร็จ ✅")
         st.download_button(
             "⬇️ ดาวน์โหลด PDF",
             data=pdf_bytes,
@@ -399,15 +504,14 @@ if c2.button("📄 สร้าง PDF ใบเสนอราคา", use_cont
 st.divider()
 st.subheader("💬 ส่งข้อความเข้า LINE ลูกค้า")
 line_text = make_line_message_text(quote_data)
-edited_line_text = st.text_area("ข้อความที่จะส่ง (แก้ได้ก่อนส่ง)", value=line_text, height=180)
-
-share_url = line_share_link(edited_line_text)
-st.markdown(f"✅ กดเพื่อเปิด LINE และส่งข้อความ: **[ส่งเข้า LINE]({share_url})**")
-st.caption("หมายเหตุ: ถ้าเปิดบนมือถือจะส่งง่ายที่สุด")
+st.text_area("ข้อความที่จะส่ง (แก้ได้ก่อนส่ง)", value=line_text, height=180)
+share_url = line_share_link(line_text)
+st.markdown(f"**[ส่งเข้า LINE]({share_url})**")
+st.caption("ถ้าเปิดบนมือถือจะสะดวกที่สุด")
 
 st.divider()
-st.subheader("📦 จัดการสต๊อกแอร์ (แก้แล้วบันทึก)")
-st.info("ปรับจำนวนสต๊อก แล้วกด 'บันทึกสต๊อก'")
+st.subheader("📦 จัดการสต๊อกแอร์")
+st.info("ปรับจำนวนสต๊อก แล้วกดบันทึกสต๊อก ข้อมูลจะถูกเก็บใน boonsuk_stock.csv")
 
 edit_cols = ["section", "model", "btu", "price_install", "stock_qty", "w_install", "w_parts", "w_comp"]
 df_edit = df_all[edit_cols].copy()
