@@ -549,15 +549,18 @@ quote_data = {
 
 st.subheader("🧾 ใบเสนอราคา (PRO v3)")
 c1, c2 = st.columns(2)
+
+# ปุ่มบันทึกข้อมูล
 if c1.button("💾 บันทึกลูกค้า/งานนี้", use_container_width=True):
     try:
         log_customer_job(quote_data)
-        st.success("✅ บันทึกข้อมูลและประวัติงานเรียบร้อยแล้ว!")
+        st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
     except Exception as e:
         st.error(f"❌ บันทึกข้อมูลไม่สำเร็จ: {e}")
 
-# --- ส่วนการสร้างและดาวน์โหลด PDF ---
+# สร้าง PDF และปุ่มดาวน์โหลด
 try:
+    # ตรวจสอบว่ามีไฟล์ฟอนต์ก่อนสร้าง PDF
     pdf_bytes = build_pdf(quote_data)
     c2.download_button(
         label="📄 ดาวน์โหลดใบเสนอราคา (PDF)",
@@ -567,11 +570,12 @@ try:
         use_container_width=True
     )
 except Exception as e:
-    st.info("💡 กรุณาตรวจสอบไฟล์ฟอนต์ THSarabunNew.zip ในโฟลเดอร์หลักเพื่อเปิดใช้งาน PDF")
+    # หากฟอนต์ไม่มี จะขึ้นเตือนแทนที่จะทำให้แอปค้าง
+    st.info("💡 กรุณาใส่ไฟล์ THSarabunNew.zip ในโฟลเดอร์เพื่อดาวน์โหลด PDF")
 
 st.divider()
 
-# --- ส่วนการแชร์ข้อมูลผ่าน LINE ---
+# ส่วนส่งข้อมูลผ่าน LINE
 st.subheader("📲 ส่งข้อมูลให้ลูกค้า")
 line_msg = make_line_message_text(quote_data)
 
@@ -583,21 +587,19 @@ st.markdown(
     f'<a href="{link}" target="_blank" style="text-decoration:none;">'
     '<button style="width:100%; background-color:#06C755; color:white; border:none; '
     'padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px;">'
-    '🟢 ส่งข้อมูลสรุปไปยัง LINE</button></a>',
+    '🟢 ส่งข้อมูลเข้า LINE</button></a>',
     unsafe_allow_html=True
 )
 
-# --- Sidebar สำหรับจัดการหลังบ้าน (Stock & Logs) ---
+# เมนู Sidebar สำหรับแก้ไขสต๊อก
 with st.sidebar:
-    st.header("⚙️ ระบบจัดการสต๊อก")
-    st.write(f"รุ่นที่เลือก: **{model}**")
+    st.header("⚙️ จัดการระบบหลังบ้าน")
+    st.subheader("📦 อัปเดตสต๊อก")
+    st.write(f"รุ่น: **{model}**")
+    current_stock = int(row.get('stock_qty', 0))
+    new_stock = st.number_input("แก้ไขจำนวนสต๊อก", min_value=0, value=current_stock)
     
-    # ดึงค่าสต๊อกปัจจุบันจาก DataFrame หลัก
-    curr_stock = int(row.get('stock_qty', 0))
-    new_stock = st.number_input("แก้ไขจำนวนสต๊อก", min_value=0, value=curr_stock)
-    
-    if st.button("อัปเดตสต๊อก", use_container_width=True):
-        # อัปเดตค่าลงใน df_all
+    if st.button("💾 บันทึกสต๊อกใหม่"):
         idx = df_all[(df_all['section'] == section) & (df_all['model'] == model)].index
         df_all.loc[idx, 'stock_qty'] = new_stock
         save_stock(df_all)
@@ -605,11 +607,6 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.header("📊 ประวัติการขาย")
     if os.path.exists(LOG_CSV):
-        df_history = pd.read_csv(LOG_CSV)
-        st.caption(f"บันทึกไว้ทั้งหมด {len(df_history)} รายการ")
         with open(LOG_CSV, "rb") as f:
-            st.download_button("📥 Export รายชื่อลูกค้า (CSV)", f, file_name="sales_history.csv", mime="text/csv")
-    else:
-        st.caption("ยังไม่มีประวัติการบันทึก")
+            st.download_button("📥 ดาวน์โหลดประวัติลูกค้า (CSV)", f, file_name="boonsuk_sales_log.csv", mime="text/csv")
