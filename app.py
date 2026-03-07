@@ -317,8 +317,14 @@ def build_pdf(q: dict) -> bytes:
 
     def money_line(label, value, bold=False):
         pdf.set_font(font, "B" if bold else "", 12)
-        pdf.cell(120, 7, label)
-        pdf.cell(0, 7, f"{fmt_baht(value)} บาท", ln=1, align="R")
+        # Use explicit widths that fit within content area (186mm total)
+        # Left margin already set via set_xy; label=130mm, value=52mm
+        label_w = 130
+        value_w = CW - label_w - 8  # 8mm padding inside the box
+        if value_w < 20:
+            value_w = 20
+        pdf.cell(label_w, 7, label)
+        pdf.cell(value_w, 7, f"{fmt_baht(value)} บาท", ln=1, align="R")
 
     # customer
     section_title("ข้อมูลลูกค้า")
@@ -368,17 +374,23 @@ def build_pdf(q: dict) -> bytes:
         if line.strip():
             pdf.multi_cell(0, 5.5, line.strip())
 
-    # signatures
-    pdf.ln(4); pdf.set_font(font, "", 12)
-    pdf.cell(85, 8, "ลงชื่อผู้เสนอราคา .................................................")
-    pdf.cell(10, 8, "")
-    pdf.cell(0,  8, "ลงชื่อผู้รับใบเสนอราคา .................................................", ln=1)
-    pdf.cell(85, 8, f"({STORE_NAME})", align="C")
-    pdf.cell(10, 8, "")
-    pdf.cell(0,  8, "(..............................................................)", ln=1, align="C")
-    pdf.cell(85, 8, "วันที่ ........../........../..........", align="C")
-    pdf.cell(10, 8, "")
-    pdf.cell(0,  8, "วันที่ ........../........../..........", ln=1, align="C")
+    # signatures — use fixed widths to avoid cell(0) overflow
+    sig_l = 90
+    sig_g = 6
+    sig_r = CW - sig_l - sig_g
+    pdf.ln(4); pdf.set_font(font, "", 11)
+    pdf.set_x(L)
+    pdf.cell(sig_l, 8, "ลงชื่อผู้เสนอราคา .................................................")
+    pdf.cell(sig_g, 8, "")
+    pdf.cell(sig_r, 8, "ลงชื่อผู้รับใบเสนอราคา .................................................", ln=1)
+    pdf.set_x(L)
+    pdf.cell(sig_l, 8, f"({STORE_NAME})", align="C")
+    pdf.cell(sig_g, 8, "")
+    pdf.cell(sig_r, 8, "(..............................................................)", ln=1, align="C")
+    pdf.set_x(L)
+    pdf.cell(sig_l, 8, "วันที่ ........../........../..........", align="C")
+    pdf.cell(sig_g, 8, "")
+    pdf.cell(sig_r, 8, "วันที่ ........../........../..........", ln=1, align="C")
 
     out = pdf.output(dest="S")
     return bytes(out) if isinstance(out, (bytes, bytearray)) else out.encode("latin-1")
