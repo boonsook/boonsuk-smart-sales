@@ -273,124 +273,151 @@ def _load_thai_font(pdf: FPDF) -> str:
 
 
 def build_pdf(q: dict) -> bytes:
-    pdf  = FPDF(unit="mm", format="A4")
+    pdf = FPDF(unit="mm", format="A4")
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=12)
-    font  = _load_thai_font(pdf)
-    L, R  = 12, 12
-    CW    = 210 - L - R
+    font = _load_thai_font(pdf)
+
+    # ---- layout constants ----
+    PAGE_W = 210
+    L = 15          # left margin
+    R = 15          # right margin
+    CW = PAGE_W - L - R   # = 180 mm content width
+
+    # always reset X to left margin before each row
+    def go_left():
+        pdf.set_x(L)
 
     # logo
     logo = os.path.join("assets", "logo.png")
     if os.path.exists(logo):
         try:
-            pdf.image(logo, x=L, y=10, w=24)
+            pdf.image(logo, x=L, y=10, w=22)
         except Exception:
             pass
 
-    # header
+    # ---- header ----
     pdf.set_font(font, "B", 20)
-    pdf.cell(0, 8, "ใบเสนอราคา / QUOTATION", ln=1, align="C")
+    go_left(); pdf.cell(CW, 8, "ใบเสนอราคา / QUOTATION", ln=1, align="C")
     pdf.set_font(font, "B", 14)
-    pdf.cell(0, 7, STORE_NAME, ln=1, align="C")
+    go_left(); pdf.cell(CW, 7, STORE_NAME, ln=1, align="C")
     pdf.set_font(font, "", 12)
-    pdf.cell(0, 6, f"มือถือ/Line: {STORE_PHONE}", ln=1, align="C")
-    pdf.cell(0, 6, f"Website: {STORE_WEB}", ln=1, align="C")
+    go_left(); pdf.cell(CW, 6, f"มือถือ/Line: {STORE_PHONE}", ln=1, align="C")
+    go_left(); pdf.cell(CW, 6, f"Website: {STORE_WEB}", ln=1, align="C")
     pdf.ln(3)
-    pdf.line(L, pdf.get_y(), 210 - R, pdf.get_y())
+    pdf.line(L, pdf.get_y(), PAGE_W - R, pdf.get_y())
     pdf.ln(4)
 
-    # date / doc no
+    # ---- date / doc no ----
     doc_no = f"QT-{datetime.today().strftime('%Y%m%d')}"
-    pdf.set_font(font, "B", 12); pdf.cell(28, 7, "วันที่", border=0)
-    pdf.set_font(font, "",  12); pdf.cell(62, 7, safe_text(q["date"]), border=0)
-    pdf.set_font(font, "B", 12); pdf.cell(30, 7, "เลขที่เอกสาร", border=0)
-    pdf.set_font(font, "",  12); pdf.cell(0,  7, doc_no, ln=1)
+    go_left()
+    pdf.set_font(font, "B", 12); pdf.cell(25, 7, "วันที่")
+    pdf.set_font(font, "",  12); pdf.cell(60, 7, safe_text(q["date"]))
+    pdf.set_font(font, "B", 12); pdf.cell(35, 7, "เลขที่เอกสาร")
+    pdf.set_font(font, "",  12); pdf.cell(CW - 25 - 60 - 35, 7, doc_no, ln=1)
 
+    # ---- helpers ----
     def section_title(t):
-        pdf.ln(2); pdf.set_font(font, "B", 15); pdf.cell(0, 8, t, ln=1)
+        pdf.ln(2)
+        go_left()
+        pdf.set_font(font, "B", 14)
+        pdf.cell(CW, 8, t, ln=1)
 
-    def wrapped(title, value, lw=28):
-        y0 = pdf.get_y()
-        pdf.set_xy(L, y0); pdf.set_font(font, "B", 12); pdf.cell(lw, 6, title)
-        pdf.set_font(font, "", 12); pdf.multi_cell(CW - lw, 6, safe_text(value))
+    def row(label, value, lw=32):
+        go_left()
+        pdf.set_font(font, "B", 12)
+        pdf.cell(lw, 6, label)
+        pdf.set_font(font, "", 12)
+        pdf.multi_cell(CW - lw, 6, safe_text(value))
 
-    def money_line(label, value, bold=False):
+    def money_row(label, value, bold=False):
+        go_left()
         pdf.set_font(font, "B" if bold else "", 12)
-        # Use explicit widths that fit within content area (186mm total)
-        # Left margin already set via set_xy; label=130mm, value=52mm
-        label_w = 130
-        value_w = CW - label_w - 8  # 8mm padding inside the box
-        if value_w < 20:
-            value_w = 20
-        pdf.cell(label_w, 7, label)
-        pdf.cell(value_w, 7, f"{fmt_baht(value)} บาท", ln=1, align="R")
+        lw = 130
+        vw = CW - lw          # = 50 mm — always positive since CW=180
+        pdf.cell(lw, 7, label)
+        pdf.cell(vw, 7, f"{fmt_baht(value)} บาท", ln=1, align="R")
 
-    # customer
+    # ---- customer ----
     section_title("ข้อมูลลูกค้า")
-    wrapped("ชื่อลูกค้า", q["customer_name"])
-    wrapped("เบอร์โทร",   q["customer_phone"])
-    wrapped("ที่อยู่",    q["customer_address"])
+    row("ชื่อลูกค้า", q["customer_name"])
+    row("เบอร์โทร",  q["customer_phone"])
+    row("ที่อยู่",   q["customer_address"])
 
-    # room
+    # ---- room ----
     section_title("รายละเอียดห้อง")
-    wrapped("ขนาดห้อง",  f"{q['room_w']} x {q['room_l']} เมตร  สูง {q['room_h']} เมตร")
-    wrapped("โดนแดด",    q["sun"])
-    wrapped("จำนวนคน",   str(q["people"]))
-    wrapped("BTU คำนวณ", f"{q['btu']:,} BTU")
-    wrapped("ขนาดแนะนำ", f"{q['suggest_cap']:,} BTU")
+    row("ขนาดห้อง",  f"{q['room_w']} x {q['room_l']} เมตร  สูง {q['room_h']} เมตร")
+    row("โดนแดด",   q["sun"])
+    row("จำนวนคน",  str(q["people"]))
+    row("BTU คำนวณ", f"{q['btu']:,} BTU")
+    row("ขนาดแนะนำ", f"{q['suggest_cap']:,} BTU")
 
-    # product
+    # ---- product box ----
     section_title("รายการสินค้า")
-    top = pdf.get_y(); h = 42
-    pdf.rect(L, top, CW, h)
+    top = pdf.get_y()
+    box_h = 42
+    pdf.rect(L, top, CW, box_h)
     pdf.set_xy(L + 3, top + 3)
-    pdf.set_font(font, "B", 13); pdf.multi_cell(CW - 6, 6, safe_text(q["section"]))
+    pdf.set_font(font, "B", 13)
+    pdf.multi_cell(CW - 6, 6, safe_text(q["section"]))
     pdf.set_x(L + 3)
     pdf.set_font(font, "", 12)
     pdf.multi_cell(CW - 6, 6, f"Model: {safe_text(q['model'])}   |   BTU: {q['model_btu']:,}")
     pdf.set_x(L + 3)
-    pdf.multi_cell(CW - 6, 6, f"ประกัน: ติดตั้ง {safe_text(q['w_install'])} / อะไหล่ {safe_text(q['w_parts'])} / คอมเพรสเซอร์ {safe_text(q['w_comp'])}")
-    if pdf.get_y() < top + h:
-        pdf.set_y(top + h)
+    pdf.multi_cell(CW - 6, 6,
+        f"ประกัน: ติดตั้ง {safe_text(q['w_install'])} / "
+        f"อะไหล่ {safe_text(q['w_parts'])} / "
+        f"คอมเพรสเซอร์ {safe_text(q['w_comp'])}")
+    if pdf.get_y() < top + box_h:
+        pdf.set_y(top + box_h)
+    else:
+        pdf.ln(2)
 
-    # summary
+    # ---- summary box ----
     section_title("สรุปราคา")
-    sy = pdf.get_y(); sh = 30
-    pdf.rect(L, sy, CW, sh)
+    sy = pdf.get_y()
+    sum_h = 34
+    pdf.rect(L, sy, CW, sum_h)
     pdf.set_xy(L + 4, sy + 4)
-    money_line("ราคาพร้อมติดตั้ง",  q["base_price"])
-    money_line("ส่วนลด",           -int(q["discount"]))
-    money_line("ค่าติดตั้งเพิ่ม",   int(q["extra_install"]))
-    pdf.line(L + 4, pdf.get_y(), 210 - R - 4, pdf.get_y()); pdf.ln(2)
-    money_line("รวมสุทธิ", q["net_total"], bold=True)
-    if pdf.get_y() < sy + sh:
-        pdf.set_y(sy + sh)
+    money_row("ราคาพร้อมติดตั้ง", q["base_price"])
+    money_row("ส่วนลด",          -int(q["discount"]))
+    money_row("ค่าติดตั้งเพิ่ม",  int(q["extra_install"]))
+    pdf.line(L + 4, pdf.get_y(), PAGE_W - R - 4, pdf.get_y())
+    pdf.ln(2)
+    money_row("รวมสุทธิ", q["net_total"], bold=True)
+    if pdf.get_y() < sy + sum_h:
+        pdf.set_y(sy + sum_h)
+    else:
+        pdf.ln(2)
 
-    # conditions
+    # ---- conditions ----
     section_title("เงื่อนไขการติดตั้ง")
     pdf.set_font(font, "", 11)
-    for line in INSTALL_CONDITIONS.split("\n"):
-        if line.strip():
-            pdf.multi_cell(0, 5.5, line.strip())
+    for cline in INSTALL_CONDITIONS.split("\n"):
+        if cline.strip():
+            go_left()
+            pdf.multi_cell(CW, 5.5, cline.strip())
 
-    # signatures — use fixed widths to avoid cell(0) overflow
-    sig_l = 90
-    sig_g = 6
-    sig_r = CW - sig_l - sig_g
-    pdf.ln(4); pdf.set_font(font, "", 11)
-    pdf.set_x(L)
-    pdf.cell(sig_l, 8, "ลงชื่อผู้เสนอราคา .................................................")
-    pdf.cell(sig_g, 8, "")
-    pdf.cell(sig_r, 8, "ลงชื่อผู้รับใบเสนอราคา .................................................", ln=1)
-    pdf.set_x(L)
-    pdf.cell(sig_l, 8, f"({STORE_NAME})", align="C")
-    pdf.cell(sig_g, 8, "")
-    pdf.cell(sig_r, 8, "(..............................................................)", ln=1, align="C")
-    pdf.set_x(L)
-    pdf.cell(sig_l, 8, "วันที่ ........../........../..........", align="C")
-    pdf.cell(sig_g, 8, "")
-    pdf.cell(sig_r, 8, "วันที่ ........../........../..........", ln=1, align="C")
+    # ---- signatures ----
+    pdf.ln(4)
+    pdf.set_font(font, "", 11)
+    col = CW // 2 - 3   # ~87 mm each column
+    gap = CW - col * 2
+
+    go_left()
+    pdf.cell(col, 8, "ลงชื่อผู้เสนอราคา .................................................")
+    pdf.cell(gap, 8, "")
+    pdf.cell(col, 8, "ลงชื่อผู้รับใบเสนอราคา .................................................", ln=1)
+
+    go_left()
+    pdf.cell(col, 8, f"({STORE_NAME})", align="C")
+    pdf.cell(gap, 8, "")
+    pdf.cell(col, 8, "(..............................................)", ln=1, align="C")
+
+    go_left()
+    pdf.cell(col, 8, "วันที่ ........../........../..........", align="C")
+    pdf.cell(gap, 8, "")
+    pdf.cell(col, 8, "วันที่ ........../........../..........", ln=1, align="C")
 
     out = pdf.output(dest="S")
     return bytes(out) if isinstance(out, (bytes, bytearray)) else out.encode("latin-1")
