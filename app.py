@@ -28,11 +28,11 @@ LOG_CSV = os.path.join(DATA_DIR, "boonsuk_customer_log.csv")
 
 
 # =========================================================
-# วาง PRODUCTS เดิมของคุณตรงนี้ทั้งก้อน
-# เอาจาก app.py เดิมของคุณ มาแทนที่ด้านล่างนี้
+# เอา PRODUCTS ลิสต์เดิมของคุณมาแทนทั้งก้อนตรงนี้
 # =========================================================
 PRODUCTS = [
-    # วางลิสต์ PRODUCTS เดิมของคุณที่นี่
+    {"section": "Midea ฟิกส์speed", "model": "Asmg09c", "btu": 9000, "price_install": 19000, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี", "stock_qty": 1},
+    {"section": "Midea ฟิกส์speed", "model": "Asmg12j", "btu": 12000, "price_install": 21500, "w_install": "1 ปี", "w_parts": "3 ปี", "w_comp": "10 ปี", "stock_qty": 2},
 ]
 
 
@@ -41,6 +41,12 @@ def format_baht(x) -> str:
         return f"{int(x):,}"
     except Exception:
         return str(x)
+
+
+def safe_text(value):
+    if value is None:
+        return "-"
+    return str(value).replace("\r", "").strip() or "-"
 
 
 def calculate_btu(width, length, height, sun_exposure, people):
@@ -74,7 +80,7 @@ def clean_products_df(df: pd.DataFrame) -> pd.DataFrame:
     df["price_install"] = pd.to_numeric(df["price_install"], errors="coerce").fillna(0).astype(int)
     df["stock_qty"] = pd.to_numeric(df["stock_qty"], errors="coerce").fillna(0).astype(int)
 
-    # กรองแถวข้อมูลเสีย/แถวหลุด
+    # กรองข้อมูลเสีย
     df = df[(df["btu"] >= 1000) & (df["price_install"] >= 1000)].copy()
     df = df[df["section"] != ""]
     df = df[df["model"] != ""]
@@ -89,7 +95,12 @@ def load_stock() -> pd.DataFrame:
             stock = pd.read_csv(STOCK_CSV, encoding="utf-8-sig")
             stock = clean_products_df(stock)
             key = ["section", "model"]
-            merged = base.merge(stock[key + ["stock_qty"]], on=key, how="left", suffixes=("", "_stock"))
+            merged = base.merge(
+                stock[key + ["stock_qty"]],
+                on=key,
+                how="left",
+                suffixes=("", "_stock")
+            )
             merged["stock_qty"] = merged["stock_qty_stock"].fillna(merged["stock_qty"]).astype(int)
             merged = merged.drop(columns=["stock_qty_stock"])
             return merged
@@ -111,7 +122,7 @@ def _load_thai_font(pdf: FPDF) -> str:
     zip_path = "THSarabunNew.zip"
     extract_dir = "fonts"
 
-    # ถ้ามี zip และยังไม่มี ttf ให้แตกไฟล์
+    # ถ้ามี zip และยังไม่มี ttf ให้แตกอัตโนมัติ
     if os.path.exists(zip_path):
         has_ttf = False
         for root, _, files in os.walk(extract_dir):
@@ -119,6 +130,8 @@ def _load_thai_font(pdf: FPDF) -> str:
                 if f.lower().endswith(".ttf"):
                     has_ttf = True
                     break
+            if has_ttf:
+                break
 
         if not has_ttf:
             with zipfile.ZipFile(zip_path, "r") as z:
@@ -149,12 +162,6 @@ def _load_thai_font(pdf: FPDF) -> str:
     return "THSarabun"
 
 
-def safe_text(value):
-    if value is None:
-        return "-"
-    return str(value).replace("\r", "").strip() or "-"
-
-
 def draw_wrapped_block(pdf, font, title, value, x, label_w, y, full_w):
     pdf.set_xy(x, y)
     pdf.set_font(font, "B", 12)
@@ -164,6 +171,7 @@ def draw_wrapped_block(pdf, font, title, value, x, label_w, y, full_w):
     current_x = pdf.get_x()
     current_y = pdf.get_y()
     available_w = full_w - label_w
+
     pdf.set_xy(current_x, current_y)
     pdf.multi_cell(available_w, 6, safe_text(value))
     return pdf.get_y()
@@ -190,7 +198,7 @@ def build_pdf(quote: dict) -> bytes:
         pdf.cell(120, 7, label, border=0)
         pdf.cell(0, 7, f"{format_baht(value)} บาท", ln=1, align="R")
 
-    # Header
+    # ===== Header =====
     logo_path = os.path.join("assets", "logo.png")
     if os.path.exists(logo_path):
         try:
@@ -212,7 +220,7 @@ def build_pdf(quote: dict) -> bytes:
     pdf.line(left, pdf.get_y(), page_w - right, pdf.get_y())
     pdf.ln(4)
 
-    # Meta
+    # ===== Meta =====
     pdf.set_font(font, "B", 12)
     pdf.cell(28, 7, "วันที่", border=0)
     pdf.set_font(font, "", 12)
@@ -224,7 +232,7 @@ def build_pdf(quote: dict) -> bytes:
     doc_no = f"QT-{datetime.today().strftime('%Y%m%d')}"
     pdf.cell(0, 7, doc_no, ln=1)
 
-    # Customer
+    # ===== Customer =====
     section_title("ข้อมูลลูกค้า")
     y = pdf.get_y()
     y = draw_wrapped_block(pdf, font, "ชื่อลูกค้า", quote["customer_name"], left, 28, y, content_w)
@@ -232,7 +240,7 @@ def build_pdf(quote: dict) -> bytes:
     y = draw_wrapped_block(pdf, font, "ที่อยู่", quote["customer_address"], left, 28, y, content_w)
     pdf.set_y(y)
 
-    # Room details
+    # ===== Room =====
     section_title("รายละเอียดห้อง")
     y = pdf.get_y()
     y = draw_wrapped_block(
@@ -246,11 +254,12 @@ def build_pdf(quote: dict) -> bytes:
     y = draw_wrapped_block(pdf, font, "ขนาดแนะนำ", f"{quote['suggest_cap']:,} BTU", left, 28, y, content_w)
     pdf.set_y(y)
 
-    # Product
+    # ===== Product =====
     section_title("รายการสินค้า")
 
     product_top = pdf.get_y()
-    pdf.rect(left, product_top, content_w, 36)
+    product_box_h = 42
+    pdf.rect(left, product_top, content_w, product_box_h)
 
     pdf.set_xy(left + 3, product_top + 3)
     pdf.set_font(font, "B", 13)
@@ -267,32 +276,38 @@ def build_pdf(quote: dict) -> bytes:
         f"ประกัน: ติดตั้ง {safe_text(quote['w_install'])} / อะไหล่ {safe_text(quote['w_parts'])} / คอมเพรสเซอร์ {safe_text(quote['w_comp'])}"
     )
 
-    pdf.set_y(product_top + 38)
+    if pdf.get_y() < product_top + product_box_h:
+        pdf.set_y(product_top + product_box_h)
+    else:
+        pdf.ln(2)
 
-    # Price
+    # ===== Price =====
     section_title("สรุปราคา")
     summary_y = pdf.get_y()
-    pdf.rect(left, summary_y, content_w, 30)
+    summary_h = 30
+    pdf.rect(left, summary_y, content_w, summary_h)
 
     pdf.set_xy(left + 4, summary_y + 4)
     money_line("ราคาพร้อมติดตั้ง", quote["base_price"])
     money_line("ส่วนลด", -int(quote["discount"]))
     money_line("ค่าติดตั้งเพิ่ม", int(quote["extra_install"]))
-
     pdf.line(left + 4, pdf.get_y(), page_w - right - 4, pdf.get_y())
     pdf.ln(2)
     money_line("รวมสุทธิ", quote["net_total"], bold=True)
 
-    pdf.set_y(summary_y + 32)
+    if pdf.get_y() < summary_y + summary_h:
+        pdf.set_y(summary_y + summary_h)
+    else:
+        pdf.ln(2)
 
-    # Conditions
+    # ===== Conditions =====
     section_title("เงื่อนไขการติดตั้ง")
     pdf.set_font(font, "", 11)
     for line in INSTALL_CONDITIONS.split("\n"):
         if line.strip():
             pdf.multi_cell(0, 5.5, line.strip())
 
-    # Signatures
+    # ===== Signatures =====
     pdf.ln(4)
     pdf.set_font(font, "", 12)
     pdf.cell(85, 8, "ลงชื่อผู้เสนอราคา .................................................", border=0)
@@ -350,7 +365,7 @@ def log_customer_job(quote: dict):
     )
 
 
-# Header UI
+# ===== Header UI =====
 logo_path = os.path.join("assets", "logo.png")
 if os.path.exists(logo_path):
     st.image(logo_path, use_container_width=True)
