@@ -25,15 +25,16 @@ STORE_NAME    = "ร้านบุญสุขอิเล็กทรอนิ
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # ←3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 
 INSTALL_CONDITIONS = (
-    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 250 บาท\n"
-    "2) ท่อน้ำยาไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 400-800 บาท\n"
-    "3) แถมท่อน้ำทิ้ง ไม่เกิน 6 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
+    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
+    "2) แถมท่อน้ำยา ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 400 บาท\n"
+    "3) แถมท่อน้ำทิ้ง ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "4) แถมสายไฟ ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "5) แถมขาแขวนหรือขายาง สำหรับติดตั้งคอยล์ร้อน\n"
-    "6) รับประกันงานตามเงื่อนไขฟรี ตลอดอายุการใช้งาน"
+    "6) กรณีไม่มีเบรคเกอร์ แถมให้ฟรี\n"
+    "7) รับประกันงานตามเงื่อนไขฟรี ตลอดอายุการใช้งาน"
 )
 
 DATA_DIR  = "."
@@ -1045,6 +1046,140 @@ ERROR_DB = {
         {"code":"CH24","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
         {"code":"CH25","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
         {"code":"CH38","desc":"Drain pump / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง","parts":"Float switch"},
+    ],
+    "Beko": [
+        {"code":"E0","desc":"PCB indoor ผิดปกติ","cause":"PCB เสีย / ไฟผิดปกติ","fix":"ตรวจไฟ 220V, เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"E2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"E3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"E4","desc":"เซ็นเซอร์ discharge temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"E5","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"E6","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"Low pressure switch, น้ำยาแอร์"},
+        {"code":"E7","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจแรงดันไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E8","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด/หลวม","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E9","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"F1","desc":"Freeze protection (คอยล์เย็นแข็ง)","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง evaporator, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F2","desc":"Drain / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง, ตรวจ float switch","parts":"Float switch"},
+        {"code":"P1","desc":"IPM / inverter protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P2","desc":"Voltage protection","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+    ],
+    "Haier": [
+        {"code":"E1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"E2","desc":"เซ็นเซอร์ indoor pipe เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"E3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"E4","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"E5","desc":"Freeze protection","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"EEPROM PCB ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E9","desc":"มอเตอร์ swing ผิดปกติ","cause":"step motor เสีย","fix":"เปลี่ยน step motor swing","parts":"Step motor swing"},
+        {"code":"F1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"F2","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F3","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"F4","desc":"Discharge temp สูงเกิน","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F5","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"F6","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"P1","desc":"Voltage ผิดปกติ","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+        {"code":"P2","desc":"IPM protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P3","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+    ],
+    "Toshiba": [
+        {"code":"E01","desc":"เซ็นเซอร์อุณหภูมิห้อง (indoor) เสีย","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"E02","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"E03","desc":"เซ็นเซอร์ outdoor ambient เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"E04","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"E05","desc":"เซ็นเซอร์ outdoor pipe เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor pipe"},
+        {"code":"E06","desc":"PCB indoor ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E07","desc":"PCB outdoor ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB outdoor","parts":"PCB outdoor"},
+        {"code":"E08","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E09","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"E10","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E11","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E12","desc":"Discharge temp สูงเกิน","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E13","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"E14","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"E15","desc":"Inverter / IPM protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"E16","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"E17","desc":"Freeze protection","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E18","desc":"Drain pump / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง","parts":"Float switch"},
+    ],
+    "Panasonic": [
+        {"code":"H00","desc":"ปกติ ไม่มีปัญหา","cause":"-","fix":"-","parts":"-"},
+        {"code":"H11","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด/หลวม","fix":"ตรวจสายสัญญาณ 3 เส้น","parts":"สายสัญญาณ"},
+        {"code":"H12","desc":"ความจุ outdoor ไม่ตรงกับ indoor","cause":"ติดตั้งผิดรุ่น","fix":"ตรวจสอบรุ่น indoor-outdoor ให้ตรงกัน","parts":"-"},
+        {"code":"H14","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"H15","desc":"เซ็นเซอร์ compressor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor compressor"},
+        {"code":"H16","desc":"กระแสไฟ outdoor ต่ำผิดปกติ","cause":"น้ำยาน้อย / compressor เสียบางส่วน","fix":"ตรวจน้ำยา, ตรวจ compressor","parts":"Compressor"},
+        {"code":"H19","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"H23","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"H27","desc":"High pressure switch ทำงาน","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"H28","desc":"เซ็นเซอร์ outdoor pipe เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor pipe"},
+        {"code":"H33","desc":"Phase sequence ผิดปกติ (3 เฟส)","cause":"ไฟ 3 เฟสสลับเฟส","fix":"สลับสายไฟ L1/L2","parts":"-"},
+        {"code":"H36","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"H38","desc":"เซ็นเซอร์อุณหภูมิห้อง (indoor) เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F90","desc":"Freeze protection (high pressure)","cause":"น้ำยาเกิน / คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"F91","desc":"Freeze protection (low pressure)","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F93","desc":"Compressor overcurrent / overload","cause":"compressor เสีย","fix":"ตรวจ compressor","parts":"Compressor, Overload protector"},
+        {"code":"F95","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"F96","desc":"IPM / inverter overheat","cause":"IPM ระบายร้อนไม่ดี","fix":"ล้างคอยล์, ตรวจพัดลม","parts":"IPM module"},
+        {"code":"F97","desc":"Compressor discharge temp สูงเกิน","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F98","desc":"Total input power สูงเกิน","cause":"ไฟกระชาก","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+        {"code":"F99","desc":"DC current protection","cause":"IPM เสีย / compressor เสีย","fix":"เปลี่ยน IPM, ตรวจ compressor","parts":"IPM module, Compressor"},
+    ],
+    "AUX": [
+        {"code":"E1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"E2","desc":"Freeze protection indoor coil","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E3","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E4","desc":"Discharge temp สูงเกิน","cause":"น้ำยาน้อย / ท่ออุดตัน","fix":"ตรวจน้ำยา, ตรวจท่อ","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"Overcurrent protection","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"E8","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"E9","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"F3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"F4","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"P0","desc":"IPM protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P1","desc":"Voltage ผิดปกติ","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+        {"code":"H3","desc":"Compressor overload protection","cause":"compressor ร้อนเกิน","fix":"ตรวจน้ำยา, ตรวจระบายความร้อน","parts":"Overload protector"},
+        {"code":"H6","desc":"ตรวจพบตำแหน่ง motor ไม่ได้","cause":"IPM เสีย / compressor เสีย","fix":"ตรวจ IPM, ตรวจ compressor","parts":"IPM module, Compressor"},
+    ],
+    "Hisense": [
+        {"code":"E1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / พัดลมเสีย","fix":"ล้างคอยล์ร้อน, ตรวจพัดลม","parts":"High pressure switch"},
+        {"code":"E2","desc":"Freeze protection indoor coil","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E3","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E4","desc":"Discharge temp สูงเกิน","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"Overcurrent protection","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"PCB indoor ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E8","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"E9","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"F3","desc":"เซ็นเซอร์ outdoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"F4","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"P0","desc":"IPM / inverter protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P1","desc":"Voltage ผิดปกติ","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+        {"code":"H6","desc":"ตรวจพบตำแหน่ง rotor ไม่ได้","cause":"IPM เสีย / compressor เสีย","fix":"ตรวจ IPM, ตรวจ compressor","parts":"IPM module, Compressor"},
+        {"code":"Ld","desc":"Drain / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง","parts":"Float switch"},
+    ],
+    "Saijo Denki": [
+        {"code":"E1","desc":"เซ็นเซอร์อุณหภูมิห้อง (indoor) เสีย","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"E2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"E3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"E4","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"E5","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"E6","desc":"Low pressure / น้ำยาน้อย","cause":"น้ำยารั่ว/น้อย","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E7","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E8","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด/หลวม","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E9","desc":"PCB indoor ผิดปกติ","cause":"PCB เสีย / ไฟผิดปกติ","fix":"ตรวจไฟ, เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"F1","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"F2","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"F3","desc":"Freeze protection","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง evaporator, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F4","desc":"Drain / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง, ตรวจ float switch","parts":"Float switch"},
+        {"code":"F5","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"P1","desc":"IPM / inverter protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P2","desc":"Voltage protection","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
     ],
 }
 
