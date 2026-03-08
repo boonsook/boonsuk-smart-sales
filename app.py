@@ -208,24 +208,52 @@ def check_login():
 
 def login_page():
     st.markdown("""
-    <div style="max-width:400px;margin:80px auto;text-align:center;">
-        <h1>❄️ ร้านบุญสุขอิเล็กทรอนิกส์</h1>
-        <p style="color:#888;font-size:16px;">Smart Sales PRO v5</p>
-    </div>""", unsafe_allow_html=True)
-    col = st.columns([1, 2, 1])[1]
+    <style>
+    /* ซ่อน sidebar ตอน login */
+    [data-testid="stSidebar"] { display:none !important; }
+    /* login card */
+    .login-wrap {
+        max-width: 420px;
+        margin: 40px auto 0 auto;
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 4px 24px #0002;
+        padding: 36px 32px 28px 32px;
+        text-align: center;
+    }
+    .login-logo { font-size: 56px; margin-bottom: 4px; }
+    .login-title { font-size: 22px; font-weight: 800; color: #0d47a1; margin: 0; }
+    .login-sub   { font-size: 13px; color: #888; margin-bottom: 24px; }
+    /* mobile */
+    @media (max-width: 600px) {
+        .login-wrap { margin: 16px 12px; padding: 28px 18px 22px 18px; }
+        .login-title { font-size: 18px; }
+        .login-logo  { font-size: 44px; }
+    }
+    </style>
+    <div class="login-wrap">
+        <div class="login-logo">❄️</div>
+        <p class="login-title">ร้านบุญสุขอิเล็กทรอนิกส์</p>
+        <p class="login-sub">Smart Sales PRO v5</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # center column — full width on mobile
+    _, col, _ = st.columns([1, 3, 1])
     with col:
-        st.subheader("🔐 เข้าสู่ระบบ")
-        username = st.text_input("ชื่อผู้ใช้", placeholder="admin / staff")
-        password = st.text_input("รหัสผ่าน", type="password")
-        if st.button("เข้าสู่ระบบ", use_container_width=True, type="primary"):
+        st.markdown("#### 🔐 เข้าสู่ระบบ")
+        username = st.text_input("👤 ชื่อผู้ใช้", placeholder="admin หรือ staff", label_visibility="visible")
+        password = st.text_input("🔑 รหัสผ่าน", type="password", label_visibility="visible")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚀 เข้าสู่ระบบ", use_container_width=True, type="primary"):
             pw_hash = hashlib.sha256(password.encode()).hexdigest()
             if username in USERS and USERS[username] == pw_hash:
                 st.session_state.logged_in = True
                 st.session_state.username  = username
                 st.rerun()
             else:
-                st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        st.caption("กรุณาติดต่อผู้ดูแลระบบเพื่อขอรหัสผ่าน")
+                st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+        st.caption("🔒 กรุณาติดต่อผู้ดูแลระบบเพื่อขอรหัสผ่าน")
 
 # ──────────────────────────────────────────────
 # SUPABASE CONNECTION
@@ -662,14 +690,95 @@ def line_share_link(text): return "https://line.me/R/msg/text/?" + urlquote(text
 # ──────────────────────────────────────────────
 st.markdown("""
 <style>
+/* ── Sidebar ─────────────────────────────── */
 [data-testid="stSidebar"] { background:linear-gradient(180deg,#0d47a1 0%,#1565c0 100%); }
 [data-testid="stSidebar"] * { color:#fff !important; }
+
+/* ── Metric cards ────────────────────────── */
 .metric-card { background:#f0f4ff;border-radius:12px;padding:16px 20px;border-left:5px solid #1565c0;margin-bottom:10px; }
 .metric-card h4 { margin:0;color:#1565c0;font-size:13px; }
 .metric-card h2 { margin:4px 0 0;color:#0d47a1;font-size:26px;font-weight:800; }
+
+/* ── Stock badges ────────────────────────── */
 .badge-in  { background:#e8f5e9;color:#2e7d32;padding:2px 10px;border-radius:20px;font-weight:700; }
 .badge-out { background:#fce4ec;color:#c62828;padding:2px 10px;border-radius:20px;font-weight:700; }
 .badge-low { background:#fff3e0;color:#e65100;padding:2px 10px;border-radius:20px;font-weight:700; }
+
+/* ══ MOBILE RESPONSIVE (max-width: 768px) ═══ */
+@media (max-width: 768px) {
+
+  /* ขยาย content เต็มจอ */
+  .main .block-container {
+    padding: 0.5rem 0.8rem 2rem !important;
+    max-width: 100% !important;
+  }
+
+  /* ปุ่มใหญ่ขึ้น กดง่าย */
+  .stButton > button {
+    height: 3rem !important;
+    font-size: 16px !important;
+    border-radius: 10px !important;
+    width: 100% !important;
+  }
+
+  /* Input box ใหญ่ขึ้น */
+  .stTextInput input, .stSelectbox select,
+  .stNumberInput input, .stTextArea textarea {
+    font-size: 16px !important;
+    height: 2.8rem !important;
+    border-radius: 8px !important;
+  }
+
+  /* หัวข้อเล็กลงนิดหน่อย */
+  h1 { font-size: 1.4rem !important; }
+  h2 { font-size: 1.2rem !important; }
+  h3 { font-size: 1.1rem !important; }
+
+  /* Expander ขยาย padding */
+  .streamlit-expanderHeader {
+    font-size: 15px !important;
+    padding: 12px !important;
+  }
+
+  /* Columns บนมือถือเรียงแนวตั้ง */
+  [data-testid="column"] {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+  }
+
+  /* Tab text ขนาดพอดี */
+  .stTabs [data-baseweb="tab"] {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+  }
+
+  /* Dataframe scroll ได้ */
+  .stDataFrame {
+    overflow-x: auto !important;
+    font-size: 12px !important;
+  }
+
+  /* Metric card บนมือถือ */
+  .metric-card h2 { font-size: 20px !important; }
+  .metric-card h4 { font-size: 12px !important; }
+
+  /* Download button */
+  .stDownloadButton > button {
+    height: 3rem !important;
+    font-size: 15px !important;
+    width: 100% !important;
+  }
+
+  /* Warning / info box */
+  .stAlert { font-size: 14px !important; border-radius: 10px !important; }
+
+  /* Sidebar toggle button ใหญ่ขึ้น */
+  [data-testid="collapsedControl"] {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+}
 </style>""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
