@@ -436,6 +436,75 @@ def delete_job(job_id):
     return False
 
 # ──────────────────────────────────────────────
+# SERVICE DATA LAYER
+# ──────────────────────────────────────────────
+SERVICE_TYPES = [
+    "🆕 ติดตั้งแอร์ใหม่",
+    "🔧 ซ่อมแอร์",
+    "🚿 ล้างแอร์",
+    "🚚 ย้ายแอร์",
+    "📡 จานดาวเทียม",
+    "❄️ ซ่อมตู้เย็น",
+    "👕 ซ่อมเครื่องซักผ้า",
+    "📹 ติดตั้ง/ซ่อมกล้องวงจรปิด (CCTV)",
+    "📺 ซ่อมทีวี LED/LCD",
+]
+SERVICE_STATUSES = ["📋 รอดำเนินการ", "🔧 กำลังดำเนินการ", "✅ เสร็จแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
+
+def load_service() -> pd.DataFrame:
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            rows = sb.table("service_jobs").select("*").order("created_at", desc=True).execute().data
+            if rows:
+                return pd.DataFrame(rows)
+            return pd.DataFrame()
+        except Exception as e:
+            st.warning(f"Supabase load_service: {e}")
+    if os.path.exists(SERVICE_CSV):
+        try:
+            return pd.read_csv(SERVICE_CSV, encoding="utf-8-sig")
+        except Exception:
+            pass
+    return pd.DataFrame()
+
+def save_service(df: pd.DataFrame):
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            for _, r in df.iterrows():
+                row = r.to_dict()
+                sb_id = row.get("id")
+                if sb_id:
+                    sb.table("service_jobs").update({
+                        "status": str(row.get("status","")),
+                        "note":   str(row.get("note","")),
+                        "price":  int(row.get("price",0)),
+                    }).eq("id", int(sb_id)).execute()
+            return
+        except Exception as e:
+            st.warning(f"Supabase save_service: {e}")
+    df.to_csv(SERVICE_CSV, index=False, encoding="utf-8-sig")
+
+def log_service_job(rec: dict):
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            insert_cols = ["date","service_type","customer_name","customer_phone",
+                           "customer_address","symptom","note","price","status","saved_by"]
+            row = {c: rec.get(c,"") for c in insert_cols}
+            row["price"] = int(row.get("price",0))
+            sb.table("service_jobs").insert(row).execute()
+            return
+        except Exception as e:
+            st.warning(f"Supabase log_service: {e}")
+    pd.DataFrame([rec]).to_csv(
+        SERVICE_CSV, mode="a",
+        header=not os.path.exists(SERVICE_CSV),
+        index=False, encoding="utf-8-sig"
+    )
+
+# ──────────────────────────────────────────────
 # EXCEL EXPORT
 # ──────────────────────────────────────────────
 def export_excel(df: pd.DataFrame) -> bytes:
@@ -1260,72 +1329,6 @@ elif page == "📊 Dashboard":
 # ══════════════════════════════════════════════
 # PAGE: รับงานซ่อม/บริการ
 # ══════════════════════════════════════════════
-SERVICE_TYPES = [
-    "🆕 ติดตั้งแอร์ใหม่",
-    "🔧 ซ่อมแอร์",
-    "🚿 ล้างแอร์",
-    "🚚 ย้ายแอร์",
-    "📡 จานดาวเทียม",
-    "❄️ ซ่อมตู้เย็น",
-    "👕 ซ่อมเครื่องซักผ้า",
-    "📹 ติดตั้ง/ซ่อมกล้องวงจรปิด (CCTV)",
-    "📺 ซ่อมทีวี LED/LCD",
-]
-SERVICE_STATUSES = ["📋 รอดำเนินการ", "🔧 กำลังดำเนินการ", "✅ เสร็จแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
-
-def load_service() -> pd.DataFrame:
-    if _use_supabase():
-        try:
-            sb = _get_supabase()
-            rows = sb.table("service_jobs").select("*").order("created_at", desc=True).execute().data
-            if rows:
-                return pd.DataFrame(rows)
-            return pd.DataFrame()
-        except Exception as e:
-            st.warning(f"Supabase load_service: {e}")
-    if os.path.exists(SERVICE_CSV):
-        try:
-            return pd.read_csv(SERVICE_CSV, encoding="utf-8-sig")
-        except Exception:
-            pass
-    return pd.DataFrame()
-
-def save_service(df: pd.DataFrame):
-    if _use_supabase():
-        try:
-            sb = _get_supabase()
-            for _, r in df.iterrows():
-                row = r.to_dict()
-                sb_id = row.get("id")
-                if sb_id:
-                    sb.table("service_jobs").update({
-                        "status": str(row.get("status","")),
-                        "note":   str(row.get("note","")),
-                        "price":  int(row.get("price",0)),
-                    }).eq("id", int(sb_id)).execute()
-            return
-        except Exception as e:
-            st.warning(f"Supabase save_service: {e}")
-    df.to_csv(SERVICE_CSV, index=False, encoding="utf-8-sig")
-
-def log_service_job(rec: dict):
-    if _use_supabase():
-        try:
-            sb = _get_supabase()
-            insert_cols = ["date","service_type","customer_name","customer_phone",
-                           "customer_address","symptom","note","price","status","saved_by"]
-            row = {c: rec.get(c,"") for c in insert_cols}
-            row["price"] = int(row.get("price",0))
-            sb.table("service_jobs").insert(row).execute()
-            return
-        except Exception as e:
-            st.warning(f"Supabase log_service: {e}")
-    pd.DataFrame([rec]).to_csv(
-        SERVICE_CSV, mode="a",
-        header=not os.path.exists(SERVICE_CSV),
-        index=False, encoding="utf-8-sig"
-    )
-
 if page == "🛠️ รับงานซ่อม/บริการ":
     st.title("🛠️ รับงานซ่อม/บริการ")
 
