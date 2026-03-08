@@ -935,84 +935,152 @@ if page == "🧾 สร้างใบเสนอราคา":
 # ══════════════════════════════════════════════
 elif page == "📋 จัดการงาน / สถานะ":
     st.title("📋 จัดการงานและสถานะ")
-    df_log = load_log()
-    if df_log.empty:
-        st.info("ยังไม่มีงาน กรุณาบันทึกงานจากหน้าใบเสนอราคาก่อน"); st.stop()
 
-    f1, f2, f3 = st.columns(3)
-    filter_status = f1.selectbox("กรองตามสถานะ", ["ทั้งหมด"] + JOB_STATUSES)
-    filter_name   = f2.text_input("ค้นหาชื่อ/เบอร์")
-    filter_date   = f3.text_input("ค้นหาวันที่ (เช่น 07/03/2026)")
+    tab_ac, tab_sv = st.tabs(["❄️ งานแอร์ / ใบเสนอราคา", "🛠️ งานซ่อม / บริการ"])
 
-    df_show = df_log.copy()
-    if filter_status != "ทั้งหมด" and "status" in df_show.columns:
-        df_show = df_show[df_show["status"] == filter_status]
-    if filter_name:
-        mask = pd.Series(False, index=df_show.index)
-        for col in ["customer_name","customer_phone"]:
-            if col in df_show.columns:
-                mask |= df_show[col].astype(str).str.lower().str.contains(filter_name.lower(),na=False)
-        df_show = df_show[mask]
-    if filter_date and "date" in df_show.columns:
-        df_show = df_show[df_show["date"].astype(str).str.contains(filter_date,na=False)]
+    # ══ Tab 1: งานแอร์ ══════════════════════════
+    with tab_ac:
+        df_log = load_log()
+        if df_log.empty:
+            st.info("ยังไม่มีงานแอร์ กรุณาบันทึกจากหน้าใบเสนอราคาก่อน")
+        else:
+            f1, f2, f3 = st.columns(3)
+            filter_status = f1.selectbox("กรองตามสถานะ", ["ทั้งหมด"] + JOB_STATUSES, key="ac_fs")
+            filter_name   = f2.text_input("ค้นหาชื่อ/เบอร์", key="ac_fn")
+            filter_date   = f3.text_input("ค้นหาวันที่", key="ac_fd")
 
-    st.markdown(f"**พบ {len(df_show)} รายการ**")
+            df_show = df_log.copy()
+            if filter_status != "ทั้งหมด" and "status" in df_show.columns:
+                df_show = df_show[df_show["status"] == filter_status]
+            if filter_name:
+                mask = pd.Series(False, index=df_show.index)
+                for col in ["customer_name","customer_phone"]:
+                    if col in df_show.columns:
+                        mask |= df_show[col].astype(str).str.lower().str.contains(filter_name.lower(),na=False)
+                df_show = df_show[mask]
+            if filter_date and "date" in df_show.columns:
+                df_show = df_show[df_show["date"].astype(str).str.contains(filter_date,na=False)]
 
-    for idx, job in df_show.iterrows():
-        status = job.get("status", JOB_STATUSES[0])
-        icon   = "💰" if "รับเงิน" in status else "✅" if "ติดตั้งแล้ว" in status else "🔧" if "กำลัง" in status else "❌" if "ยกเลิก" in status else "📋"
-        with st.expander(f"{icon} {job.get('customer_name','?')} | {job.get('model','?')} | {job.get('date','?')} | ฿{fmt_baht(job.get('net_total',0))} | {status}"):
-            c1, c2 = st.columns(2)
-            c1.markdown(f"**ลูกค้า:** {job.get('customer_name','-')}")
-            c1.markdown(f"**โทร:** {job.get('customer_phone','-')}")
-            c1.markdown(f"**รุ่น:** {job.get('model','-')} | {int(job.get('model_btu',0)):,} BTU")
-            c2.markdown(f"**ราคาสุทธิ:** ฿{fmt_baht(job.get('net_total',0))}")
-            c2.markdown(f"**รับเงิน:** ฿{fmt_baht(job.get('paid_amount',job.get('net_total',0)))}")
-            c2.markdown(f"**บันทึกโดย:** {job.get('saved_by','-')}")
+            st.markdown(f"**พบ {len(df_show)} รายการ**")
+
+            for idx, job in df_show.iterrows():
+                status = job.get("status", JOB_STATUSES[0])
+                icon   = "💰" if "รับเงิน" in status else "✅" if "ติดตั้งแล้ว" in status else "🔧" if "กำลัง" in status else "❌" if "ยกเลิก" in status else "📋"
+                with st.expander(f"{icon} {job.get('customer_name','?')} | {job.get('model','?')} | {job.get('date','?')} | ฿{fmt_baht(job.get('net_total',0))} | {status}"):
+                    c1, c2 = st.columns(2)
+                    c1.markdown(f"**ลูกค้า:** {job.get('customer_name','-')}")
+                    c1.markdown(f"**โทร:** {job.get('customer_phone','-')}")
+                    c1.markdown(f"**รุ่น:** {job.get('model','-')} | {int(job.get('model_btu',0)):,} BTU")
+                    c2.markdown(f"**ราคาสุทธิ:** ฿{fmt_baht(job.get('net_total',0))}")
+                    c2.markdown(f"**รับเงิน:** ฿{fmt_baht(job.get('paid_amount',job.get('net_total',0)))}")
+                    c2.markdown(f"**บันทึกโดย:** {job.get('saved_by','-')}")
+                    st.divider()
+                    e1, e2, e3 = st.columns(3)
+                    new_status  = e1.selectbox("เปลี่ยนสถานะ", JOB_STATUSES,
+                                    index=JOB_STATUSES.index(status) if status in JOB_STATUSES else 0,
+                                    key=f"st_{idx}")
+                    receipt_no  = e2.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
+                    paid_amount = e3.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
+
+                    u1, u2, u3, u4 = st.columns(4)
+                    if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
+                        df_log.at[idx,"status"]      = new_status
+                        df_log.at[idx,"receipt_no"]  = receipt_no
+                        df_log.at[idx,"paid_amount"] = paid_amount
+                        save_log(df_log); st.success("อัปเดตแล้ว ✅"); st.rerun()
+
+                    if u2.button("🧾 ใบเสร็จ", key=f"rc_{idx}", use_container_width=True):
+                        try:
+                            qd = job.to_dict(); qd["paid_amount"] = paid_amount
+                            pb = build_pdf_receipt(qd, receipt_no or f"RC-{idx}", is_tax=False)
+                            st.download_button("⬇️ ดาวน์โหลดใบเสร็จ", data=pb,
+                                               file_name=f"ใบเสร็จ_{receipt_no or idx}.pdf",
+                                               mime="application/pdf", key=f"dlrc_{idx}")
+                        except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+
+                    if u3.button("📑 ใบกำกับภาษี", key=f"tx_{idx}", use_container_width=True):
+                        try:
+                            qd = job.to_dict(); qd["paid_amount"] = paid_amount
+                            pb = build_pdf_receipt(qd, receipt_no or f"TX-{idx}", is_tax=True)
+                            st.download_button("⬇️ ดาวน์โหลดใบกำกับภาษี", data=pb,
+                                               file_name=f"ใบกำกับภาษี_{receipt_no or idx}.pdf",
+                                               mime="application/pdf", key=f"dltx_{idx}")
+                        except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+
+                    if u4.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
+                        df_log = df_log.drop(index=idx).reset_index(drop=True)
+                        save_log(df_log); st.warning("ลบแล้ว"); st.rerun()
+
             st.divider()
-            e1, e2, e3 = st.columns(3)
-            new_status  = e1.selectbox("เปลี่ยนสถานะ", JOB_STATUSES,
-                            index=JOB_STATUSES.index(status) if status in JOB_STATUSES else 0,
-                            key=f"st_{idx}")
-            receipt_no  = e2.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
-            paid_amount = e3.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
+            if st.button("📊 Export Excel รายงานแอร์", use_container_width=True, type="primary"):
+                xlsx = export_excel(df_log)
+                st.download_button("⬇️ ดาวน์โหลด Excel", data=xlsx,
+                                   file_name=f"รายงาน_บุญสุข_{date.today().strftime('%Y%m%d')}.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                   use_container_width=True)
 
-            u1, u2, u3, u4 = st.columns(4)
-            if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
-                df_log.at[idx,"status"]      = new_status
-                df_log.at[idx,"receipt_no"]  = receipt_no
-                df_log.at[idx,"paid_amount"] = paid_amount
-                save_log(df_log); st.success("อัปเดตแล้ว ✅"); st.rerun()
+    # ══ Tab 2: งานซ่อม/บริการ ═══════════════════
+    with tab_sv:
+        df_sv2 = load_service()
+        if df_sv2.empty:
+            st.info("ยังไม่มีงานซ่อม/บริการ กรุณาบันทึกจากหน้ารับงานซ่อม/บริการก่อน")
+        else:
+            sf1, sf2, sf3 = st.columns(3)
+            sv2_filter_status = sf1.selectbox("กรองตามสถานะ", ["ทั้งหมด"] + SERVICE_STATUSES, key="sv2_fs")
+            sv2_filter_type   = sf2.selectbox("กรองประเภทงาน", ["ทั้งหมด"] + SERVICE_TYPES, key="sv2_ft")
+            sv2_search        = sf3.text_input("ค้นหาชื่อ/เบอร์", key="sv2_srch")
 
-            if u2.button("🧾 ใบเสร็จ", key=f"rc_{idx}", use_container_width=True):
-                try:
-                    qd = job.to_dict(); qd["paid_amount"] = paid_amount
-                    pb = build_pdf_receipt(qd, receipt_no or f"RC-{idx}", is_tax=False)
-                    st.download_button("⬇️ ดาวน์โหลดใบเสร็จ", data=pb,
-                                       file_name=f"ใบเสร็จ_{receipt_no or idx}.pdf",
-                                       mime="application/pdf", key=f"dlrc_{idx}")
-                except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+            df_sv2_show = df_sv2.copy()
+            if sv2_filter_status != "ทั้งหมด":
+                df_sv2_show = df_sv2_show[df_sv2_show["status"] == sv2_filter_status]
+            if sv2_filter_type != "ทั้งหมด":
+                df_sv2_show = df_sv2_show[df_sv2_show["service_type"] == sv2_filter_type]
+            if sv2_search:
+                mask2 = (df_sv2_show["customer_name"].astype(str).str.contains(sv2_search, case=False, na=False) |
+                         df_sv2_show["customer_phone"].astype(str).str.contains(sv2_search, case=False, na=False))
+                df_sv2_show = df_sv2_show[mask2]
 
-            if u3.button("📑 ใบกำกับภาษี", key=f"tx_{idx}", use_container_width=True):
-                try:
-                    qd = job.to_dict(); qd["paid_amount"] = paid_amount
-                    pb = build_pdf_receipt(qd, receipt_no or f"TX-{idx}", is_tax=True)
-                    st.download_button("⬇️ ดาวน์โหลดใบกำกับภาษี", data=pb,
-                                       file_name=f"ใบกำกับภาษี_{receipt_no or idx}.pdf",
-                                       mime="application/pdf", key=f"dltx_{idx}")
-                except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+            st.markdown(f"**พบ {len(df_sv2_show)} รายการ**")
 
-            if u4.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
-                df_log = df_log.drop(index=idx).reset_index(drop=True)
-                save_log(df_log); st.warning("ลบแล้ว"); st.rerun()
+            for idx2, r2 in df_sv2_show.iterrows():
+                st2 = str(r2.get("status", SERVICE_STATUSES[0]))
+                icon2 = "💰" if "รับเงิน" in st2 else "✅" if "เสร็จ" in st2 else "🔧" if "ดำเนินการ" in st2 else "❌" if "ยกเลิก" in st2 else "📋"
+                with st.expander(
+                    f"{icon2} {r2.get('service_type','')} — {r2.get('customer_name','?')} | {r2.get('customer_phone','?')} | {r2.get('date','?')} | ฿{fmt_baht(r2.get('price',0))} | {st2}"
+                ):
+                    d1, d2 = st.columns(2)
+                    d1.markdown(f"**👤 ลูกค้า:** {r2.get('customer_name','-')}")
+                    d1.markdown(f"**📞 โทร:** {r2.get('customer_phone','-')}")
+                    d1.markdown(f"**📍 ที่อยู่:** {r2.get('customer_address','-')}")
+                    d2.markdown(f"**💰 ค่าบริการ:** ฿{fmt_baht(r2.get('price',0))}")
+                    d2.markdown(f"**📅 วันที่:** {r2.get('date','-')}")
+                    d2.markdown(f"**บันทึกโดย:** {r2.get('saved_by','-')}")
+                    st.markdown(f"**⚡ อาการ/งาน:** {r2.get('symptom','-')}")
+                    if r2.get("note",""):
+                        st.markdown(f"**📌 หมายเหตุ:** {r2.get('note','')}")
+                    st.divider()
 
-    st.divider()
-    if st.button("📊 Export Excel รายงานทั้งหมด", use_container_width=True, type="primary"):
-        xlsx = export_excel(df_log)
-        st.download_button("⬇️ ดาวน์โหลด Excel", data=xlsx,
-                           file_name=f"รายงาน_บุญสุข_{date.today().strftime('%Y%m%d')}.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                           use_container_width=True)
+                    sv2_u1, sv2_u2, sv2_u3 = st.columns([3,2,1])
+                    new_st2 = sv2_u1.selectbox("เปลี่ยนสถานะ", SERVICE_STATUSES,
+                                index=SERVICE_STATUSES.index(st2) if st2 in SERVICE_STATUSES else 0,
+                                key=f"sv2_st_{idx2}")
+                    new_price2 = sv2_u2.number_input("ค่าบริการ (฿)", min_value=0, step=50,
+                                value=int(r2.get("price",0)), key=f"sv2_pr_{idx2}")
+                    if sv2_u3.button("💾", key=f"sv2_save_{idx2}", help="บันทึก"):
+                        df_sv2.at[idx2,"status"] = new_st2
+                        df_sv2.at[idx2,"price"]  = new_price2
+                        save_service(df_sv2)
+                        st.success("✅ อัปเดตแล้ว"); st.rerun()
+
+                    if st.button("🗑️ ลบงานนี้", key=f"sv2_del_{idx2}", use_container_width=True):
+                        df_sv2 = df_sv2.drop(index=idx2).reset_index(drop=True)
+                        save_service(df_sv2); st.warning("ลบแล้ว"); st.rerun()
+
+            st.divider()
+            csv_sv2 = df_sv2_show.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+            st.download_button("⬇️ Export CSV งานซ่อม/บริการ", data=csv_sv2,
+                               file_name=f"service_jobs_{date.today().strftime('%Y%m%d')}.csv",
+                               mime="text/csv", use_container_width=True)
 
 # ══════════════════════════════════════════════
 # PAGE 3: STOCK
