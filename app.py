@@ -977,12 +977,106 @@ elif page == "📊 Dashboard":
             st.bar_chart(sd.set_index("สถานะ"))
 
     st.divider()
-    if st.button("📊 Export Excel รายงาน", use_container_width=True, type="primary"):
-        xlsx = export_excel(df_log)
-        st.download_button("⬇️ ดาวน์โหลด Excel", data=xlsx,
-                           file_name=f"รายงาน_บุญสุข_{date.today().strftime('%Y%m%d')}.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                           use_container_width=True)
+
+    # ── Export / Import Section ──────────────────
+    st.subheader("📁 จัดการข้อมูล (Export / Import)")
+
+    tab1, tab2, tab3 = st.tabs(["📊 Export Excel", "⬇️ Export CSV", "⬆️ Import CSV"])
+
+    with tab1:
+        st.caption("Export รายงานยอดขายทั้งหมดเป็น Excel")
+        if st.button("📊 สร้างไฟล์ Excel", use_container_width=True, type="primary"):
+            xlsx = export_excel(df_log)
+            st.download_button("⬇️ ดาวน์โหลด Excel", data=xlsx,
+                               file_name=f"รายงาน_บุญสุข_{date.today().strftime('%Y%m%d')}.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               use_container_width=True)
+
+    with tab2:
+        st.caption("Export ข้อมูลดิบเป็น CSV สำหรับสำรองข้อมูลหรือแก้ไขภายนอก")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**📋 ประวัติงานทั้งหมด**")
+            csv_jobs = df_log.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+            st.download_button(
+                "⬇️ ดาวน์โหลด jobs.csv",
+                data=csv_jobs,
+                file_name=f"boonsuk_jobs_{date.today().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        with c2:
+            st.markdown("**📦 สต๊อกสินค้า**")
+            df_stock = load_stock()
+            csv_stock = df_stock.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+            st.download_button(
+                "⬇️ ดาวน์โหลด stock.csv",
+                data=csv_stock,
+                file_name=f"boonsuk_stock_{date.today().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    with tab3:
+        st.caption("นำเข้าข้อมูลจากไฟล์ CSV (ข้อมูลเดิมจะถูกแทนที่)")
+        if st.session_state.get("username") != "admin":
+            st.warning("⚠️ เฉพาะ admin เท่านั้นที่สามารถ Import ข้อมูลได้")
+        else:
+            imp1, imp2 = st.columns(2)
+            with imp1:
+                st.markdown("**⬆️ Import ประวัติงาน**")
+                uploaded_jobs = st.file_uploader("เลือกไฟล์ jobs.csv", type=["csv"], key="upload_jobs")
+                if uploaded_jobs:
+                    try:
+                        df_import = pd.read_csv(uploaded_jobs, encoding="utf-8-sig")
+                        st.dataframe(df_import.head(5), use_container_width=True)
+                        st.caption(f"พบ {len(df_import)} แถว")
+                        if st.button("✅ ยืนยัน Import ประวัติงาน", type="primary", use_container_width=True):
+                            if _use_supabase():
+                                try:
+                                    sb = _get_supabase()
+                                    # clear existing then insert
+                                    sb.table("jobs").delete().neq("id", 0).execute()
+                                    insert_cols = [
+                                        "date","customer_name","customer_phone","customer_address",
+                                        "section","model","model_btu","base_price","discount",
+                                        "extra_install","net_total","paid_amount","status",
+                                        "receipt_no","saved_by","room_w","room_l","room_h",
+                                        "sun","people","btu","suggest_cap","w_install","w_parts","w_comp"
+                                    ]
+                                    for _, r in df_import.iterrows():
+                                        row = {}
+                                        for c in insert_cols:
+                                            if c in r:
+                                                val = r[c]
+                                                if pd.isna(val): val = "" if isinstance(val, str) else 0
+                                                row[c] = val
+                                        sb.table("jobs").insert(row).execute()
+                                    st.success(f"✅ Import สำเร็จ {len(df_import)} รายการ!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Import ไม่สำเร็จ: {e}")
+                            else:
+                                df_import.to_csv(LOG_CSV, index=False, encoding="utf-8-sig")
+                                st.success(f"✅ Import สำเร็จ {len(df_import)} รายการ!")
+                                st.rerun()
+                    except Exception as e:
+                        st.error(f"อ่านไฟล์ไม่สำเร็จ: {e}")
+
+            with imp2:
+                st.markdown("**⬆️ Import สต๊อก**")
+                uploaded_stock = st.file_uploader("เลือกไฟล์ stock.csv", type=["csv"], key="upload_stock")
+                if uploaded_stock:
+                    try:
+                        df_s_import = pd.read_csv(uploaded_stock, encoding="utf-8-sig")
+                        st.dataframe(df_s_import.head(5), use_container_width=True)
+                        st.caption(f"พบ {len(df_s_import)} แถว")
+                        if st.button("✅ ยืนยัน Import สต๊อก", type="primary", use_container_width=True):
+                            save_stock(clean_df(df_s_import))
+                            st.success(f"✅ Import สต๊อกสำเร็จ {len(df_s_import)} รายการ!")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"อ่านไฟล์ไม่สำเร็จ: {e}")
 
 # ══════════════════════════════════════════════
 # ERROR CODE DATABASE
