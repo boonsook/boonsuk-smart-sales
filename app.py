@@ -225,7 +225,7 @@ def login_page():
                 st.rerun()
             else:
                 st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        st.caption("admin / boonsuk2024  |  staff / staff1234")
+        st.caption("กรุณาติดต่อผู้ดูแลระบบเพื่อขอรหัสผ่าน")
 
 # ──────────────────────────────────────────────
 # SUPABASE CONNECTION
@@ -694,7 +694,8 @@ with st.sidebar:
         "📦 จัดการสต๊อก",
         "📊 Dashboard",
         "🔧 คลังเออเร่อแอร์",
-    ], label_visibility="collapsed")
+    ] + (["⚙️ นำเข้า/ส่งออกข้อมูล"] if st.session_state.get("username") == "admin" else []),
+    label_visibility="collapsed")
     st.divider()
     st.caption(f"👤 ล็อกอิน: **{st.session_state.username}**")
     if st.button("🚪 ออกจากระบบ", use_container_width=True):
@@ -1404,3 +1405,186 @@ if page == "🔧 คลังเออเร่อแอร์":
                            file_name="คลังเออเร่อแอร์_บุญสุข.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                            use_container_width=True)
+
+# ══════════════════════════════════════════════
+# PAGE 6: IMPORT / EXPORT (admin only)
+# ══════════════════════════════════════════════
+elif page == "⚙️ นำเข้า/ส่งออกข้อมูล":
+    if st.session_state.get("username") != "admin":
+        st.error("เฉพาะ admin เท่านั้น"); st.stop()
+
+    st.title("⚙️ นำเข้า/ส่งออกข้อมูล")
+    st.caption("สำรอง-กู้คืนข้อมูลทั้งหมด | เฉพาะผู้ดูแลระบบ")
+
+    tab1, tab2 = st.tabs(["📤 ส่งออก (Export)", "📥 นำเข้า (Import)"])
+
+    # ──────────────────────────────────────────
+    # TAB 1: EXPORT
+    # ──────────────────────────────────────────
+    with tab1:
+        st.subheader("📤 ดาวน์โหลดข้อมูลทั้งหมด")
+
+        col1, col2 = st.columns(2)
+
+        # Export ประวัติงาน
+        with col1:
+            st.markdown("#### 📋 ประวัติงาน / ใบเสนอราคา")
+            df_log = load_log()
+            if df_log.empty:
+                st.info("ยังไม่มีข้อมูลงาน")
+            else:
+                st.metric("จำนวนงานทั้งหมด", f"{len(df_log)} รายการ")
+                # CSV
+                csv_log = df_log.to_csv(index=False, encoding="utf-8-sig")
+                st.download_button(
+                    "⬇️ Export ประวัติงาน (.csv)",
+                    data=csv_log.encode("utf-8-sig"),
+                    file_name=f"jobs_backup_{date.today().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+                # Excel
+                xlsx_bytes = export_excel(df_log)
+                st.download_button(
+                    "⬇️ Export ประวัติงาน (.xlsx)",
+                    data=xlsx_bytes,
+                    file_name=f"jobs_backup_{date.today().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+
+        # Export สต๊อก
+        with col2:
+            st.markdown("#### 📦 ข้อมูลสต๊อกแอร์")
+            df_stk = load_stock()
+            st.metric("จำนวนรุ่นทั้งหมด", f"{len(df_stk)} รุ่น")
+            csv_stk = df_stk.to_csv(index=False, encoding="utf-8-sig")
+            st.download_button(
+                "⬇️ Export สต๊อก (.csv)",
+                data=csv_stk.encode("utf-8-sig"),
+                file_name=f"stock_backup_{date.today().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+        # Export ทุกอย่างใน ZIP
+        st.divider()
+        st.markdown("#### 📦 Export ทุกอย่างในครั้งเดียว")
+        if st.button("⬇️ Download ทั้งหมด (ZIP)", use_container_width=True, type="primary"):
+            import zipfile as zf
+            zip_buf = io.BytesIO()
+            with zf.ZipFile(zip_buf, "w") as z:
+                df_log2 = load_log()
+                df_stk2 = load_stock()
+                if not df_log2.empty:
+                    z.writestr(f"jobs_{date.today().strftime('%Y%m%d')}.csv",
+                               df_log2.to_csv(index=False, encoding="utf-8-sig"))
+                z.writestr(f"stock_{date.today().strftime('%Y%m%d')}.csv",
+                           df_stk2.to_csv(index=False, encoding="utf-8-sig"))
+            st.download_button(
+                "⬇️ ดาวน์โหลด ZIP",
+                data=zip_buf.getvalue(),
+                file_name=f"boonsuk_backup_{date.today().strftime('%Y%m%d')}.zip",
+                mime="application/zip",
+                use_container_width=True,
+            )
+
+    # ──────────────────────────────────────────
+    # TAB 2: IMPORT
+    # ──────────────────────────────────────────
+    with tab2:
+        st.subheader("📥 นำเข้าข้อมูลจากไฟล์ CSV")
+        st.warning("⚠️ การนำเข้าจะ **เพิ่ม** ข้อมูลเข้าไปในระบบ ไม่ลบข้อมูลเดิม")
+
+        imp1, imp2 = st.columns(2)
+
+        # Import ประวัติงาน
+        with imp1:
+            st.markdown("#### 📋 นำเข้าประวัติงาน")
+            uploaded_jobs = st.file_uploader(
+                "เลือกไฟล์ CSV ประวัติงาน",
+                type=["csv"],
+                key="upload_jobs",
+            )
+            if uploaded_jobs:
+                try:
+                    df_new = pd.read_csv(uploaded_jobs, encoding="utf-8-sig")
+                    st.success(f"พบข้อมูล {len(df_new)} รายการ")
+                    st.dataframe(df_new.head(5), use_container_width=True, hide_index=True)
+                    if st.button("✅ ยืนยันนำเข้าประวัติงาน", use_container_width=True, type="primary", key="confirm_jobs"):
+                        if _use_supabase():
+                            sb = _get_supabase()
+                            insert_cols = [
+                                "date","customer_name","customer_phone","customer_address",
+                                "section","model","model_btu","base_price","discount",
+                                "extra_install","net_total","paid_amount","status",
+                                "receipt_no","saved_by","room_w","room_l","room_h",
+                                "sun","people","btu","suggest_cap","w_install","w_parts","w_comp"
+                            ]
+                            ok = 0
+                            for _, r in df_new.iterrows():
+                                try:
+                                    row = {}
+                                    for c in insert_cols:
+                                        if c in r:
+                                            val = r[c]
+                                            if pd.isna(val): val = ""
+                                            if isinstance(val, float): val = int(val) if val == int(val) else val
+                                            row[c] = val
+                                    sb.table("jobs").insert(row).execute()
+                                    ok += 1
+                                except Exception:
+                                    pass
+                            st.success(f"นำเข้าสำเร็จ {ok}/{len(df_new)} รายการ ✅")
+                        else:
+                            # CSV mode: append
+                            existing = load_log()
+                            combined = pd.concat([existing, df_new], ignore_index=True) if not existing.empty else df_new
+                            save_log(combined)
+                            st.success(f"นำเข้าสำเร็จ {len(df_new)} รายการ ✅")
+                        st.cache_data.clear()
+                except Exception as e:
+                    st.error(f"อ่านไฟล์ไม่ได้: {e}")
+
+        # Import สต๊อก
+        with imp2:
+            st.markdown("#### 📦 นำเข้า/อัปเดตสต๊อก")
+            uploaded_stock = st.file_uploader(
+                "เลือกไฟล์ CSV สต๊อก",
+                type=["csv"],
+                key="upload_stock",
+            )
+            if uploaded_stock:
+                try:
+                    df_stk_new = pd.read_csv(uploaded_stock, encoding="utf-8-sig")
+                    df_stk_new = clean_df(df_stk_new)
+                    st.success(f"พบข้อมูล {len(df_stk_new)} รุ่น")
+                    st.dataframe(df_stk_new.head(5), use_container_width=True, hide_index=True)
+                    if st.button("✅ ยืนยันอัปเดตสต๊อก", use_container_width=True, type="primary", key="confirm_stock"):
+                        save_stock(df_stk_new)
+                        st.success("อัปเดตสต๊อกสำเร็จ ✅")
+                        st.cache_data.clear()
+                except Exception as e:
+                    st.error(f"อ่านไฟล์ไม่ได้: {e}")
+
+        # ── ลบข้อมูลทั้งหมด (Danger Zone) ────────
+        st.divider()
+        with st.expander("🔴 Danger Zone — ลบข้อมูลทั้งหมด"):
+            st.error("⚠️ การลบข้อมูลไม่สามารถกู้คืนได้!")
+            confirm_del = st.text_input("พิมพ์ 'ลบทั้งหมด' เพื่อยืนยัน")
+            if st.button("🗑️ ลบประวัติงานทั้งหมด", use_container_width=True):
+                if confirm_del == "ลบทั้งหมด":
+                    if _use_supabase():
+                        try:
+                            sb = _get_supabase()
+                            sb.table("jobs").delete().neq("id", 0).execute()
+                            st.success("ลบข้อมูลทั้งหมดแล้ว ✅")
+                            st.cache_data.clear()
+                        except Exception as e:
+                            st.error(f"ไม่สำเร็จ: {e}")
+                    else:
+                        if os.path.exists(LOG_CSV):
+                            os.remove(LOG_CSV)
+                            st.success("ลบไฟล์ CSV แล้ว ✅")
+                else:
+                    st.warning("พิมพ์ 'ลบทั้งหมด' ให้ถูกต้องก่อนครับ")
