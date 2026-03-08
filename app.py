@@ -753,7 +753,10 @@ def make_line_text(q: dict) -> str:
         STORE_WEB,
     ])
 
-def line_share_link(text): return "https://line.me/R/msg/text/?" + urlquote(text)
+def line_share_link(text):
+    # LINE share ต้องใช้ %0A แทน newline และ encode ให้ถูกต้อง
+    encoded = urlquote(text, safe="")
+    return "https://line.me/R/msg/text/?" + encoded
 
 # ──────────────────────────────────────────────
 # CSS
