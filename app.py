@@ -53,7 +53,8 @@ INSTALL_CONDITIONS = (
 
 DATA_DIR  = "."
 STOCK_CSV = os.path.join(DATA_DIR, "boonsuk_stock.csv")
-LOG_CSV   = os.path.join(DATA_DIR, "boonsuk_customer_log.csv")
+LOG_CSV      = os.path.join(DATA_DIR, "boonsuk_customer_log.csv")
+SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 
 # ── ผู้ใช้งาน ──────────────────────────────────
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
@@ -799,6 +800,7 @@ with st.sidebar:
     st.divider()
     page = st.radio("เมนู", [
         "🧾 สร้างใบเสนอราคา",
+        "🛠️ รับงานซ่อม/บริการ",
         "📋 จัดการงาน / สถานะ",
         "📦 จัดการสต๊อก",
         "📊 Dashboard",
@@ -1186,6 +1188,195 @@ elif page == "📊 Dashboard":
                             st.rerun()
                     except Exception as e:
                         st.error(f"อ่านไฟล์ไม่สำเร็จ: {e}")
+
+# ══════════════════════════════════════════════
+# PAGE: รับงานซ่อม/บริการ
+# ══════════════════════════════════════════════
+SERVICE_TYPES = [
+    "🆕 ติดตั้งแอร์ใหม่",
+    "🔧 ซ่อมแอร์",
+    "🚿 ล้างแอร์",
+    "🚚 ย้ายแอร์",
+    "📡 จานดาวเทียม",
+    "❄️ ซ่อมตู้เย็น",
+    "👕 ซ่อมเครื่องซักผ้า",
+    "📹 ติดตั้ง/ซ่อมกล้องวงจรปิด (CCTV)",
+]
+SERVICE_STATUSES = ["📋 รอดำเนินการ", "🔧 กำลังดำเนินการ", "✅ เสร็จแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
+
+def load_service() -> pd.DataFrame:
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            rows = sb.table("service_jobs").select("*").order("created_at", desc=True).execute().data
+            if rows:
+                return pd.DataFrame(rows)
+            return pd.DataFrame()
+        except Exception as e:
+            st.warning(f"Supabase load_service: {e}")
+    if os.path.exists(SERVICE_CSV):
+        try:
+            return pd.read_csv(SERVICE_CSV, encoding="utf-8-sig")
+        except Exception:
+            pass
+    return pd.DataFrame()
+
+def save_service(df: pd.DataFrame):
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            for _, r in df.iterrows():
+                row = r.to_dict()
+                sb_id = row.get("id")
+                if sb_id:
+                    sb.table("service_jobs").update({
+                        "status": str(row.get("status","")),
+                        "note":   str(row.get("note","")),
+                        "price":  int(row.get("price",0)),
+                    }).eq("id", int(sb_id)).execute()
+            return
+        except Exception as e:
+            st.warning(f"Supabase save_service: {e}")
+    df.to_csv(SERVICE_CSV, index=False, encoding="utf-8-sig")
+
+def log_service_job(rec: dict):
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            insert_cols = ["date","service_type","customer_name","customer_phone",
+                           "customer_address","symptom","note","price","status","saved_by"]
+            row = {c: rec.get(c,"") for c in insert_cols}
+            row["price"] = int(row.get("price",0))
+            sb.table("service_jobs").insert(row).execute()
+            return
+        except Exception as e:
+            st.warning(f"Supabase log_service: {e}")
+    pd.DataFrame([rec]).to_csv(
+        SERVICE_CSV, mode="a",
+        header=not os.path.exists(SERVICE_CSV),
+        index=False, encoding="utf-8-sig"
+    )
+
+if page == "🛠️ รับงานซ่อม/บริการ":
+    st.title("🛠️ รับงานซ่อม/บริการ")
+
+    tab_new, tab_list = st.tabs(["➕ เปิดใบงานใหม่", "📋 รายการงานบริการ"])
+
+    # ── Tab 1: เปิดใบงานใหม่ ──────────────────────
+    with tab_new:
+        st.subheader("📝 กรอกข้อมูลลูกค้า")
+
+        c1, c2 = st.columns(2)
+        sv_date   = c1.date_input("📅 วันที่รับงาน", value=date.today())
+        sv_type   = c2.selectbox("🔧 ประเภทงาน", SERVICE_TYPES)
+
+        st.divider()
+        c3, c4 = st.columns(2)
+        sv_name   = c3.text_input("👤 ชื่อลูกค้า", placeholder="ชื่อ-นามสกุล")
+        sv_phone  = c4.text_input("📞 เบอร์โทร", placeholder="08X-XXXXXXX")
+        sv_addr   = st.text_area("📍 ที่อยู่", placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด", height=80)
+
+        st.divider()
+        sv_symptom = st.text_area("⚡ อาการเสีย / รายละเอียดงาน",
+                                   placeholder="เช่น แอร์ไม่เย็น / ขึ้น error E1 / ต้องการล้างแอร์ 2 ตัว",
+                                   height=100)
+        sv_note   = st.text_area("📌 หมายเหตุเพิ่มเติม (ถ้ามี)", height=60)
+
+        c5, c6 = st.columns(2)
+        sv_price  = c5.number_input("💰 ค่าบริการ (บาท)", min_value=0, step=50, value=0)
+        sv_status = c6.selectbox("📊 สถานะ", SERVICE_STATUSES)
+
+        st.divider()
+        if st.button("💾 บันทึกใบงาน", use_container_width=True, type="primary"):
+            if not sv_name.strip():
+                st.error("⚠️ กรุณากรอกชื่อลูกค้า")
+            elif not sv_phone.strip():
+                st.error("⚠️ กรุณากรอกเบอร์โทร")
+            elif not sv_symptom.strip():
+                st.error("⚠️ กรุณากรอกอาการเสีย/รายละเอียดงาน")
+            else:
+                rec = {
+                    "date":            sv_date.strftime("%Y-%m-%d"),
+                    "service_type":    sv_type,
+                    "customer_name":   sv_name.strip(),
+                    "customer_phone":  sv_phone.strip(),
+                    "customer_address":sv_addr.strip(),
+                    "symptom":         sv_symptom.strip(),
+                    "note":            sv_note.strip(),
+                    "price":           int(sv_price),
+                    "status":          sv_status,
+                    "saved_by":        st.session_state.get("username",""),
+                }
+                log_service_job(rec)
+                st.success(f"✅ บันทึกใบงานสำเร็จ! ลูกค้า: {sv_name.strip()}")
+                st.balloons()
+
+    # ── Tab 2: รายการงาน ─────────────────────────
+    with tab_list:
+        df_sv = load_service()
+        if df_sv.empty:
+            st.info("ยังไม่มีใบงานบริการครับ")
+        else:
+            # Filter bar
+            fc1, fc2, fc3 = st.columns([2,2,2])
+            sv_filter_status = fc1.selectbox("กรองสถานะ", ["ทั้งหมด"] + SERVICE_STATUSES, key="sv_fs")
+            sv_filter_type   = fc2.selectbox("กรองประเภท", ["ทั้งหมด"] + SERVICE_TYPES, key="sv_ft")
+            sv_search        = fc3.text_input("🔍 ค้นหาชื่อ/เบอร์", key="sv_srch")
+
+            df_show = df_sv.copy()
+            if sv_filter_status != "ทั้งหมด":
+                df_show = df_show[df_show["status"] == sv_filter_status]
+            if sv_filter_type != "ทั้งหมด":
+                df_show = df_show[df_show["service_type"] == sv_filter_type]
+            if sv_search:
+                mask = (df_show["customer_name"].astype(str).str.contains(sv_search, case=False, na=False) |
+                        df_show["customer_phone"].astype(str).str.contains(sv_search, case=False, na=False))
+                df_show = df_show[mask]
+
+            st.markdown(f"**พบ {len(df_show)} รายการ**")
+
+            for idx, r in df_show.iterrows():
+                status_color = {
+                    "📋 รอดำเนินการ": "#1565c0",
+                    "🔧 กำลังดำเนินการ": "#e65100",
+                    "✅ เสร็จแล้ว": "#2e7d32",
+                    "💰 รับเงินแล้ว": "#6a1b9a",
+                    "❌ ยกเลิก": "#c62828",
+                }.get(str(r.get("status","")), "#888")
+
+                with st.expander(
+                    f"**{r.get('service_type','')}** — {r.get('customer_name','')} | {r.get('customer_phone','')} | {r.get('date','')}",
+                    expanded=False
+                ):
+                    d1, d2 = st.columns(2)
+                    d1.markdown(f"**📍 ที่อยู่:** {r.get('customer_address','-')}")
+                    d2.markdown(f"**💰 ค่าบริการ:** {fmt_baht(r.get('price',0))} บาท")
+                    st.markdown(f"**⚡ อาการ:** {r.get('symptom','-')}")
+                    if r.get("note",""):
+                        st.markdown(f"**📌 หมายเหตุ:** {r.get('note','')}")
+                    st.markdown(f"<span style='color:{status_color};font-weight:700'>● {r.get('status','')}</span>",
+                                unsafe_allow_html=True)
+
+                    # อัปเดตสถานะ
+                    u1, u2, u3 = st.columns([3,2,1])
+                    new_st = u1.selectbox("เปลี่ยนสถานะ", SERVICE_STATUSES,
+                                          index=SERVICE_STATUSES.index(str(r.get("status", SERVICE_STATUSES[0])))
+                                          if str(r.get("status","")) in SERVICE_STATUSES else 0,
+                                          key=f"sv_st_{idx}")
+                    new_price = u2.number_input("ค่าบริการ", min_value=0, step=50,
+                                                value=int(r.get("price",0)), key=f"sv_pr_{idx}")
+                    if u3.button("💾", key=f"sv_save_{idx}", help="บันทึก"):
+                        df_sv.at[idx, "status"] = new_st
+                        df_sv.at[idx, "price"]  = new_price
+                        save_service(df_sv)
+                        st.success("✅ อัปเดตแล้ว"); st.rerun()
+
+            st.divider()
+            # Export CSV
+            csv_sv = df_show.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+            st.download_button("⬇️ Export CSV ใบงานบริการ", data=csv_sv,
+                               file_name=f"service_jobs_{date.today().strftime('%Y%m%d')}.csv",
+                               mime="text/csv", use_container_width=True)
 
 # ══════════════════════════════════════════════
 # ERROR CODE DATABASE
