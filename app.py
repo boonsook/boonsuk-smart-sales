@@ -1,5 +1,7 @@
 import os
 import io
+import sys
+import subprocess
 import hashlib
 import zipfile
 import pandas as pd
@@ -7,6 +9,17 @@ import streamlit as st
 from datetime import date, datetime
 from urllib.parse import quote as urlquote
 from fpdf import FPDF
+
+# ── Auto-install missing packages ────────────
+def _ensure(pkg, import_name=None):
+    import_name = import_name or pkg
+    try:
+        __import__(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", pkg, "-q"])
+
+_ensure("openpyxl")
+_ensure("fpdf2", "fpdf")
 
 # ──────────────────────────────────────────────
 # PAGE CONFIG
@@ -281,7 +294,7 @@ def log_customer_job(quote: dict):
 # ──────────────────────────────────────────────
 def export_excel(df: pd.DataFrame) -> bytes:
     buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:  # requires: pip install openpyxl
         cols_job = [c for c in [
             "date","receipt_no","customer_name","customer_phone",
             "section","model","model_btu","base_price","discount",
@@ -1253,7 +1266,7 @@ if page == "🔧 คลังเออเร่อแอร์":
     st.divider()
     if st.button("📥 Export คลังเออเร่อ Excel", use_container_width=True):
         buf = io.BytesIO()
-        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:  # requires: pip install openpyxl
             all_rows = []
             for brand, errors in ERROR_DB.items():
                 for e in errors:
