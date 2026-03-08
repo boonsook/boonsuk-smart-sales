@@ -1312,6 +1312,44 @@ if page == "🛠️ รับงานซ่อม/บริการ":
                 st.success(f"✅ บันทึกใบงานสำเร็จ! ลูกค้า: {sv_name.strip()}")
                 st.balloons()
 
+                # ── LINE share ──────────────────────────
+                price_text = f"{fmt_baht(int(sv_price))} บาท" if int(sv_price) > 0 else "ยังไม่ระบุ"
+                line_text = "\n".join([
+                    f"🛠️ ใบรับงาน — {STORE_NAME}",
+                    f"{'─'*30}",
+                    f"📅 วันที่: {sv_date.strftime('%d/%m/%Y')}",
+                    f"🔧 ประเภทงาน: {sv_type}",
+                    f"{'─'*30}",
+                    f"👤 ชื่อ: {sv_name.strip()}",
+                    f"📞 เบอร์: {sv_phone.strip()}",
+                    f"📍 ที่อยู่: {sv_addr.strip() or '-'}",
+                    f"{'─'*30}",
+                    f"⚡ อาการ/งาน: {sv_symptom.strip()}",
+                    f"📌 หมายเหตุ: {sv_note.strip() or '-'}",
+                    f"💰 ค่าบริการ: {price_text}",
+                    f"📊 สถานะ: {sv_status}",
+                    f"{'─'*30}",
+                    f"📞 ติดต่อร้าน: {STORE_PHONE}",
+                    f"🌐 {STORE_WEB}",
+                ])
+                line_url = line_share_link(line_text)
+
+                st.divider()
+                st.markdown("### 📤 ส่งใบรับงานให้ลูกค้า")
+                bc1, bc2 = st.columns(2)
+                with bc1:
+                    st.markdown(
+                        f'<a href="{line_url}" target="_blank">'
+                        f'<button style="width:100%;height:3rem;background:#06C755;color:white;'
+                        f'border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">'
+                        f'💚 ส่ง LINE</button></a>',
+                        unsafe_allow_html=True
+                    )
+                with bc2:
+                    st.markdown("**ข้อความที่จะส่ง:**")
+                    with st.expander("ดูข้อความ LINE"):
+                        st.code(line_text, language=None)
+
     # ── Tab 2: รายการงาน ─────────────────────────
     with tab_list:
         df_sv = load_service()
