@@ -20,6 +20,7 @@ def _ensure(pkg, import_name=None):
 
 _ensure("openpyxl")
 _ensure("fpdf2", "fpdf")
+_ensure("supabase")
 
 # ──────────────────────────────────────────────
 # PAGE CONFIG
@@ -227,7 +228,25 @@ def login_page():
         st.caption("admin / boonsuk2024  |  staff / staff1234")
 
 # ──────────────────────────────────────────────
-# DATA LAYER
+# SUPABASE CONNECTION
+# ──────────────────────────────────────────────
+def _get_supabase():
+    """คืนค่า Supabase client ถ้ามี config, ไม่งั้น None"""
+    try:
+        from supabase import create_client
+        url = st.secrets.get("SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
+        key = st.secrets.get("SUPABASE_KEY", os.environ.get("SUPABASE_KEY", ""))
+        if url and key and url.startswith("https://"):
+            return create_client(url, key)
+    except Exception:
+        pass
+    return None
+
+def _use_supabase() -> bool:
+    return _get_supabase() is not None
+
+# ──────────────────────────────────────────────
+# DATA LAYER  (CSV fallback → Supabase)
 # ──────────────────────────────────────────────
 def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     defaults = {"section":"","model":"","w_install":"","w_parts":"","w_comp":"",
@@ -247,11 +266,27 @@ def clean_df(df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_data(ttl=60)
 def load_stock() -> pd.DataFrame:
     base = clean_df(pd.DataFrame(PRODUCTS))
+    # ── Supabase ──
+    if _use_supabase():
+        try:
+            sb   = _get_supabase()
+            rows = sb.table("stock").select("section,model,stock_qty").execute().data
+            if rows:
+                saved  = pd.DataFrame(rows)
+                saved["stock_qty"] = pd.to_numeric(saved["stock_qty"], errors="coerce").fillna(0).astype(int)
+                merged = base.merge(saved[["section","model","stock_qty"]], on=["section","model"],
+                                    how="left", suffixes=("","_s"))
+                merged["stock_qty"] = merged["stock_qty_s"].fillna(merged["stock_qty"]).astype(int)
+                return merged.drop(columns=["stock_qty_s"])
+        except Exception as e:
+            st.warning(f"Supabase load_stock: {e} — ใช้ข้อมูลเริ่มต้น")
+        return base
+    # ── CSV fallback ──
     if os.path.exists(STOCK_CSV):
         try:
             saved  = clean_df(pd.read_csv(STOCK_CSV, encoding="utf-8-sig"))
-            key    = ["section", "model"]
-            merged = base.merge(saved[key + ["stock_qty"]], on=key, how="left", suffixes=("","_s"))
+            merged = base.merge(saved[["section","model","stock_qty"]], on=["section","model"],
+                                how="left", suffixes=("","_s"))
             merged["stock_qty"] = merged["stock_qty_s"].fillna(merged["stock_qty"]).astype(int)
             return merged.drop(columns=["stock_qty_s"])
         except Exception:
@@ -260,10 +295,41 @@ def load_stock() -> pd.DataFrame:
 
 def save_stock(df: pd.DataFrame):
     cols = ["section","model","btu","price_install","w_install","w_parts","w_comp","stock_qty"]
+    # ── Supabase ──
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            for _, r in df[cols].iterrows():
+                row = r.to_dict()
+                # upsert โดยใช้ section+model เป็น key
+                existing = sb.table("stock").select("id").eq("section", row["section"]).eq("model", row["model"]).execute().data
+                if existing:
+                    sb.table("stock").update({"stock_qty": int(row["stock_qty"])}).eq("section", row["section"]).eq("model", row["model"]).execute()
+                else:
+                    sb.table("stock").insert({k: (int(v) if isinstance(v, (int, float)) else str(v)) for k, v in row.items()}).execute()
+            st.cache_data.clear(); return
+        except Exception as e:
+            st.warning(f"Supabase save_stock: {e} — บันทึก CSV แทน")
+    # ── CSV fallback ──
     df[cols].to_csv(STOCK_CSV, index=False, encoding="utf-8-sig")
     st.cache_data.clear()
 
 def load_log() -> pd.DataFrame:
+    # ── Supabase ──
+    if _use_supabase():
+        try:
+            sb   = _get_supabase()
+            rows = sb.table("jobs").select("*").order("created_at", desc=True).execute().data
+            if rows:
+                df = pd.DataFrame(rows)
+                if "status"      not in df.columns: df["status"]      = JOB_STATUSES[0]
+                if "receipt_no"  not in df.columns: df["receipt_no"]  = ""
+                if "paid_amount" not in df.columns: df["paid_amount"] = df.get("net_total", 0)
+                return df
+            return pd.DataFrame()
+        except Exception as e:
+            st.warning(f"Supabase load_log: {e} — ใช้ CSV แทน")
+    # ── CSV fallback ──
     if os.path.exists(LOG_CSV):
         try:
             df = pd.read_csv(LOG_CSV, encoding="utf-8-sig")
@@ -276,6 +342,24 @@ def load_log() -> pd.DataFrame:
     return pd.DataFrame()
 
 def save_log(df: pd.DataFrame):
+    # ── Supabase: sync ทั้ง table (update status/receipt/paid ทีละ row) ──
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            for _, r in df.iterrows():
+                row = r.to_dict()
+                sb_id = row.get("id")
+                update_data = {
+                    "status":      str(row.get("status", "")),
+                    "receipt_no":  str(row.get("receipt_no", "")),
+                    "paid_amount": int(row.get("paid_amount", 0)),
+                }
+                if sb_id:
+                    sb.table("jobs").update(update_data).eq("id", int(sb_id)).execute()
+            return
+        except Exception as e:
+            st.warning(f"Supabase save_log: {e} — บันทึก CSV แทน")
+    # ── CSV fallback ──
     df.to_csv(LOG_CSV, index=False, encoding="utf-8-sig")
 
 def log_customer_job(quote: dict):
@@ -284,10 +368,43 @@ def log_customer_job(quote: dict):
     record.setdefault("receipt_no",  "")
     record.setdefault("paid_amount", record.get("net_total", 0))
     record.setdefault("saved_by",    st.session_state.get("username",""))
+    # ── Supabase ──
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            insert_cols = [
+                "date","customer_name","customer_phone","customer_address",
+                "section","model","model_btu","base_price","discount","extra_install",
+                "net_total","paid_amount","status","receipt_no","saved_by",
+                "room_w","room_l","room_h","sun","people","btu","suggest_cap",
+                "w_install","w_parts","w_comp"
+            ]
+            row = {}
+            for c in insert_cols:
+                val = record.get(c, "")
+                if isinstance(val, float): val = int(val) if val == int(val) else val
+                row[c] = val
+            sb.table("jobs").insert(row).execute()
+            return
+        except Exception as e:
+            st.warning(f"Supabase log_job: {e} — บันทึก CSV แทน")
+    # ── CSV fallback ──
     pd.DataFrame([record]).to_csv(
         LOG_CSV, mode="a", header=not os.path.exists(LOG_CSV),
         index=False, encoding="utf-8-sig"
     )
+
+def delete_job(job_id):
+    """ลบงานจาก Supabase หรือ DataFrame"""
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            sb.table("jobs").delete().eq("id", int(job_id)).execute()
+            return True
+        except Exception as e:
+            st.warning(f"Supabase delete: {e}")
+            return False
+    return False
 
 # ──────────────────────────────────────────────
 # EXCEL EXPORT
