@@ -39,7 +39,7 @@ STORE_NAME    = "ร้านบุญสุขอิเล็กทรอนิ
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # ← 33208000111106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
@@ -65,8 +65,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -232,32 +232,28 @@ def suggest_capacity(btu):
 # ──────────────────────────────────────────────
 def check_login():
     if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-        st.session_state.username  = ""
+        st.session_state.logged_in  = False
+        st.session_state.username   = ""
+        st.session_state.role       = ""
+        st.session_state.full_name  = ""
+        st.session_state.user_phone = ""
 
 def login_page():
     st.markdown("""
     <style>
-    /* ซ่อน sidebar ตอน login */
     [data-testid="stSidebar"] { display:none !important; }
-    /* login card */
     .login-wrap {
-        max-width: 420px;
-        margin: 40px auto 0 auto;
-        background: #fff;
-        border-radius: 20px;
+        max-width: 440px; margin: 30px auto 0 auto;
+        background: #fff; border-radius: 20px;
         box-shadow: 0 4px 24px #0002;
-        padding: 36px 32px 28px 32px;
-        text-align: center;
+        padding: 32px 32px 24px 32px; text-align: center;
+        border-top: 5px solid #1565c0;
     }
-    .login-logo { font-size: 56px; margin-bottom: 4px; }
-    .login-title { font-size: 22px; font-weight: 800; color: #0d47a1; margin: 0; }
-    .login-sub   { font-size: 13px; color: #888; margin-bottom: 24px; }
-    /* mobile */
+    .login-logo  { font-size: 52px; margin-bottom: 4px; }
+    .login-title { font-size: 20px; font-weight: 800; color: #0d47a1; margin: 0; }
+    .login-sub   { font-size: 13px; color: #888; margin-bottom: 16px; }
     @media (max-width: 600px) {
-        .login-wrap { margin: 16px 12px; padding: 28px 18px 22px 18px; }
-        .login-title { font-size: 18px; }
-        .login-logo  { font-size: 44px; }
+        .login-wrap { margin: 12px 8px; padding: 24px 14px; }
     }
     </style>
     <div class="login-wrap">
@@ -267,22 +263,66 @@ def login_page():
     </div>
     """, unsafe_allow_html=True)
 
-    # center column — full width on mobile
     _, col, _ = st.columns([1, 3, 1])
     with col:
-        st.markdown("#### 🔐 เข้าสู่ระบบ")
-        username = st.text_input("👤 ชื่อผู้ใช้", placeholder="admin หรือ staff", label_visibility="visible")
-        password = st.text_input("🔑 รหัสผ่าน", type="password", label_visibility="visible")
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚀 เข้าสู่ระบบ", use_container_width=True, type="primary"):
-            pw_hash = hashlib.sha256(password.encode()).hexdigest()
-            if username in USERS and USERS[username] == pw_hash:
-                st.session_state.logged_in = True
-                st.session_state.username  = username
-                st.rerun()
-            else:
-                st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-        st.caption("🔒 กรุณาติดต่อผู้ดูแลระบบเพื่อขอรหัสผ่าน")
+        tab_staff, tab_cust = st.tabs(["👔 พนักงาน/แอดมิน", "👤 ลูกค้า"])
+
+        # ── Tab พนักงาน ──────────────────────────
+        with tab_staff:
+            st.markdown("#### 🔐 เข้าสู่ระบบ")
+            username = st.text_input("👤 ชื่อผู้ใช้", placeholder="admin หรือ staff", key="lg_user")
+            password = st.text_input("🔑 รหัสผ่าน", type="password", key="lg_pw")
+            if st.button("🚀 เข้าสู่ระบบ", use_container_width=True, type="primary", key="lg_btn"):
+                pw_hash = hashlib.sha256(password.encode()).hexdigest()
+                if username in USERS and USERS[username] == pw_hash:
+                    role = "admin" if username == "admin" else "staff"
+                    st.session_state.logged_in  = True
+                    st.session_state.username   = username
+                    st.session_state.role       = role
+                    st.session_state.full_name  = username
+                    st.session_state.user_phone = ""
+                    st.rerun()
+                else:
+                    st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+            st.caption("🔒 กรุณาติดต่อผู้ดูแลระบบเพื่อขอรหัสผ่าน")
+
+        # ── Tab ลูกค้า ────────────────────────────
+        with tab_cust:
+            cust_tab1, cust_tab2 = st.tabs(["🔑 เข้าสู่ระบบ", "📝 สมัครสมาชิก"])
+
+            with cust_tab1:
+                st.markdown("#### 📞 เข้าสู่ระบบด้วยเบอร์โทร")
+                c_phone = st.text_input("📞 เบอร์โทรศัพท์", placeholder="08X-XXXXXXX", key="c_login_phone")
+                if st.button("🚀 เข้าสู่ระบบ", use_container_width=True, type="primary", key="c_login_btn"):
+                    if not c_phone.strip():
+                        st.error("กรุณากรอกเบอร์โทร")
+                    else:
+                        ok, user, msg = customer_login(c_phone)
+                        if ok:
+                            st.session_state.logged_in  = True
+                            st.session_state.username   = user["phone"]
+                            st.session_state.role       = "customer"
+                            st.session_state.full_name  = user["full_name"]
+                            st.session_state.user_phone = user["phone"]
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+
+            with cust_tab2:
+                st.markdown("#### 📝 สมัครสมาชิกใหม่")
+                r_name  = st.text_input("👤 ชื่อ-นามสกุล", placeholder="ชื่อจริง", key="c_reg_name")
+                r_phone = st.text_input("📞 เบอร์โทร", placeholder="08X-XXXXXXX", key="c_reg_phone")
+                if st.button("✅ สมัครสมาชิก", use_container_width=True, type="primary", key="c_reg_btn"):
+                    if not r_name.strip() or not r_phone.strip():
+                        st.error("กรุณากรอกชื่อและเบอร์โทร")
+                    else:
+                        ok, msg = customer_register(r_name, r_phone)
+                        if ok:
+                            st.success(f"✅ {msg} กรุณาเข้าสู่ระบบด้วยเบอร์โทรได้เลยครับ")
+                            # แจ้งร้านทาง LINE
+                            line_notify_owner(f"👤 ลูกค้าใหม่สมัครสมาชิก!\n{r_name.strip()} | {r_phone.strip()}")
+                        else:
+                            st.error(f"❌ {msg}")
 
 # ──────────────────────────────────────────────
 # SUPABASE CONNECTION
@@ -531,6 +571,42 @@ def log_service_job(rec: dict):
         header=not os.path.exists(SERVICE_CSV),
         index=False, encoding="utf-8-sig"
     )
+
+# ──────────────────────────────────────────────
+# CUSTOMER AUTH (Supabase users table)
+# ──────────────────────────────────────────────
+def customer_register(full_name: str, phone: str) -> tuple:
+    """สมัครสมาชิกลูกค้า คืน (ok, message)"""
+    phone = phone.strip().replace("-","").replace(" ","")
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            exist = sb.table("users").select("id").eq("phone", phone).execute().data
+            if exist:
+                return False, "เบอร์นี้สมัครแล้วครับ กรุณาเข้าสู่ระบบ"
+            sb.table("users").insert({
+                "full_name": full_name.strip(),
+                "phone": phone,
+                "role": "customer"
+            }).execute()
+            return True, "สมัครสำเร็จ!"
+        except Exception as e:
+            return False, f"เกิดข้อผิดพลาด: {e}"
+    return False, "ไม่มีการเชื่อมต่อ Supabase"
+
+def customer_login(phone: str) -> tuple:
+    """Login ด้วยเบอร์โทร คืน (ok, user_dict, message)"""
+    phone = phone.strip().replace("-","").replace(" ","")
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            rows = sb.table("users").select("*").eq("phone", phone).execute().data
+            if rows:
+                return True, rows[0], "เข้าสู่ระบบสำเร็จ"
+            return False, {}, "ไม่พบเบอร์นี้ในระบบ กรุณาสมัครสมาชิกก่อน"
+        except Exception as e:
+            return False, {}, f"เกิดข้อผิดพลาด: {e}"
+    return False, {}, "ไม่มีการเชื่อมต่อ Supabase"
 
 # ──────────────────────────────────────────────
 # EXCEL EXPORT
@@ -915,19 +991,37 @@ with st.sidebar:
     st.markdown(f"📞 **{STORE_PHONE}**")
     st.markdown(f"🌐 [Facebook]({STORE_WEB})")
     st.divider()
-    page = st.radio("เมนู", [
-        "🧾 สร้างใบเสนอราคา",
-        "🛠️ รับงานซ่อม/บริการ",
-        "📋 จัดการงาน / สถานะ",
-        "📦 จัดการสต๊อก",
-        "📊 Dashboard",
-        "🔧 คลังเออเร่อแอร์",
-    ] + (["⚙️ นำเข้า/ส่งออกข้อมูล"] if st.session_state.get("username") == "admin" else []),
-    label_visibility="collapsed")
+    _role = st.session_state.get("role","staff")
+    _name = st.session_state.get("full_name", st.session_state.get("username",""))
+
+    if _role == "customer":
+        _menus = [
+            "🧾 ขอใบเสนอราคาแอร์",
+            "🛠️ แจ้งซ่อม/บริการ",
+            "📋 งานของฉัน",
+        ]
+    else:
+        _menus = [
+            "🧾 สร้างใบเสนอราคา",
+            "🛠️ รับงานซ่อม/บริการ",
+            "📋 จัดการงาน / สถานะ",
+            "📦 จัดการสต๊อก",
+            "📊 Dashboard",
+            "🔧 คลังเออเร่อแอร์",
+        ]
+        if _role == "admin":
+            _menus.append("⚙️ นำเข้า/ส่งออกข้อมูล")
+
+    page = st.radio("เมนู", _menus, label_visibility="collapsed")
     st.divider()
-    st.caption(f"👤 ล็อกอิน: **{st.session_state.username}**")
+    if _role == "customer":
+        st.caption(f"👤 สวัสดี **{_name}**")
+    else:
+        st.caption(f"👤 ล็อกอิน: **{st.session_state.username}** ({_role})")
     if st.button("🚪 ออกจากระบบ", use_container_width=True):
-        st.session_state.logged_in = False; st.session_state.username = ""; st.rerun()
+        for k in ["logged_in","username","role","full_name","user_phone"]:
+            st.session_state[k] = "" if k != "logged_in" else False
+        st.rerun()
 
 df_all = load_stock()
 
@@ -1591,6 +1685,139 @@ if page == "🛠️ รับงานซ่อม/บริการ":
             st.download_button("⬇️ Export CSV ใบงานบริการ", data=csv_sv,
                                file_name=f"service_jobs_{date.today().strftime('%Y%m%d')}.csv",
                                mime="text/csv", use_container_width=True)
+
+# ══════════════════════════════════════════════
+# PAGE: ลูกค้า — ขอใบเสนอราคา
+# ══════════════════════════════════════════════
+if page == "🧾 ขอใบเสนอราคาแอร์":
+    cust_name  = st.session_state.get("full_name","")
+    cust_phone = st.session_state.get("user_phone","")
+    st.title("🧾 ขอใบเสนอราคาแอร์")
+    st.info(f"👤 สวัสดีคุณ **{cust_name}** | 📞 {cust_phone}")
+
+    with st.form("cust_quote_form"):
+        st.subheader("📍 ข้อมูลการติดตั้ง")
+        f1, f2 = st.columns(2)
+        cq_addr    = f1.text_input("📍 ที่อยู่ติดตั้ง")
+        cq_note    = f2.text_input("📌 หมายเหตุ (ถ้ามี)")
+
+        st.subheader("🏠 ขนาดห้อง")
+        room_type_c = st.selectbox("ประเภทห้อง", list(BTU_FACTORS.keys()))
+        r1, r2, r3  = st.columns(3)
+        cq_w = r1.number_input("กว้าง (ม.)", min_value=0.0, step=0.1)
+        cq_l = r2.number_input("ยาว (ม.)",   min_value=0.0, step=0.1)
+        cq_h = r3.number_input("สูง (ม.)",   min_value=0.0, step=0.1, value=2.6)
+        s1, s2 = st.columns(2)
+        cq_sun    = s1.selectbox("แดด/ทิศ", ["ไม่โดนแดด","โดนแดด (ทิศตะวันตก/ใต้/กระจก)"])
+        cq_people = s2.number_input("จำนวนคน", min_value=1, step=1, value=1)
+
+        submitted_cq = st.form_submit_button("📨 ส่งคำขอใบเสนอราคา", use_container_width=True, type="primary")
+
+    if submitted_cq:
+        if not cq_addr.strip():
+            st.error("กรุณากรอกที่อยู่ติดตั้ง")
+        elif cq_w <= 0 or cq_l <= 0:
+            st.error("กรุณากรอกขนาดห้อง")
+        else:
+            sun_val = "โดนแดด" if "โดนแดด" in cq_sun else "ไม่โดนแดด"
+            btu_c   = calculate_btu(cq_w, cq_l, cq_h, sun_val, int(cq_people), room_type_c)
+            cap_c   = suggest_capacity(btu_c)
+            rec = {
+                "date":             date.today().strftime("%Y-%m-%d"),
+                "service_type":     "🧾 ขอใบเสนอราคาแอร์",
+                "customer_name":    cust_name,
+                "customer_phone":   cust_phone,
+                "customer_address": cq_addr.strip(),
+                "symptom":          f"ห้อง: {room_type_c} | {cq_w}x{cq_l}x{cq_h}ม. | BTU: {btu_c:,} | แนะนำ: {cap_c:,} BTU",
+                "note":             cq_note.strip(),
+                "price":            0,
+                "status":           "📋 รอดำเนินการ",
+                "saved_by":         cust_phone,
+            }
+            log_service_job(rec)
+            st.success(f"✅ ส่งคำขอสำเร็จ! ทางร้านจะติดต่อกลับเร็วๆ นี้ครับ")
+            st.info(f"🌡️ BTU แนะนำ: **{cap_c:,} BTU** ({room_type_c})")
+            line_notify_owner(
+                f"🧾 ลูกค้าขอใบเสนอราคา!\n"
+                f"👤 {cust_name} | 📞 {cust_phone}\n"
+                f"📍 {cq_addr.strip()}\n"
+                f"❄️ แนะนำ {cap_c:,} BTU\n"
+                f"🔗 {APP_URL}"
+            )
+
+# ══════════════════════════════════════════════
+# PAGE: ลูกค้า — แจ้งซ่อม/บริการ
+# ══════════════════════════════════════════════
+elif page == "🛠️ แจ้งซ่อม/บริการ":
+    cust_name  = st.session_state.get("full_name","")
+    cust_phone = st.session_state.get("user_phone","")
+    st.title("🛠️ แจ้งซ่อม/บริการ")
+    st.info(f"👤 สวัสดีคุณ **{cust_name}** | 📞 {cust_phone}")
+
+    with st.form("cust_service_form"):
+        cs_type    = st.selectbox("🔧 ประเภทงาน", SERVICE_TYPES)
+        cs_addr    = st.text_area("📍 ที่อยู่", placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด", height=70)
+        cs_symptom = st.text_area("⚡ อาการเสีย / รายละเอียด", height=100)
+        cs_note    = st.text_input("📌 หมายเหตุ (ถ้ามี)")
+        submitted_cs = st.form_submit_button("📨 ส่งคำแจ้งซ่อม", use_container_width=True, type="primary")
+
+    if submitted_cs:
+        if not cs_symptom.strip():
+            st.error("กรุณากรอกอาการเสีย/รายละเอียด")
+        else:
+            rec = {
+                "date":             date.today().strftime("%Y-%m-%d"),
+                "service_type":     cs_type,
+                "customer_name":    cust_name,
+                "customer_phone":   cust_phone,
+                "customer_address": cs_addr.strip(),
+                "symptom":          cs_symptom.strip(),
+                "note":             cs_note.strip(),
+                "price":            0,
+                "status":           "📋 รอดำเนินการ",
+                "saved_by":         cust_phone,
+            }
+            log_service_job(rec)
+            st.success("✅ แจ้งซ่อมสำเร็จ! ทางร้านจะติดต่อกลับเร็วๆ นี้ครับ")
+            st.balloons()
+            line_notify_owner(
+                f"🛠️ ลูกค้าแจ้งซ่อม!\n"
+                f"🔧 {cs_type}\n"
+                f"👤 {cust_name} | 📞 {cust_phone}\n"
+                f"⚡ {cs_symptom.strip()[:60]}\n"
+                f"🔗 {APP_URL}"
+            )
+
+# ══════════════════════════════════════════════
+# PAGE: ลูกค้า — งานของฉัน
+# ══════════════════════════════════════════════
+elif page == "📋 งานของฉัน":
+    cust_name  = st.session_state.get("full_name","")
+    cust_phone = st.session_state.get("user_phone","")
+    st.title("📋 งานของฉัน")
+    st.info(f"👤 **{cust_name}** | 📞 {cust_phone}")
+
+    df_my = load_service()
+    if not df_my.empty and "customer_phone" in df_my.columns:
+        phone_clean = cust_phone.replace("-","").replace(" ","")
+        df_my = df_my[df_my["customer_phone"].astype(str).str.replace("-","").str.replace(" ","") == phone_clean]
+
+    if df_my.empty:
+        st.info("ยังไม่มีงานครับ กดเมนูด้านซ้ายเพื่อแจ้งงานได้เลย")
+    else:
+        st.markdown(f"**พบ {len(df_my)} งาน**")
+        for _, r in df_my.iterrows():
+            st2 = str(r.get("status",""))
+            color = {"📋 รอดำเนินการ":"#1565c0","🔧 กำลังดำเนินการ":"#e65100",
+                     "✅ เสร็จแล้ว":"#2e7d32","💰 รับเงินแล้ว":"#6a1b9a","❌ ยกเลิก":"#c62828"}.get(st2,"#888")
+            with st.expander(f"{r.get('service_type','')} | {r.get('date','')} | {st2}"):
+                st.markdown(f"**⚡ อาการ:** {r.get('symptom','-')}")
+                if r.get("note",""):
+                    st.markdown(f"**📌 หมายเหตุ:** {r.get('note','')}")
+                if int(r.get("price",0)) > 0:
+                    st.markdown(f"**💰 ค่าบริการ:** {fmt_baht(r.get('price',0))} บาท")
+                st.markdown(f"<span style='color:{color};font-weight:700'>● สถานะ: {st2}</span>",
+                            unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # ERROR CODE DATABASE
