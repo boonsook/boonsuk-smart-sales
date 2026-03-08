@@ -40,6 +40,7 @@ STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
 STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
+APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 INSTALL_CONDITIONS = (
     "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
@@ -761,19 +762,25 @@ def build_pdf_receipt(q: dict, receipt_no: str, is_tax: bool = False) -> bytes:
 # ──────────────────────────────────────────────
 def make_line_text(q: dict) -> str:
     return "\n".join([
-        f"ใบเสนอราคา - {STORE_NAME}",
-        f"วันที่: {q['date']}",
-        f"ลูกค้า: {safe_text(q['customer_name'])}",
-        f"โทร: {safe_text(q['customer_phone'])}",
-        f"รุ่น: {safe_text(q['model'])}  ({safe_text(q['section'])})",
-        f"BTU รุ่น: {q['model_btu']:,} BTU",
-        f"ราคาพร้อมติดตั้ง: {fmt_baht(q['base_price'])} บาท",
-        f"ส่วนลด: {fmt_baht(q['discount'])} บาท",
-        f"ค่าติดตั้งเพิ่ม: {fmt_baht(q['extra_install'])} บาท",
-        f"รวมสุทธิ: {fmt_baht(q['net_total'])} บาท",
-        "",
-        f"ติดต่อร้าน: {STORE_PHONE}",
-        STORE_WEB,
+        f"🧾 ใบเสนอราคา — {STORE_NAME}",
+        f"{'─'*30}",
+        f"📅 วันที่: {q['date']}",
+        f"👤 ลูกค้า: {safe_text(q['customer_name'])}",
+        f"📞 โทร: {safe_text(q['customer_phone'])}",
+        f"{'─'*30}",
+        f"❄️ รุ่น: {safe_text(q['model'])}  ({safe_text(q['section'])})",
+        f"🌡️ BTU รุ่น: {q['model_btu']:,} BTU",
+        f"{'─'*30}",
+        f"💰 ราคาพร้อมติดตั้ง: {fmt_baht(q['base_price'])} บาท",
+        f"🎁 ส่วนลด: {fmt_baht(q['discount'])} บาท",
+        f"🔧 ค่าติดตั้งเพิ่ม: {fmt_baht(q['extra_install'])} บาท",
+        f"✅ รวมสุทธิ: {fmt_baht(q['net_total'])} บาท",
+        f"{'─'*30}",
+        f"📞 ติดต่อร้าน: {STORE_PHONE}",
+        f"🌐 {STORE_WEB}",
+        f"",
+        f"📋 ติดตามสถานะงาน:",
+        f"{APP_URL}",
     ])
 
 def line_share_link(text):
@@ -1453,6 +1460,9 @@ if page == "🛠️ รับงานซ่อม/บริการ":
                     f"{'─'*30}",
                     f"📞 ติดต่อร้าน: {STORE_PHONE}",
                     f"🌐 {STORE_WEB}",
+                    f"",
+                    f"📋 ติดตามสถานะงาน:",
+                    f"{APP_URL}",
                 ])
                 line_url = line_share_link(line_text)
 
