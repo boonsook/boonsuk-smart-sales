@@ -184,13 +184,36 @@ def safe_text(value) -> str:
         return "-"
     return str(value).replace("\r", "").strip() or "-"
 
-def calculate_btu(w, l, h, sun, people):
-    base = w * l * 900
+# ── ตัวแปรความร้อน (Factor) ตามมาตรฐาน ──────
+BTU_FACTORS = {
+    "ห้องนอน (ไม่โดนแดด)":              750,
+    "ห้องนอน (โดนแดดบ้าง)":             825,
+    "ห้องทำงาน / ห้องนั่งเล่น":          850,
+    "ห้องที่โดนแดดมาก / ห้องกระจก":      950,
+    "ร้านค้า / ออฟฟิศโดนแดด":           1000,
+    "ร้านอาหาร / ห้องประชุม / ร้านทำผม": 1200,
+    "ร้านปิ้งย่าง / ห้องที่มีความร้อนสูง": 1400,
+}
+
+def calculate_btu(w, l, h, sun, people, room_type="ห้องทำงาน / ห้องนั่งเล่น"):
+    # ── 1. เลือก factor ตามประเภทห้อง ──
+    factor = BTU_FACTORS.get(room_type, 850)
+
+    # ── 2. คำนวณ base จากพื้นที่ ──
+    area = w * l
+    base = area * factor
+
+    # ── 3. เพดานสูงเกิน 2.7 ม. บวก 10% ──
     if h > 2.7:
         base *= 1.10
+
+    # ── 4. ทิศตะวันตก/ใต้ หรือกระจกโดนแดด บวก 10% ──
     if sun == "โดนแดด":
-        base *= 1.15
-    base += max(0, people - 1) * 600
+        base *= 1.10
+
+    # ── 5. คนเพิ่มจาก 1 คน บวกคนละ 700 BTU ──
+    base += max(0, people - 1) * 700
+
     return int(round(base))
 
 def suggest_capacity(btu):
@@ -905,20 +928,45 @@ if page == "🧾 สร้างใบเสนอราคา":
         customer_address = st.text_area("ที่อยู่/สถานที่ติดตั้ง", height=68)
 
     with st.expander("🏠 ขั้นตอน 2 — ขนาดห้องและ BTU", expanded=True):
+        # ── ประเภทห้อง ──
+        room_type = st.selectbox("🏠 ประเภทห้อง", list(BTU_FACTORS.keys()),
+            help="เลือกประเภทห้องเพื่อใช้ค่า Factor ที่เหมาะสม")
+        factor_used = BTU_FACTORS[room_type]
+        st.caption(f"Factor ที่ใช้: **{factor_used}** BTU/ตร.ม.")
+
         c1, c2, c3 = st.columns(3)
         room_w = c1.number_input("กว้าง (เมตร)", min_value=0.0, step=0.1)
         room_l = c2.number_input("ยาว (เมตร)",   min_value=0.0, step=0.1)
         room_h = c3.number_input("สูง (เมตร)",   min_value=0.0, step=0.1, value=2.6)
         c4, c5 = st.columns(2)
-        sun    = c4.selectbox("ห้องโดนแดด?", ["ไม่โดนแดด","โดนแดด"])
-        people = c5.number_input("จำนวนคน", min_value=1, step=1, value=1)
+        sun    = c4.selectbox("ทิศ/แดด?", ["ไม่โดนแดด","โดนแดด (ทิศตะวันตก/ใต้/กระจก)"],
+                              help="ทิศตะวันตก/ใต้ หรือห้องกระจก บวกเพิ่ม 10%")
+        people = c5.number_input("จำนวนคนใช้งาน", min_value=1, step=1, value=1)
+
         btu = suggest_cap = None
         if room_w > 0 and room_l > 0:
-            btu = calculate_btu(room_w, room_l, room_h, sun, int(people))
+            sun_val = "โดนแดด" if "โดนแดด" in sun else "ไม่โดนแดด"
+            btu = calculate_btu(room_w, room_l, room_h, sun_val, int(people), room_type)
             suggest_cap = suggest_capacity(btu)
-            m1, m2 = st.columns(2)
-            m1.metric("BTU ที่คำนวณได้", f"{btu:,} BTU")
-            m2.metric("ขนาดแอร์แนะนำ",  f"{suggest_cap:,} BTU")
+            area = room_w * room_l
+            m1, m2, m3 = st.columns(3)
+            m1.metric("พื้นที่ห้อง", f"{area:.1f} ตร.ม.")
+            m2.metric("BTU ที่คำนวณได้", f"{btu:,} BTU")
+            m3.metric("ขนาดแอร์แนะนำ", f"{suggest_cap:,} BTU")
+
+            # ── สูตรโชว์ให้ลูกค้าเข้าใจ ──
+            with st.expander("📐 ดูสูตรคำนวณ"):
+                st.markdown(f"""
+| รายการ | ค่า |
+|--------|-----|
+| พื้นที่ | {area:.1f} ตร.ม. |
+| Factor ({room_type}) | × {factor_used} |
+| เพดานสูง > 2.7 ม. | {"× 1.10 (+10%)" if room_h > 2.7 else "ไม่บวกเพิ่ม"} |
+| โดนแดด/ทิศตะวันตก | {"× 1.10 (+10%)" if "โดนแดด" in sun else "ไม่บวกเพิ่ม"} |
+| คนเพิ่ม {max(0,int(people)-1)} คน | +{max(0,int(people)-1)*700:,} BTU |
+| **BTU รวม** | **{btu:,} BTU** |
+| **แนะนำซื้อขนาด** | **{suggest_cap:,} BTU** |
+""")
         else:
             st.info("กรอกขนาดห้องเพื่อคำนวณ BTU")
 
