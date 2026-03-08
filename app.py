@@ -1,4 +1,6 @@
 import os
+import io
+import hashlib
 import zipfile
 import pandas as pd
 import streamlit as st
@@ -7,23 +9,27 @@ from urllib.parse import quote as urlquote
 from fpdf import FPDF
 
 # ──────────────────────────────────────────────
-# CONFIG
+# PAGE CONFIG
 # ──────────────────────────────────────────────
 st.set_page_config(
-    page_title="ร้านบุญสุข Smart Sales v4",
+    page_title="ร้านบุญสุข Smart Sales v5",
     page_icon="❄️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# ──────────────────────────────────────────────
+# CONSTANTS
+# ──────────────────────────────────────────────
 STORE_NAME    = "ร้านบุญสุขอิเล็กทรอนิกส์"
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
+STORE_TAX_ID  = ""   # ←3320800011106
 
 INSTALL_CONDITIONS = (
     "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 250 บาท\n"
-    "2) ท่อน้ำยาไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 500-800 บาท แล้วแต่ขนาดท่อน้ำยา\n"
+    "2) ท่อน้ำยาไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 400-800 บาท\n"
     "3) แถมท่อน้ำทิ้ง ไม่เกิน 6 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "4) แถมสายไฟ ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "5) แถมขาแขวนหรือขายาง สำหรับติดตั้งคอยล์ร้อน\n"
@@ -34,123 +40,113 @@ DATA_DIR  = "."
 STOCK_CSV = os.path.join(DATA_DIR, "boonsuk_stock.csv")
 LOG_CSV   = os.path.join(DATA_DIR, "boonsuk_customer_log.csv")
 
+# ── ผู้ใช้งาน ──────────────────────────────────
+# เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
+# สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
+USERS = {
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
+}
+
+JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
+LOW_STOCK_THRESHOLD = 2   # แจ้งเตือนเมื่อสต๊อก ≤ ค่านี้
+
 # ──────────────────────────────────────────────
 # PRODUCT CATALOGUE
 # ──────────────────────────────────────────────
 PRODUCTS = [
-    # Midea
     {"section":"Midea ฟิกส์speed","model":"Asmg09c","btu":9000,"price_install":19000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Midea ฟิกส์speed","model":"Asmg12j","btu":12000,"price_install":21500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Midea ฟิกส์speed","model":"Asaa18j","btu":18000,"price_install":27500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Midea ฟิกส์speed","model":"Asaa24j","btu":24000,"price_install":37500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Midea ฟิกส์speed","model":"Asaa30j","btu":30000,"price_install":43000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Fujitsu inverter
     {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asmg09jl","btu":8500,"price_install":15500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asmg12jl","btu":11900,"price_install":16500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa18jc","btu":17700,"price_install":23500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa24jc","btu":24200,"price_install":34500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa30cm","btu":27300,"price_install":40000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Fujitsu fix speed
     {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma09r32","btu":9100,"price_install":13800,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma12r32","btu":11500,"price_install":14500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma13r3","btu":13906,"price_install":16700,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma18r410","btu":18745,"price_install":23000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma24r410","btu":24508,"price_install":32000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma30r4","btu":28800,"price_install":35500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Carrier Explorer Inverter
     {"section":"Carrier Explorer Inverter","model":"Tvgs010","btu":9000,"price_install":15800,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Explorer Inverter","model":"Tvgs013","btu":12000,"price_install":18500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Explorer Inverter","model":"Tvgs016","btu":15000,"price_install":22500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Explorer Inverter","model":"Tvgs018","btu":18000,"price_install":26500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Explorer Inverter","model":"Tvgs024","btu":22000,"price_install":29500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Carrier Gemini
     {"section":"Carrier Gemini Inverter","model":"Tvegb010","btu":9000,"price_install":15000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Gemini Inverter","model":"Tvegb013","btu":12000,"price_install":17000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Gemini Inverter","model":"Tvegb018","btu":18000,"price_install":23500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Gemini Inverter","model":"Tvegb024","btu":22000,"price_install":27000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Carrier Gemini Inverter","model":"Tvegb025","btu":24000,"price_install":31500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Carrier Astrony
     {"section":"Carrier Astrony R32","model":"AAF010","btu":9000,"price_install":13000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
     {"section":"Carrier Astrony R32","model":"AAF013","btu":12000,"price_install":14000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
     {"section":"Carrier Astrony R32","model":"AAF018","btu":18000,"price_install":20500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
     {"section":"Carrier Astrony R32","model":"AAF025","btu":25000,"price_install":26500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    # Carrier Everest
     {"section":"Carrier Everest R32","model":"Tsgs010","btu":9000,"price_install":14000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
     {"section":"Carrier Everest R32","model":"Tsgs013","btu":12000,"price_install":15000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
     {"section":"Carrier Everest R32","model":"Tsgs018","btu":18000,"price_install":21000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
     {"section":"Carrier Everest R32","model":"Tsgs025","btu":24000,"price_install":27000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    # Mitsubishi Heavy Deluxe
     {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk10cvs","btu":9444,"price_install":15500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk13cvs","btu":12039,"price_install":18000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk19cvs","btu":19127,"price_install":29000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk25cvs","btu":25085,"price_install":38800,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Mitsubishi Heavy Standard
     {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk10cvv","btu":9239,"price_install":15000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk13cvv","btu":11634,"price_install":17500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk15cvv","btu":14457,"price_install":20800,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk18cvv","btu":17305,"price_install":25500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Mitsubishi Heavy Inverter
     {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk10yw","btu":8683,"price_install":16800,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk13yw","btu":11098,"price_install":21000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk15yw","btu":14457,"price_install":24000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk18yw","btu":17276,"price_install":28300,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk24yw","btu":23021,"price_install":38000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Gree Fairy
     {"section":"Gree Fairy Series R32","model":"Gwc09acc","btu":9000,"price_install":13500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Fairy Series R32","model":"Gwc12acc","btu":12000,"price_install":14700,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Fairy Series R32","model":"Gwc18acc","btu":18000,"price_install":22500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Fairy Series R32","model":"Gwc24acc","btu":24000,"price_install":26500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Gree Amber III
     {"section":"Gree Amber III R32","model":"Gwc09yb3","btu":9000,"price_install":11800,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Amber III R32","model":"Gwc12yc3","btu":12000,"price_install":13500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Amber III R32","model":"Gwc18yc3","btu":18000,"price_install":20500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Amber III R32","model":"Gwc24yc3","btu":24000,"price_install":24000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    # Gree Amber III Inverter
     {"section":"Gree Amber III Inverter R32","model":"Gwc09qb","btu":9000,"price_install":16000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Amber III Inverter R32","model":"Gwc12qb","btu":12000,"price_install":17000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Amber III Inverter R32","model":"Gwc18qb","btu":18000,"price_install":24000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
     {"section":"Gree Amber III Inverter R32","model":"Gwc24qb","btu":24000,"price_install":27300,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    # MAVELL ธรรมดา
     {"section":"MAVELL ระบบธรรมดา","model":"MVF-09","btu":9000,"price_install":11500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
     {"section":"MAVELL ระบบธรรมดา","model":"MVF-12","btu":12000,"price_install":13000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
     {"section":"MAVELL ระบบธรรมดา","model":"MVF-18","btu":18000,"price_install":18000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
     {"section":"MAVELL ระบบธรรมดา","model":"MVF-25","btu":24000,"price_install":22500,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    # MAVELL อินเวอร์เตอร์
     {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-09INV","btu":9000,"price_install":14000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
     {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-12 INV","btu":12000,"price_install":15000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
     {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-18 INV","btu":18000,"price_install":19800,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
     {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-25 INV","btu":24000,"price_install":26000,"w_install":"1 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    # Daikin SMASH
     {"section":"DAIKIN SMASH (2018)","model":"FTM 09 PV2S","btu":9000,"price_install":14500,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
     {"section":"DAIKIN SMASH (2018)","model":"FTM 13 PV2S","btu":12000,"price_install":17000,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
     {"section":"DAIKIN SMASH (2018)","model":"FTM 15 PV2S","btu":15000,"price_install":20000,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
     {"section":"DAIKIN SMASH (2018)","model":"FTM 18 PV2S","btu":18000,"price_install":25500,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
     {"section":"DAIKIN SMASH (2018)","model":"FTM 24 PV2S","btu":24000,"price_install":35500,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
     {"section":"DAIKIN SMASH (2018)","model":"FTM 28 PV2S","btu":28000,"price_install":37000,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    # Daikin SABAI
     {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 09 TV2S","btu":9000,"price_install":15500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 13 TV2S","btu":12000,"price_install":18500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 15 TV2S","btu":15000,"price_install":21000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 18 TV2S","btu":18000,"price_install":27000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 24 TV2S","btu":24000,"price_install":37000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Daikin SUPER SMILE
     {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 09 TV2S","btu":9000,"price_install":19000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 13 TV2S","btu":12000,"price_install":21000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 15 TV2S","btu":18000,"price_install":28500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 18 TV2S","btu":24000,"price_install":40500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 24 TV2S","btu":28000,"price_install":43500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Mitsubishi Electric Mr.Slim
     {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 09 VF","btu":9000,"price_install":15500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 13 VF","btu":13000,"price_install":18500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 15 VF","btu":15000,"price_install":22500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 18 VF","btu":18000,"price_install":27000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 24 VF","btu":24000,"price_install":40000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Mitsubishi HAPPY INVERTER
     {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 09 VF","btu":9000,"price_install":16800,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 13 VF","btu":13000,"price_install":19800,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 15 VF","btu":15000,"price_install":23500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 18 VF","btu":18000,"price_install":28500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    # Mitsubishi SLIM INVERTER
     {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 09 VF","btu":9000,"price_install":17700,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 13 VF","btu":13000,"price_install":21000,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
     {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 15 VF","btu":15000,"price_install":24500,"w_install":"1 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
@@ -167,39 +163,64 @@ def fmt_baht(x) -> str:
     except Exception:
         return str(x)
 
-
 def safe_text(value) -> str:
     if value is None:
         return "-"
     return str(value).replace("\r", "").strip() or "-"
 
-
-def calculate_btu(width: float, length: float, height: float, sun_exposure: str, people: int) -> int:
-    base = width * length * 900
-    if height > 2.7:
+def calculate_btu(w, l, h, sun, people):
+    base = w * l * 900
+    if h > 2.7:
         base *= 1.10
-    if sun_exposure == "โดนแดด":
+    if sun == "โดนแดด":
         base *= 1.15
     base += max(0, people - 1) * 600
     return int(round(base))
 
-
-def suggest_capacity(btu: int) -> int:
-    for step in [9000, 12000, 15000, 18000, 22000, 24000, 25000, 28000, 30000]:
-        if btu <= step:
-            return step
+def suggest_capacity(btu):
+    for s in [9000, 12000, 15000, 18000, 22000, 24000, 25000, 28000, 30000]:
+        if btu <= s:
+            return s
     return 30000
 
+# ──────────────────────────────────────────────
+# LOGIN
+# ──────────────────────────────────────────────
+def check_login():
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+        st.session_state.username  = ""
+
+def login_page():
+    st.markdown("""
+    <div style="max-width:400px;margin:80px auto;text-align:center;">
+        <h1>❄️ ร้านบุญสุขอิเล็กทรอนิกส์</h1>
+        <p style="color:#888;font-size:16px;">Smart Sales PRO v5</p>
+    </div>""", unsafe_allow_html=True)
+    col = st.columns([1, 2, 1])[1]
+    with col:
+        st.subheader("🔐 เข้าสู่ระบบ")
+        username = st.text_input("ชื่อผู้ใช้", placeholder="admin / staff")
+        password = st.text_input("รหัสผ่าน", type="password")
+        if st.button("เข้าสู่ระบบ", use_container_width=True, type="primary"):
+            pw_hash = hashlib.sha256(password.encode()).hexdigest()
+            if username in USERS and USERS[username] == pw_hash:
+                st.session_state.logged_in = True
+                st.session_state.username  = username
+                st.rerun()
+            else:
+                st.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+        st.caption("admin / boonsuk2024  |  staff / staff1234")
 
 # ──────────────────────────────────────────────
 # DATA LAYER
 # ──────────────────────────────────────────────
 def clean_df(df: pd.DataFrame) -> pd.DataFrame:
-    defaults = {"section": "", "model": "", "w_install": "", "w_parts": "", "w_comp": "",
-                "btu": 0, "price_install": 0, "stock_qty": 0}
-    for col, default in defaults.items():
+    defaults = {"section":"","model":"","w_install":"","w_parts":"","w_comp":"",
+                "btu":0,"price_install":0,"stock_qty":0}
+    for col, val in defaults.items():
         if col not in df.columns:
-            df[col] = default
+            df[col] = val
     df["section"]       = df["section"].astype(str).str.strip()
     df["model"]         = df["model"].astype(str).str.strip()
     df["btu"]           = pd.to_numeric(df["btu"], errors="coerce").fillna(0).astype(int)
@@ -209,219 +230,283 @@ def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df[(df["section"] != "") & (df["model"] != "")]
     return df.copy()
 
-
 @st.cache_data(ttl=60)
 def load_stock() -> pd.DataFrame:
     base = clean_df(pd.DataFrame(PRODUCTS))
     if os.path.exists(STOCK_CSV):
         try:
-            saved = clean_df(pd.read_csv(STOCK_CSV, encoding="utf-8-sig"))
-            key   = ["section", "model"]
-            merged = base.merge(saved[key + ["stock_qty"]], on=key, how="left", suffixes=("", "_s"))
+            saved  = clean_df(pd.read_csv(STOCK_CSV, encoding="utf-8-sig"))
+            key    = ["section", "model"]
+            merged = base.merge(saved[key + ["stock_qty"]], on=key, how="left", suffixes=("","_s"))
             merged["stock_qty"] = merged["stock_qty_s"].fillna(merged["stock_qty"]).astype(int)
             return merged.drop(columns=["stock_qty_s"])
         except Exception:
             pass
     return base
 
-
 def save_stock(df: pd.DataFrame):
-    cols = ["section", "model", "btu", "price_install", "w_install", "w_parts", "w_comp", "stock_qty"]
+    cols = ["section","model","btu","price_install","w_install","w_parts","w_comp","stock_qty"]
     df[cols].to_csv(STOCK_CSV, index=False, encoding="utf-8-sig")
     st.cache_data.clear()
-
 
 def load_log() -> pd.DataFrame:
     if os.path.exists(LOG_CSV):
         try:
-            return pd.read_csv(LOG_CSV, encoding="utf-8-sig")
+            df = pd.read_csv(LOG_CSV, encoding="utf-8-sig")
+            if "status"      not in df.columns: df["status"]      = JOB_STATUSES[0]
+            if "receipt_no"  not in df.columns: df["receipt_no"]  = ""
+            if "paid_amount" not in df.columns: df["paid_amount"] = df.get("net_total", 0)
+            return df
         except Exception:
             pass
     return pd.DataFrame()
 
+def save_log(df: pd.DataFrame):
+    df.to_csv(LOG_CSV, index=False, encoding="utf-8-sig")
 
 def log_customer_job(quote: dict):
-    record = {k: str(v).replace("\n", " | ") if isinstance(v, str) else v for k, v in quote.items()}
+    record = {k: str(v).replace("\n"," | ") if isinstance(v, str) else v for k, v in quote.items()}
+    record.setdefault("status",      JOB_STATUSES[0])
+    record.setdefault("receipt_no",  "")
+    record.setdefault("paid_amount", record.get("net_total", 0))
+    record.setdefault("saved_by",    st.session_state.get("username",""))
     pd.DataFrame([record]).to_csv(
-        LOG_CSV, mode="a", header=not os.path.exists(LOG_CSV), index=False, encoding="utf-8-sig"
+        LOG_CSV, mode="a", header=not os.path.exists(LOG_CSV),
+        index=False, encoding="utf-8-sig"
     )
 
+# ──────────────────────────────────────────────
+# EXCEL EXPORT
+# ──────────────────────────────────────────────
+def export_excel(df: pd.DataFrame) -> bytes:
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        cols_job = [c for c in [
+            "date","receipt_no","customer_name","customer_phone",
+            "section","model","model_btu","base_price","discount",
+            "extra_install","net_total","paid_amount","status","saved_by"
+        ] if c in df.columns]
+        df_out = df[cols_job].copy()
+        rename = {
+            "date":"วันที่","receipt_no":"เลขใบเสร็จ","customer_name":"ชื่อลูกค้า",
+            "customer_phone":"เบอร์โทร","section":"ซีรีส์","model":"รุ่น",
+            "model_btu":"BTU","base_price":"ราคาพร้อมติดตั้ง","discount":"ส่วนลด",
+            "extra_install":"ติดตั้งเพิ่ม","net_total":"รวมสุทธิ",
+            "paid_amount":"รับเงินแล้ว","status":"สถานะ","saved_by":"บันทึกโดย"
+        }
+        df_out.rename(columns=rename, inplace=True)
+        df_out.to_excel(writer, sheet_name="รายการงาน", index=False)
+
+        # Sheet สรุป
+        if "net_total" in df.columns:
+            df2 = df.copy()
+            df2["net_total"]   = pd.to_numeric(df2["net_total"],   errors="coerce").fillna(0)
+            df2["paid_amount"] = pd.to_numeric(df2.get("paid_amount", df2["net_total"]), errors="coerce").fillna(0)
+            paid_count = len(df2[df2["status"] == "💰 รับเงินแล้ว"]) if "status" in df2.columns else 0
+            wait_count = len(df2[df2["status"] == "📋 รอดำเนินการ"]) if "status" in df2.columns else 0
+            summary = pd.DataFrame({
+                "รายการ": ["จำนวนงานทั้งหมด","ยอดขายรวม (บาท)","รับเงินแล้ว (บาท)","เฉลี่ย/งาน (บาท)","งานรับเงินแล้ว","งานรอดำเนินการ"],
+                "ค่า":    [len(df2), df2["net_total"].sum(), df2["paid_amount"].sum(),
+                            round(df2["net_total"].mean(),2) if len(df2) else 0, paid_count, wait_count]
+            })
+            summary.to_excel(writer, sheet_name="สรุปยอดขาย", index=False)
+
+        wb = writer.book
+        from openpyxl.styles import Font, PatternFill, Alignment
+        hfill = PatternFill("solid", fgColor="1565C0")
+        hfont = Font(bold=True, color="FFFFFF", name="Arial", size=11)
+        for ws in wb.worksheets:
+            for cell in ws[1]:
+                cell.fill = hfill; cell.font = hfont
+                cell.alignment = Alignment(horizontal="center")
+            for col in ws.columns:
+                mlen = max((len(str(c.value or "")) for c in col), default=10)
+                ws.column_dimensions[col[0].column_letter].width = min(mlen + 4, 40)
+    return buf.getvalue()
 
 # ──────────────────────────────────────────────
-# PDF BUILDER
+# PDF HELPERS
 # ──────────────────────────────────────────────
 def _load_thai_font(pdf: FPDF) -> str:
     os.makedirs("fonts", exist_ok=True)
-    zip_path = "THSarabunNew.zip"
-    extract_dir = "fonts"
+    zip_path = "THSarabunNew.zip"; extract_dir = "fonts"
     if os.path.exists(zip_path):
-        has_ttf = any(f.lower().endswith(".ttf") for _, _, files in os.walk(extract_dir) for f in files)
+        has_ttf = any(f.lower().endswith(".ttf") for _,_,files in os.walk(extract_dir) for f in files)
         if not has_ttf:
-            with zipfile.ZipFile(zip_path, "r") as z:
-                z.extractall(extract_dir)
+            with zipfile.ZipFile(zip_path,"r") as z: z.extractall(extract_dir)
     regular, bold = [], []
     for root, _, files in os.walk(extract_dir):
         for f in files:
             if f.lower().endswith(".ttf") and ("thsarabunnew" in f.lower() or "sarabun" in f.lower()):
                 path = os.path.join(root, f)
                 (bold if "bold" in f.lower() else regular).append(path)
-    if not regular:
-        raise FileNotFoundError("ไม่พบฟอนต์ภาษาไทย .ttf")
-    pdf.add_font("THSarabun", "",  regular[0], uni=True)
-    pdf.add_font("THSarabun", "B", (bold or regular)[0], uni=True)
+    if not regular: raise FileNotFoundError("ไม่พบฟอนต์ภาษาไทย .ttf")
+    pdf.add_font("THSarabun","",  regular[0], uni=True)
+    pdf.add_font("THSarabun","B", (bold or regular)[0], uni=True)
     return "THSarabun"
 
-
-def build_pdf(q: dict) -> bytes:
-    pdf = FPDF(unit="mm", format="A4")
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=12)
-    font = _load_thai_font(pdf)
-
-    # ---- layout constants ----
-    PAGE_W = 210
-    L = 15          # left margin
-    R = 15          # right margin
-    CW = PAGE_W - L - R   # = 180 mm content width
-
-    # always reset X to left margin before each row
-    def go_left():
-        pdf.set_x(L)
-
-    # logo
-    logo = os.path.join("assets", "logo.png")
+def _pdf_header(pdf, font, CW, L, title):
+    def go(): pdf.set_x(L)
+    logo = os.path.join("assets","logo.png")
     if os.path.exists(logo):
-        try:
-            pdf.image(logo, x=L, y=10, w=22)
-        except Exception:
-            pass
+        try: pdf.image(logo, x=L, y=10, w=22)
+        except: pass
+    pdf.set_font(font,"B",20); go(); pdf.cell(CW,8,title,ln=1,align="C")
+    pdf.set_font(font,"B",14); go(); pdf.cell(CW,7,STORE_NAME,ln=1,align="C")
+    pdf.set_font(font,"",11)
+    go(); pdf.cell(CW,6,f"ที่อยู่: {STORE_ADDRESS}",ln=1,align="C")
+    go(); pdf.cell(CW,6,f"มือถือ/Line: {STORE_PHONE}  |  {STORE_WEB}",ln=1,align="C")
+    if STORE_TAX_ID:
+        go(); pdf.cell(CW,6,f"เลขผู้เสียภาษี: {STORE_TAX_ID}",ln=1,align="C")
+    pdf.ln(2); pdf.line(L,pdf.get_y(),L+CW,pdf.get_y()); pdf.ln(3)
 
-    # ---- header ----
-    pdf.set_font(font, "B", 20)
-    go_left(); pdf.cell(CW, 8, "ใบเสนอราคา / QUOTATION", ln=1, align="C")
-    pdf.set_font(font, "B", 14)
-    go_left(); pdf.cell(CW, 7, STORE_NAME, ln=1, align="C")
-    pdf.set_font(font, "", 12)
-    go_left(); pdf.cell(CW, 6, f"มือถือ/Line: {STORE_PHONE}", ln=1, align="C")
-    go_left(); pdf.cell(CW, 6, f"ที่อยู่: {STORE_ADDRESS}", ln=1, align="C")
-    go_left(); pdf.cell(CW, 6, f"Website: {STORE_WEB}", ln=1, align="C")
-    pdf.ln(3)
-    pdf.line(L, pdf.get_y(), PAGE_W - R, pdf.get_y())
-    pdf.ln(4)
+def _pdf_out(pdf):
+    out = pdf.output(dest="S")
+    return bytes(out) if isinstance(out,(bytes,bytearray)) else out.encode("latin-1")
 
-    # ---- date / doc no ----
-    doc_no = f"QT-{datetime.today().strftime('%Y%m%d')}"
-    go_left()
-    pdf.set_font(font, "B", 12); pdf.cell(25, 7, "วันที่")
-    pdf.set_font(font, "",  12); pdf.cell(60, 7, safe_text(q["date"]))
-    pdf.set_font(font, "B", 12); pdf.cell(35, 7, "เลขที่เอกสาร")
-    pdf.set_font(font, "",  12); pdf.cell(CW - 25 - 60 - 35, 7, doc_no, ln=1)
+def _money_row(pdf, font, CW, L, label, value, bold=False):
+    pdf.set_x(L)
+    pdf.set_font(font,"B" if bold else "",12)
+    pdf.cell(130,7,label)
+    pdf.cell(CW-130,7,f"{fmt_baht(value)} บาท",ln=1,align="R")
 
-    # ---- helpers ----
-    def section_title(t):
-        pdf.ln(2)
-        go_left()
-        pdf.set_font(font, "B", 14)
-        pdf.cell(CW, 8, t, ln=1)
+def _signatures(pdf, font, CW, L, left_label, right_label):
+    pdf.ln(5); pdf.set_font(font,"",11)
+    col = CW//2-3; gap = CW-col*2
+    pdf.set_x(L)
+    pdf.cell(col,8,f"{left_label} .................................................")
+    pdf.cell(gap,8,"")
+    pdf.cell(col,8,f"{right_label} .................................................",ln=1)
+    pdf.set_x(L)
+    pdf.cell(col,8,f"({STORE_NAME})",align="C")
+    pdf.cell(gap,8,"")
+    pdf.cell(col,8,"(..................................)",ln=1,align="C")
+    pdf.set_x(L)
+    pdf.cell(col,8,"วันที่ ........../........../..........",align="C")
+    pdf.cell(gap,8,"")
+    pdf.cell(col,8,"วันที่ ........../........../..........",ln=1,align="C")
 
-    def row(label, value, lw=32):
-        go_left()
-        pdf.set_font(font, "B", 12)
-        pdf.cell(lw, 6, label)
-        pdf.set_font(font, "", 12)
-        pdf.multi_cell(CW - lw, 6, safe_text(value))
+# ── ใบเสนอราคา ───────────────────────────────
+def build_pdf_quotation(q: dict) -> bytes:
+    pdf = FPDF(unit="mm",format="A4"); pdf.add_page()
+    pdf.set_auto_page_break(auto=True,margin=12)
+    font = _load_thai_font(pdf); L=15; CW=180
+    _pdf_header(pdf,font,CW,L,"ใบเสนอราคา / QUOTATION")
 
-    def money_row(label, value, bold=False):
-        go_left()
-        pdf.set_font(font, "B" if bold else "", 12)
-        lw = 130
-        vw = CW - lw          # = 50 mm — always positive since CW=180
-        pdf.cell(lw, 7, label)
-        pdf.cell(vw, 7, f"{fmt_baht(value)} บาท", ln=1, align="R")
+    def go(): pdf.set_x(L)
+    def row(lbl,val,lw=35):
+        go(); pdf.set_font(font,"B",12); pdf.cell(lw,6,lbl)
+        pdf.set_font(font,"",12); pdf.multi_cell(CW-lw,6,safe_text(val))
+    def sec(t):
+        pdf.ln(2); go(); pdf.set_font(font,"B",13); pdf.cell(CW,7,t,ln=1)
 
-    # ---- customer ----
-    section_title("ข้อมูลลูกค้า")
+    doc_no = f"QT-{datetime.today().strftime('%Y%m%d%H%M')}"
+    go()
+    pdf.set_font(font,"B",12); pdf.cell(25,7,"วันที่")
+    pdf.set_font(font,"",12);  pdf.cell(60,7,safe_text(q["date"]))
+    pdf.set_font(font,"B",12); pdf.cell(35,7,"เลขที่เอกสาร")
+    pdf.set_font(font,"",12);  pdf.cell(60,7,doc_no,ln=1)
+
+    sec("ข้อมูลลูกค้า")
     row("ชื่อลูกค้า", q["customer_name"])
     row("เบอร์โทร",  q["customer_phone"])
     row("ที่อยู่",   q["customer_address"])
 
+    sec("รายการสินค้า")
+    top=pdf.get_y(); bh=38; pdf.rect(L,top,CW,bh)
+    pdf.set_xy(L+3,top+3); pdf.set_font(font,"B",12)
+    pdf.multi_cell(CW-6,6,safe_text(q["section"]))
+    pdf.set_x(L+3); pdf.set_font(font,"",12)
+    pdf.multi_cell(CW-6,6,f"Model: {safe_text(q['model'])}   |   BTU: {q['model_btu']:,}")
+    pdf.set_x(L+3)
+    pdf.multi_cell(CW-6,6,f"ประกัน: ติดตั้ง {safe_text(q['w_install'])} / อะไหล่ {safe_text(q['w_parts'])} / คอมฯ {safe_text(q['w_comp'])}")
+    if pdf.get_y() < top+bh: pdf.set_y(top+bh)
 
+    sec("สรุปราคา")
+    sy=pdf.get_y(); sh=34; pdf.rect(L,sy,CW,sh)
+    pdf.set_xy(L+4,sy+4)
+    _money_row(pdf,font,CW,L+4,"ราคาพร้อมติดตั้ง",q["base_price"])
+    _money_row(pdf,font,CW,L+4,"ส่วนลด",-int(q["discount"]))
+    _money_row(pdf,font,CW,L+4,"ค่าติดตั้งเพิ่ม",int(q["extra_install"]))
+    pdf.line(L+4,pdf.get_y(),L+CW-4,pdf.get_y()); pdf.ln(2)
+    _money_row(pdf,font,CW,L+4,"รวมสุทธิ",q["net_total"],bold=True)
+    if pdf.get_y() < sy+sh: pdf.set_y(sy+sh)
 
-    # ---- product box ----
-    section_title("รายการสินค้า")
-    top = pdf.get_y()
-    box_h = 42
-    pdf.rect(L, top, CW, box_h)
-    pdf.set_xy(L + 3, top + 3)
-    pdf.set_font(font, "B", 13)
-    pdf.multi_cell(CW - 6, 6, safe_text(q["section"]))
-    pdf.set_x(L + 3)
-    pdf.set_font(font, "", 12)
-    pdf.multi_cell(CW - 6, 6, f"Model: {safe_text(q['model'])}   |   BTU: {q['model_btu']:,}")
-    pdf.set_x(L + 3)
-    pdf.multi_cell(CW - 6, 6,
-        f"ประกัน: ติดตั้ง {safe_text(q['w_install'])} / "
-        f"อะไหล่ {safe_text(q['w_parts'])} / "
-        f"คอมเพรสเซอร์ {safe_text(q['w_comp'])}")
-    if pdf.get_y() < top + box_h:
-        pdf.set_y(top + box_h)
-    else:
-        pdf.ln(2)
-
-    # ---- summary box ----
-    section_title("สรุปราคา")
-    sy = pdf.get_y()
-    sum_h = 34
-    pdf.rect(L, sy, CW, sum_h)
-    pdf.set_xy(L + 4, sy + 4)
-    money_row("ราคาพร้อมติดตั้ง", q["base_price"])
-    money_row("ส่วนลด",          -int(q["discount"]))
-    money_row("ค่าติดตั้งเพิ่ม",  int(q["extra_install"]))
-    pdf.line(L + 4, pdf.get_y(), PAGE_W - R - 4, pdf.get_y())
-    pdf.ln(2)
-    money_row("รวมสุทธิ", q["net_total"], bold=True)
-    if pdf.get_y() < sy + sum_h:
-        pdf.set_y(sy + sum_h)
-    else:
-        pdf.ln(2)
-
-    # ---- conditions ----
-    section_title("เงื่อนไขการติดตั้ง")
-    pdf.set_font(font, "", 11)
+    sec("เงื่อนไขการติดตั้ง")
+    pdf.set_font(font,"",11)
     for cline in INSTALL_CONDITIONS.split("\n"):
-        if cline.strip():
-            go_left()
-            pdf.multi_cell(CW, 5.5, cline.strip())
+        if cline.strip(): go(); pdf.multi_cell(CW,5.5,cline.strip())
 
-    # ---- signatures ----
-    pdf.ln(4)
-    pdf.set_font(font, "", 11)
-    col = CW // 2 - 3   # ~87 mm each column
-    gap = CW - col * 2
+    _signatures(pdf,font,CW,L,"ลงชื่อผู้เสนอราคา","ลงชื่อผู้รับใบเสนอราคา")
+    return _pdf_out(pdf)
 
-    go_left()
-    pdf.cell(col, 8, "ลงชื่อผู้เสนอราคา .................................................")
-    pdf.cell(gap, 8, "")
-    pdf.cell(col, 8, "ลงชื่อผู้รับใบเสนอราคา .................................................", ln=1)
+# ── ใบเสร็จ / ใบกำกับภาษี ───────────────────
+def build_pdf_receipt(q: dict, receipt_no: str, is_tax: bool = False) -> bytes:
+    title = "ใบกำกับภาษีอย่างง่าย" if is_tax else "ใบเสร็จรับเงิน"
+    pdf = FPDF(unit="mm",format="A4"); pdf.add_page()
+    pdf.set_auto_page_break(auto=True,margin=12)
+    font = _load_thai_font(pdf); L=15; CW=180
+    _pdf_header(pdf,font,CW,L,title)
 
-    go_left()
-    pdf.cell(col, 8, f"({STORE_NAME})", align="C")
-    pdf.cell(gap, 8, "")
-    pdf.cell(col, 8, "(..............................................)", ln=1, align="C")
+    def go(): pdf.set_x(L)
+    def row(lbl,val,lw=40):
+        go(); pdf.set_font(font,"B",12); pdf.cell(lw,6,lbl)
+        pdf.set_font(font,"",12); pdf.multi_cell(CW-lw,6,safe_text(val))
 
-    go_left()
-    pdf.cell(col, 8, "วันที่ ........../........../..........", align="C")
-    pdf.cell(gap, 8, "")
-    pdf.cell(col, 8, "วันที่ ........../........../..........", ln=1, align="C")
+    # doc ref
+    go()
+    pdf.set_font(font,"B",12); pdf.cell(40,7,"เลขที่ใบเสร็จ")
+    pdf.set_font(font,"",12);  pdf.cell(60,7,receipt_no)
+    pdf.set_font(font,"B",12); pdf.cell(20,7,"วันที่")
+    pdf.set_font(font,"",12);  pdf.cell(60,7,safe_text(q["date"]),ln=1)
+    pdf.ln(2)
 
-    out = pdf.output(dest="S")
-    return bytes(out) if isinstance(out, (bytes, bytearray)) else out.encode("latin-1")
+    pdf.set_font(font,"B",13); go(); pdf.cell(CW,7,"ข้อมูลลูกค้า",ln=1)
+    row("ชื่อ",   q.get("customer_name",""))
+    row("โทร",    q.get("customer_phone",""))
+    row("ที่อยู่", q.get("customer_address",""))
+    if is_tax:
+        row("เลขผู้เสียภาษี (ลูกค้า)", q.get("customer_tax_id","-"))
 
+    # item table
+    pdf.ln(3); pdf.set_font(font,"B",12); go()
+    pdf.cell(10,7,"ที่",border=1,align="C")
+    pdf.cell(90,7,"รายการ",border=1,align="C")
+    pdf.cell(30,7,"จำนวน",border=1,align="C")
+    pdf.cell(50,7,"ราคา (บาท)",border=1,align="C",ln=1)
+    pdf.set_font(font,"",12); go()
+    item_desc = f"{safe_text(q.get('section',''))} {safe_text(q.get('model',''))} {int(q.get('model_btu',0)):,} BTU"
+    pdf.cell(10,7,"1",border=1,align="C")
+    pdf.cell(90,7,item_desc[:45],border=1)
+    pdf.cell(30,7,"1 เครื่อง",border=1,align="C")
+    pdf.cell(50,7,fmt_baht(q.get("base_price",0)),border=1,align="R",ln=1)
 
-def line_share_link(text: str) -> str:
-    return "https://line.me/R/msg/text/?" + urlquote(text)
+    pdf.ln(3)
+    if int(q.get("discount",0)) > 0:
+        _money_row(pdf,font,CW,L,"ส่วนลด",-int(q["discount"]))
+    if int(q.get("extra_install",0)) > 0:
+        _money_row(pdf,font,CW,L,"ค่าติดตั้งเพิ่ม",int(q["extra_install"]))
 
+    if is_tax:
+        before_vat = round(q["net_total"]/1.07,2)
+        vat = q["net_total"]-before_vat
+        go(); pdf.line(L,pdf.get_y(),L+CW,pdf.get_y()); pdf.ln(1)
+        _money_row(pdf,font,CW,L,"ราคาก่อน VAT 7%",before_vat)
+        _money_row(pdf,font,CW,L,"VAT 7%",vat)
 
+    go(); pdf.line(L,pdf.get_y(),L+CW,pdf.get_y()); pdf.ln(2)
+    _money_row(pdf,font,CW,L,"รวมสุทธิ",q["net_total"],bold=True)
+    pdf.ln(2); go()
+    pdf.set_font(font,"B",13)
+    paid = q.get("paid_amount", q.get("net_total",0))
+    pdf.cell(CW,8,f"✅ รับชำระเงินแล้ว: {fmt_baht(paid)} บาท",ln=1,align="C")
+
+    _signatures(pdf,font,CW,L,"ลงชื่อผู้รับเงิน","ลงชื่อผู้จ่ายเงิน")
+    return _pdf_out(pdf)
+
+# ──────────────────────────────────────────────
+# LINE
+# ──────────────────────────────────────────────
 def make_line_text(q: dict) -> str:
     return "\n".join([
         f"ใบเสนอราคา - {STORE_NAME}",
@@ -439,65 +524,79 @@ def make_line_text(q: dict) -> str:
         STORE_WEB,
     ])
 
+def line_share_link(text): return "https://line.me/R/msg/text/?" + urlquote(text)
 
 # ──────────────────────────────────────────────
-# CUSTOM CSS
+# CSS
 # ──────────────────────────────────────────────
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { background: linear-gradient(180deg,#0d47a1 0%,#1565c0 100%); }
-[data-testid="stSidebar"] * { color: #fff !important; }
-.metric-card {
-    background: #f0f4ff; border-radius: 12px; padding: 16px 20px;
-    border-left: 5px solid #1565c0; margin-bottom: 10px;
-}
-.metric-card h4 { margin:0; color:#1565c0; font-size:13px; }
-.metric-card h2 { margin:4px 0 0; color:#0d47a1; font-size:26px; font-weight:800; }
-.badge-in  { background:#e8f5e9; color:#2e7d32; padding:2px 10px; border-radius:20px; font-weight:700; }
-.badge-out { background:#fce4ec; color:#c62828; padding:2px 10px; border-radius:20px; font-weight:700; }
-</style>
-""", unsafe_allow_html=True)
+[data-testid="stSidebar"] { background:linear-gradient(180deg,#0d47a1 0%,#1565c0 100%); }
+[data-testid="stSidebar"] * { color:#fff !important; }
+.metric-card { background:#f0f4ff;border-radius:12px;padding:16px 20px;border-left:5px solid #1565c0;margin-bottom:10px; }
+.metric-card h4 { margin:0;color:#1565c0;font-size:13px; }
+.metric-card h2 { margin:4px 0 0;color:#0d47a1;font-size:26px;font-weight:800; }
+.badge-in  { background:#e8f5e9;color:#2e7d32;padding:2px 10px;border-radius:20px;font-weight:700; }
+.badge-out { background:#fce4ec;color:#c62828;padding:2px 10px;border-radius:20px;font-weight:700; }
+.badge-low { background:#fff3e0;color:#e65100;padding:2px 10px;border-radius:20px;font-weight:700; }
+</style>""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
-# SIDEBAR
+# MAIN
 # ──────────────────────────────────────────────
+check_login()
+if not st.session_state.logged_in:
+    login_page(); st.stop()
+
+# Sidebar
 with st.sidebar:
-    logo_path = os.path.join("assets", "logo.png")
-    if os.path.exists(logo_path):
-        st.image(logo_path, use_container_width=True)
+    logo_path = os.path.join("assets","logo.png")
+    if os.path.exists(logo_path): st.image(logo_path, use_container_width=True)
     st.markdown(f"## ❄️ {STORE_NAME}")
     st.markdown(f"📍 {STORE_ADDRESS}")
     st.markdown(f"📞 **{STORE_PHONE}**")
     st.markdown(f"🌐 [Facebook]({STORE_WEB})")
     st.divider()
-    page = st.radio("เมนู", ["🧾 สร้างใบเสนอราคา", "📦 จัดการสต๊อก", "📊 Dashboard / ประวัติ"],
-                    label_visibility="collapsed")
+    page = st.radio("เมนู", [
+        "🧾 สร้างใบเสนอราคา",
+        "📋 จัดการงาน / สถานะ",
+        "📦 จัดการสต๊อก",
+        "📊 Dashboard",
+        "🔧 คลังเออเร่อแอร์",
+    ], label_visibility="collapsed")
+    st.divider()
+    st.caption(f"👤 ล็อกอิน: **{st.session_state.username}**")
+    if st.button("🚪 ออกจากระบบ", use_container_width=True):
+        st.session_state.logged_in = False; st.session_state.username = ""; st.rerun()
 
 df_all = load_stock()
 
+# แจ้งเตือนสต๊อกใกล้หมด
+low_stock = df_all[df_all["stock_qty"] <= LOW_STOCK_THRESHOLD]
+if not low_stock.empty:
+    items = ", ".join(f"{r['model']} (เหลือ {r['stock_qty']})" for _, r in low_stock.head(5).iterrows())
+    st.warning(f"⚠️ **สต๊อกใกล้หมด:** {items}")
+
 # ══════════════════════════════════════════════
-# PAGE 1 : QUOTATION
+# PAGE 1: QUOTATION
 # ══════════════════════════════════════════════
 if page == "🧾 สร้างใบเสนอราคา":
     st.title("🧾 สร้างใบเสนอราคา")
 
-    # ── Step 1: Customer ──────────────────────
     with st.expander("👤 ขั้นตอน 1 — ข้อมูลลูกค้า", expanded=True):
         c1, c2 = st.columns(2)
-        customer_name  = c1.text_input("ชื่อลูกค้า")
-        customer_phone = c2.text_input("เบอร์โทร")
+        customer_name    = c1.text_input("ชื่อลูกค้า")
+        customer_phone   = c2.text_input("เบอร์โทร")
         customer_address = st.text_area("ที่อยู่/สถานที่ติดตั้ง", height=68)
 
-    # ── Step 2: Room / BTU ───────────────────
     with st.expander("🏠 ขั้นตอน 2 — ขนาดห้องและ BTU", expanded=True):
         c1, c2, c3 = st.columns(3)
         room_w = c1.number_input("กว้าง (เมตร)", min_value=0.0, step=0.1)
         room_l = c2.number_input("ยาว (เมตร)",   min_value=0.0, step=0.1)
         room_h = c3.number_input("สูง (เมตร)",   min_value=0.0, step=0.1, value=2.6)
         c4, c5 = st.columns(2)
-        sun    = c4.selectbox("ห้องโดนแดด?", ["ไม่โดนแดด", "โดนแดด"])
+        sun    = c4.selectbox("ห้องโดนแดด?", ["ไม่โดนแดด","โดนแดด"])
         people = c5.number_input("จำนวนคน", min_value=1, step=1, value=1)
-
         btu = suggest_cap = None
         if room_w > 0 and room_l > 0:
             btu = calculate_btu(room_w, room_l, room_h, sun, int(people))
@@ -508,124 +607,188 @@ if page == "🧾 สร้างใบเสนอราคา":
         else:
             st.info("กรอกขนาดห้องเพื่อคำนวณ BTU")
 
-    # ── Step 3: Product ──────────────────────
     with st.expander("❄️ ขั้นตอน 3 — เลือกรุ่นแอร์", expanded=True):
-        q_search = st.text_input("🔍 ค้นหา (รุ่น/ซีรีส์)", placeholder="เช่น Fujitsu, 12000, inverter").strip().lower()
-        df_view = df_all.copy()
+        q_search = st.text_input("🔍 ค้นหา", placeholder="เช่น Fujitsu, 12000, inverter").strip().lower()
+        df_view  = df_all.copy()
         if q_search:
-            mask = (df_view["section"].str.lower().str.contains(q_search, na=False) |
-                    df_view["model"].str.lower().str.contains(q_search, na=False))
+            mask = (df_view["section"].str.lower().str.contains(q_search,na=False) |
+                    df_view["model"].str.lower().str.contains(q_search,na=False))
             df_view = df_view[mask]
-
-        # filter by BTU range
         if btu and suggest_cap:
-            btu_filter = st.checkbox(f"แสดงเฉพาะรุ่น BTU ใกล้เคียง ({suggest_cap:,} BTU)", value=False)
-            if btu_filter:
-                df_view = df_view[
-                    (df_view["btu"] >= suggest_cap * 0.8) &
-                    (df_view["btu"] <= suggest_cap * 1.3)
-                ]
+            if st.checkbox(f"แสดงเฉพาะรุ่น BTU ใกล้เคียง ({suggest_cap:,} BTU)", value=False):
+                df_view = df_view[(df_view["btu"] >= suggest_cap*0.8) & (df_view["btu"] <= suggest_cap*1.3)]
 
         sections = sorted(df_view["section"].dropna().unique().tolist())
-        if not sections:
-            st.warning("ไม่พบสินค้าตามที่ค้นหา")
-            st.stop()
+        if not sections: st.warning("ไม่พบสินค้า"); st.stop()
 
-        col_s, col_m = st.columns([2, 2])
-        section = col_s.selectbox("ซีรีส์/หมวดรุ่น", options=sections)
-        df_sec  = df_view[df_view["section"] == section].copy()
+        col_s, col_m = st.columns([2,2])
+        section  = col_s.selectbox("ซีรีส์/หมวดรุ่น", options=sections)
+        df_sec   = df_view[df_view["section"] == section].copy()
         if btu and suggest_cap:
-            df_sec["_diff"] = (df_sec["btu"] - suggest_cap).abs()
-            df_sec = df_sec.sort_values(["_diff", "price_install"])
+            df_sec["_diff"] = (df_sec["btu"]-suggest_cap).abs()
+            df_sec = df_sec.sort_values(["_diff","price_install"])
         else:
             df_sec = df_sec.sort_values("price_install")
-
-        model = col_m.selectbox("Model", options=df_sec["model"].tolist())
-        row   = df_sec[df_sec["model"] == model].iloc[0].to_dict()
-
-        stock_qty = int(row.get("stock_qty", 0))
-        badge     = f'<span class="badge-in">มีสต๊อก {stock_qty} เครื่อง</span>' if stock_qty > 0 \
-                    else '<span class="badge-out">สต๊อกหมด</span>'
-
+        model    = col_m.selectbox("Model", options=df_sec["model"].tolist())
+        row_data = df_sec[df_sec["model"]==model].iloc[0].to_dict()
+        sq = int(row_data.get("stock_qty",0))
+        badge = (f'<span class="badge-in">มีสต๊อก {sq} เครื่อง</span>' if sq > LOW_STOCK_THRESHOLD
+                 else f'<span class="badge-low">เหลือ {sq} เครื่อง</span>' if sq > 0
+                 else '<span class="badge-out">สต๊อกหมด</span>')
         ca, cb, cc, cd = st.columns(4)
-        ca.metric("BTU", f"{int(row['btu']):,}")
-        cb.metric("ราคา (พร้อมติดตั้ง)", f"{fmt_baht(row['price_install'])} ฿")
-        cc.metric("ประกันคอมฯ", row.get("w_comp", "-"))
+        ca.metric("BTU",f"{int(row_data['btu']):,}")
+        cb.metric("ราคา (พร้อมติดตั้ง)",f"{fmt_baht(row_data['price_install'])} ฿")
+        cc.metric("ประกันคอมฯ",row_data.get("w_comp","-"))
         cd.markdown(f"**สต๊อก**<br>{badge}", unsafe_allow_html=True)
-        st.caption(f"ประกันติดตั้ง {safe_text(row.get('w_install'))} | ประกันอะไหล่ {safe_text(row.get('w_parts'))}")
+        st.caption(f"ประกันติดตั้ง {safe_text(row_data.get('w_install'))} | ประกันอะไหล่ {safe_text(row_data.get('w_parts'))}")
 
-    # ── Step 4: Pricing ──────────────────────
     with st.expander("💰 ขั้นตอน 4 — ปรับราคา", expanded=True):
         p1, p2 = st.columns(2)
         discount      = p1.number_input("ส่วนลด (บาท)", min_value=0, step=100, value=0)
         extra_install = p2.number_input("ค่าติดตั้งเพิ่ม (บาท)", min_value=0, step=100, value=0)
-        base_price = int(row["price_install"])
+        base_price = int(row_data["price_install"])
         net_total  = max(0, base_price - int(discount) + int(extra_install))
+        st.markdown(f"""<div class="metric-card"><h4>สรุปราคา</h4><h2>฿ {fmt_baht(net_total)}</h2>
+        <small>ราคาพร้อมติดตั้ง {fmt_baht(base_price)} | ส่วนลด {fmt_baht(discount)} | ติดตั้งเพิ่ม {fmt_baht(extra_install)}</small>
+        </div>""", unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class="metric-card">
-          <h4>สรุปราคา</h4>
-          <h2>฿ {fmt_baht(net_total)}</h2>
-          <small>ราคาพร้อมติดตั้ง {fmt_baht(base_price)} | ส่วนลด {fmt_baht(discount)} | ติดตั้งเพิ่ม {fmt_baht(extra_install)}</small>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ── Build quote dict ──────────────────────
     today_str  = date.today().strftime("%d/%m/%Y")
     quote_data = dict(
         date=today_str, customer_name=customer_name, customer_phone=customer_phone,
         customer_address=customer_address, room_w=room_w, room_l=room_l, room_h=room_h,
         sun=sun, people=int(people),
         btu=int(btu) if btu else 0, suggest_cap=int(suggest_cap) if suggest_cap else 0,
-        section=section, model=model, model_btu=int(row["btu"]),
-        w_install=row.get("w_install", ""), w_parts=row.get("w_parts", ""), w_comp=row.get("w_comp", ""),
-        base_price=base_price, discount=int(discount), extra_install=int(extra_install), net_total=int(net_total),
+        section=section, model=model, model_btu=int(row_data["btu"]),
+        w_install=row_data.get("w_install",""), w_parts=row_data.get("w_parts",""),
+        w_comp=row_data.get("w_comp",""),
+        base_price=base_price, discount=int(discount),
+        extra_install=int(extra_install), net_total=int(net_total),
+        status=JOB_STATUSES[0], saved_by=st.session_state.username,
     )
 
-    # ── Actions ──────────────────────────────
-    st.divider()
-    st.subheader("📤 ดำเนินการ")
+    st.divider(); st.subheader("📤 ดำเนินการ")
     a1, a2, a3 = st.columns(3)
-
-    if a1.button("💾 บันทึกงาน", use_container_width=True):
-        log_customer_job(quote_data)
-        st.success("บันทึกแล้ว ✅")
-
-    if a2.button("📄 สร้าง PDF", use_container_width=True):
+    if a1.button("💾 บันทึกงาน", use_container_width=True, type="primary"):
+        log_customer_job(quote_data); st.success("บันทึกแล้ว ✅")
+    if a2.button("📄 สร้าง PDF ใบเสนอราคา", use_container_width=True):
         try:
-            pdf_bytes = build_pdf(quote_data)
-            fname     = f"ใบเสนอราคา_{customer_name or 'ลูกค้า'}_{today_str.replace('/', '-')}.pdf"
+            pdf_b = build_pdf_quotation(quote_data)
+            fname = f"ใบเสนอราคา_{customer_name or 'ลูกค้า'}_{today_str.replace('/','')}.pdf"
             st.success("สร้าง PDF สำเร็จ ✅")
-            st.download_button("⬇️ ดาวน์โหลด PDF", data=pdf_bytes, file_name=fname,
+            st.download_button("⬇️ ดาวน์โหลด PDF", data=pdf_b, file_name=fname,
                                mime="application/pdf", use_container_width=True)
         except Exception as e:
             st.error(f"สร้าง PDF ไม่สำเร็จ: {e}")
-
     line_text = make_line_text(quote_data)
-    share_url = line_share_link(line_text)
-    a3.markdown(f"""
-    <a href="{share_url}" target="_blank" style="
-        display:block; text-align:center; background:#00c300; color:white;
-        padding:10px; border-radius:8px; text-decoration:none; font-weight:700; font-size:15px;">
-        💬 ส่ง LINE
-    </a>""", unsafe_allow_html=True)
-
+    a3.markdown(f"""<a href="{line_share_link(line_text)}" target="_blank" style="
+        display:block;text-align:center;background:#00c300;color:white;
+        padding:10px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-top:4px;">
+        💬 ส่ง LINE</a>""", unsafe_allow_html=True)
     with st.expander("📝 ดูข้อความ LINE"):
         st.text_area("ข้อความ", value=line_text, height=180)
 
 # ══════════════════════════════════════════════
-# PAGE 2 : STOCK MANAGEMENT
+# PAGE 2: JOB MANAGEMENT
+# ══════════════════════════════════════════════
+elif page == "📋 จัดการงาน / สถานะ":
+    st.title("📋 จัดการงานและสถานะ")
+    df_log = load_log()
+    if df_log.empty:
+        st.info("ยังไม่มีงาน กรุณาบันทึกงานจากหน้าใบเสนอราคาก่อน"); st.stop()
+
+    f1, f2, f3 = st.columns(3)
+    filter_status = f1.selectbox("กรองตามสถานะ", ["ทั้งหมด"] + JOB_STATUSES)
+    filter_name   = f2.text_input("ค้นหาชื่อ/เบอร์")
+    filter_date   = f3.text_input("ค้นหาวันที่ (เช่น 07/03/2026)")
+
+    df_show = df_log.copy()
+    if filter_status != "ทั้งหมด" and "status" in df_show.columns:
+        df_show = df_show[df_show["status"] == filter_status]
+    if filter_name:
+        mask = pd.Series(False, index=df_show.index)
+        for col in ["customer_name","customer_phone"]:
+            if col in df_show.columns:
+                mask |= df_show[col].astype(str).str.lower().str.contains(filter_name.lower(),na=False)
+        df_show = df_show[mask]
+    if filter_date and "date" in df_show.columns:
+        df_show = df_show[df_show["date"].astype(str).str.contains(filter_date,na=False)]
+
+    st.markdown(f"**พบ {len(df_show)} รายการ**")
+
+    for idx, job in df_show.iterrows():
+        status = job.get("status", JOB_STATUSES[0])
+        icon   = "💰" if "รับเงิน" in status else "✅" if "ติดตั้งแล้ว" in status else "🔧" if "กำลัง" in status else "❌" if "ยกเลิก" in status else "📋"
+        with st.expander(f"{icon} {job.get('customer_name','?')} | {job.get('model','?')} | {job.get('date','?')} | ฿{fmt_baht(job.get('net_total',0))} | {status}"):
+            c1, c2 = st.columns(2)
+            c1.markdown(f"**ลูกค้า:** {job.get('customer_name','-')}")
+            c1.markdown(f"**โทร:** {job.get('customer_phone','-')}")
+            c1.markdown(f"**รุ่น:** {job.get('model','-')} | {int(job.get('model_btu',0)):,} BTU")
+            c2.markdown(f"**ราคาสุทธิ:** ฿{fmt_baht(job.get('net_total',0))}")
+            c2.markdown(f"**รับเงิน:** ฿{fmt_baht(job.get('paid_amount',job.get('net_total',0)))}")
+            c2.markdown(f"**บันทึกโดย:** {job.get('saved_by','-')}")
+            st.divider()
+            e1, e2, e3 = st.columns(3)
+            new_status  = e1.selectbox("เปลี่ยนสถานะ", JOB_STATUSES,
+                            index=JOB_STATUSES.index(status) if status in JOB_STATUSES else 0,
+                            key=f"st_{idx}")
+            receipt_no  = e2.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
+            paid_amount = e3.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
+
+            u1, u2, u3, u4 = st.columns(4)
+            if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
+                df_log.at[idx,"status"]      = new_status
+                df_log.at[idx,"receipt_no"]  = receipt_no
+                df_log.at[idx,"paid_amount"] = paid_amount
+                save_log(df_log); st.success("อัปเดตแล้ว ✅"); st.rerun()
+
+            if u2.button("🧾 ใบเสร็จ", key=f"rc_{idx}", use_container_width=True):
+                try:
+                    qd = job.to_dict(); qd["paid_amount"] = paid_amount
+                    pb = build_pdf_receipt(qd, receipt_no or f"RC-{idx}", is_tax=False)
+                    st.download_button("⬇️ ดาวน์โหลดใบเสร็จ", data=pb,
+                                       file_name=f"ใบเสร็จ_{receipt_no or idx}.pdf",
+                                       mime="application/pdf", key=f"dlrc_{idx}")
+                except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+
+            if u3.button("📑 ใบกำกับภาษี", key=f"tx_{idx}", use_container_width=True):
+                try:
+                    qd = job.to_dict(); qd["paid_amount"] = paid_amount
+                    pb = build_pdf_receipt(qd, receipt_no or f"TX-{idx}", is_tax=True)
+                    st.download_button("⬇️ ดาวน์โหลดใบกำกับภาษี", data=pb,
+                                       file_name=f"ใบกำกับภาษี_{receipt_no or idx}.pdf",
+                                       mime="application/pdf", key=f"dltx_{idx}")
+                except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+
+            if u4.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
+                df_log = df_log.drop(index=idx).reset_index(drop=True)
+                save_log(df_log); st.warning("ลบแล้ว"); st.rerun()
+
+    st.divider()
+    if st.button("📊 Export Excel รายงานทั้งหมด", use_container_width=True, type="primary"):
+        xlsx = export_excel(df_log)
+        st.download_button("⬇️ ดาวน์โหลด Excel", data=xlsx,
+                           file_name=f"รายงาน_บุญสุข_{date.today().strftime('%Y%m%d')}.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                           use_container_width=True)
+
+# ══════════════════════════════════════════════
+# PAGE 3: STOCK
 # ══════════════════════════════════════════════
 elif page == "📦 จัดการสต๊อก":
     st.title("📦 จัดการสต๊อกแอร์")
+    total_m = len(df_all)
+    in_s    = len(df_all[df_all["stock_qty"] > LOW_STOCK_THRESHOLD])
+    low_s   = len(df_all[(df_all["stock_qty"] > 0) & (df_all["stock_qty"] <= LOW_STOCK_THRESHOLD)])
+    out_s   = len(df_all[df_all["stock_qty"] == 0])
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("รุ่นทั้งหมด",   total_m)
+    m2.metric("มีสต๊อกปกติ",   in_s)
+    m3.metric("⚠️ ใกล้หมด",   low_s)
+    m4.metric("❌ สต๊อกหมด",   out_s)
     st.info("แก้ไขจำนวนสต๊อกในตาราง แล้วกด **บันทึกสต๊อก**")
-
-    edit_cols = ["section", "model", "btu", "price_install", "stock_qty", "w_install", "w_parts", "w_comp"]
+    edit_cols = ["section","model","btu","price_install","stock_qty","w_install","w_parts","w_comp"]
     edited = st.data_editor(
-        df_all[edit_cols].copy(),
-        use_container_width=True,
-        hide_index=True,
-        num_rows="fixed",
+        df_all[edit_cols].copy(), use_container_width=True, hide_index=True, num_rows="fixed",
         column_config={
             "stock_qty":     st.column_config.NumberColumn("สต๊อก",    min_value=0, step=1),
             "price_install": st.column_config.NumberColumn("ราคา (฿)", min_value=0, step=100),
@@ -633,74 +796,346 @@ elif page == "📦 จัดการสต๊อก":
         },
     )
     if st.button("✅ บันทึกสต๊อก", use_container_width=True, type="primary"):
-        try:
-            save_stock(clean_df(edited))
-            st.success("บันทึกสต๊อกแล้ว ✅")
-        except Exception as e:
-            st.error(f"บันทึกไม่สำเร็จ: {e}")
-
-    # low stock alert
-    low = df_all[df_all["stock_qty"] == 0]
-    if not low.empty:
-        st.divider()
-        st.warning(f"⚠️ สินค้าสต๊อกหมด {len(low)} รายการ")
-        st.dataframe(low[["section", "model", "btu", "price_install"]],
-                     use_container_width=True, hide_index=True)
-
+        try: save_stock(clean_df(edited)); st.success("บันทึกสต๊อกแล้ว ✅")
+        except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
     if os.path.exists(STOCK_CSV):
-        with open(STOCK_CSV, "rb") as f:
+        with open(STOCK_CSV,"rb") as f:
             st.download_button("⬇️ Export สต๊อก CSV", data=f.read(),
                                file_name="boonsuk_stock.csv", mime="text/csv")
 
 # ══════════════════════════════════════════════
-# PAGE 3 : DASHBOARD
+# PAGE 4: DASHBOARD
 # ══════════════════════════════════════════════
-elif page == "📊 Dashboard / ประวัติ":
-    st.title("📊 Dashboard & ประวัติการขาย")
-
+elif page == "📊 Dashboard":
+    st.title("📊 Dashboard ยอดขาย")
     df_log = load_log()
+    if df_log.empty: st.info("ยังไม่มีข้อมูล"); st.stop()
 
-    if df_log.empty:
-        st.info("ยังไม่มีข้อมูลการบันทึก กรุณาบันทึกงานจากหน้าใบเสนอราคาก่อน")
-    else:
-        # ensure types
-        if "net_total" in df_log.columns:
-            df_log["net_total"] = pd.to_numeric(df_log["net_total"], errors="coerce").fillna(0)
-        if "date" in df_log.columns:
-            df_log["date_parsed"] = pd.to_datetime(df_log["date"], dayfirst=True, errors="coerce")
+    if "net_total"   in df_log.columns: df_log["net_total"]   = pd.to_numeric(df_log["net_total"],   errors="coerce").fillna(0)
+    if "paid_amount" in df_log.columns: df_log["paid_amount"] = pd.to_numeric(df_log["paid_amount"], errors="coerce").fillna(0)
 
-        total_jobs  = len(df_log)
-        total_sales = int(df_log["net_total"].sum()) if "net_total" in df_log.columns else 0
-        avg_sale    = int(df_log["net_total"].mean()) if total_jobs else 0
+    total_jobs  = len(df_log)
+    total_sales = int(df_log["net_total"].sum())
+    total_paid  = int(df_log["paid_amount"].sum()) if "paid_amount" in df_log.columns else 0
+    avg_sale    = int(df_log["net_total"].mean()) if total_jobs else 0
+    jobs_paid   = len(df_log[df_log["status"] == "💰 รับเงินแล้ว"]) if "status" in df_log.columns else 0
+    jobs_wait   = len(df_log[df_log["status"] == "📋 รอดำเนินการ"]) if "status" in df_log.columns else 0
 
-        m1, m2, m3 = st.columns(3)
-        m1.markdown(f'<div class="metric-card"><h4>งานทั้งหมด</h4><h2>{total_jobs}</h2></div>', unsafe_allow_html=True)
-        m2.markdown(f'<div class="metric-card"><h4>ยอดรวม (บาท)</h4><h2>{fmt_baht(total_sales)}</h2></div>', unsafe_allow_html=True)
-        m3.markdown(f'<div class="metric-card"><h4>เฉลี่ย/งาน (บาท)</h4><h2>{fmt_baht(avg_sale)}</h2></div>', unsafe_allow_html=True)
+    m1,m2,m3,m4,m5,m6 = st.columns(6)
+    m1.markdown(f'<div class="metric-card"><h4>งานทั้งหมด</h4><h2>{total_jobs}</h2></div>', unsafe_allow_html=True)
+    m2.markdown(f'<div class="metric-card"><h4>ยอดรวม (฿)</h4><h2>{fmt_baht(total_sales)}</h2></div>', unsafe_allow_html=True)
+    m3.markdown(f'<div class="metric-card"><h4>รับเงินแล้ว (฿)</h4><h2>{fmt_baht(total_paid)}</h2></div>', unsafe_allow_html=True)
+    m4.markdown(f'<div class="metric-card"><h4>เฉลี่ย/งาน (฿)</h4><h2>{fmt_baht(avg_sale)}</h2></div>', unsafe_allow_html=True)
+    m5.markdown(f'<div class="metric-card"><h4>รับเงินแล้ว</h4><h2>{jobs_paid} งาน</h2></div>', unsafe_allow_html=True)
+    m6.markdown(f'<div class="metric-card"><h4>รอดำเนินการ</h4><h2>{jobs_wait} งาน</h2></div>', unsafe_allow_html=True)
 
-        st.divider()
-
-        # brand chart
+    st.divider()
+    ch1, ch2 = st.columns(2)
+    with ch1:
+        st.subheader("📈 ยอดขายแยกซีรีส์")
         if "section" in df_log.columns:
-            st.subheader("📈 ยอดขายแยกตามซีรีส์")
-            brand_df = df_log.groupby("section")["net_total"].sum().reset_index()
-            brand_df.columns = ["ซีรีส์", "ยอดรวม (บาท)"]
-            brand_df = brand_df.sort_values("ยอดรวม (บาท)", ascending=False).head(15)
-            st.bar_chart(brand_df.set_index("ซีรีส์"))
+            bd = df_log.groupby("section")["net_total"].sum().reset_index()
+            bd.columns = ["ซีรีส์","ยอดรวม"]
+            st.bar_chart(bd.sort_values("ยอดรวม",ascending=False).head(10).set_index("ซีรีส์"))
+    with ch2:
+        st.subheader("📊 สถานะงาน")
+        if "status" in df_log.columns:
+            sd = df_log["status"].value_counts().reset_index()
+            sd.columns = ["สถานะ","จำนวน"]
+            st.bar_chart(sd.set_index("สถานะ"))
 
-        st.divider()
-        st.subheader("🔍 ค้นหาประวัติลูกค้า")
-        search_log = st.text_input("ค้นหาชื่อ / เบอร์ / รุ่น").strip().lower()
-        show_df = df_log.copy()
-        if search_log:
-            mask = pd.Series(False, index=show_df.index)
-            for col in ["customer_name", "customer_phone", "model", "section"]:
-                if col in show_df.columns:
-                    mask |= show_df[col].astype(str).str.lower().str.contains(search_log, na=False)
-            show_df = show_df[mask]
+    st.divider()
+    if st.button("📊 Export Excel รายงาน", use_container_width=True, type="primary"):
+        xlsx = export_excel(df_log)
+        st.download_button("⬇️ ดาวน์โหลด Excel", data=xlsx,
+                           file_name=f"รายงาน_บุญสุข_{date.today().strftime('%Y%m%d')}.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                           use_container_width=True)
 
-        st.dataframe(show_df, use_container_width=True, hide_index=True)
+# ══════════════════════════════════════════════
+# ERROR CODE DATABASE
+# ══════════════════════════════════════════════
+ERROR_DB = {
+    "Daikin": [
+        {"code":"A1","desc":"PCB แผงวงจรผิดปกติ","cause":"PCB เสีย / ไฟเลี้ยงกระชาก","fix":"ตรวจสอบแรงดันไฟ 220V, เปลี่ยน PCB ชุดในห้อง","parts":"PCB indoor"},
+        {"code":"A3","desc":"ระดับน้ำทิ้งผิดปกติ / float switch","cause":"ท่อน้ำทิ้งอุดตัน / float switch เสีย","fix":"ล้างท่อน้ำทิ้ง, ตรวจ float switch","parts":"Float switch"},
+        {"code":"A5","desc":"เทอร์มิสเตอร์ freeze protection ทำงาน","cause":"แผง evaporator สกปรก / น้ำยาน้อย","fix":"ล้างแผงอีวา, ตรวจน้ำยา","parts":"น้ำยาแอร์ R32/R410A"},
+        {"code":"A6","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์เสีย / capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์พัดลม indoor, Capacitor"},
+        {"code":"A7","desc":"แผ่น swing motor ผิดปกติ","cause":"มอเตอร์ swing เสีย","fix":"เปลี่ยนมอเตอร์ swing","parts":"Step motor swing"},
+        {"code":"C4","desc":"เทอร์มิสเตอร์ liquid pipe ผิดปกติ","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor liquid"},
+        {"code":"C5","desc":"เทอร์มิสเตอร์ gas pipe ผิดปกติ","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor gas"},
+        {"code":"C9","desc":"เทอร์มิสเตอร์อุณหภูมิห้องผิดปกติ","cause":"เทอร์มิสเตอร์เสีย","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room temp"},
+        {"code":"E1","desc":"PCB outdoor ผิดปกติ","cause":"PCB outdoor เสีย","fix":"ตรวจไฟ outdoor, เปลี่ยน PCB","parts":"PCB outdoor"},
+        {"code":"E3","desc":"แรงดันสูง high pressure","cause":"คอยล์ร้อนสกปรก / พัดลมเสีย / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจพัดลม, ตรวจน้ำยา","parts":"พัดลม outdoor, High pressure switch"},
+        {"code":"E4","desc":"แรงดันต่ำ low pressure","cause":"น้ำยารั่ว/น้อย / ท่ออุดตัน","fix":"ตรวจน้ำยา, ตรวจท่อ","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"กระแสไฟ compressor เกิน (overcurrent)","cause":"แรงดันไฟต่ำ / compressor เสีย","fix":"ตรวจแรงดันไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด/หลวม","fix":"ตรวจสายสัญญาณ 3 เส้น","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย / inverter board เสีย","fix":"ตรวจมอเตอร์, ตรวจ IPM","parts":"มอเตอร์ outdoor, IPM module"},
+        {"code":"E9","desc":"วาล์ว 4 ทาง (4-way valve) ผิดปกติ","cause":"4-way valve เสีย / คอยล์วาล์วเสีย","fix":"ตรวจคอยล์วาล์ว, เปลี่ยนวาล์ว","parts":"4-way valve"},
+        {"code":"F3","desc":"เทอร์มิสเตอร์ discharge pipe ผิดปกติ","cause":"เทอร์มิสเตอร์เสีย","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"H6","desc":"ตรวจไม่พบตำแหน่ง rotor","cause":"IPM เสีย / compressor เสีย","fix":"ตรวจ IPM module, ตรวจ compressor","parts":"IPM module, Compressor"},
+        {"code":"H9","desc":"เทอร์มิสเตอร์อุณหภูมิภายนอกผิดปกติ","cause":"เทอร์มิสเตอร์เสีย","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor temp"},
+        {"code":"J3","desc":"เทอร์มิสเตอร์ discharge temperature สูง","cause":"น้ำยาน้อย / ท่ออุดตัน","fix":"ตรวจน้ำยา, ตรวจท่อ","parts":"น้ำยาแอร์"},
+        {"code":"L4","desc":"IPM module อุณหภูมิสูง","cause":"ระบายความร้อนไม่ดี","fix":"ล้างคอยล์ร้อน, ตรวจพัดลม outdoor","parts":"IPM module"},
+        {"code":"L5","desc":"IPM module overcurrent","cause":"IPM เสีย / compressor ล็อก","fix":"เปลี่ยน IPM, ตรวจ compressor","parts":"IPM module, Compressor"},
+        {"code":"U0","desc":"น้ำยาแอร์น้อย","cause":"น้ำยารั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"U2","desc":"แรงดันไฟ DC ผิดปกติ","cause":"ไฟบ้านผิดปกติ / PCB เสีย","fix":"ตรวจแรงดันไฟ, เปลี่ยน PCB","parts":"PCB outdoor"},
+        {"code":"U4","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+    ],
+    "Mitsubishi Electric": [
+        {"code":"P1","desc":"แรงดันไฟ indoor ผิดปกติ","cause":"ไฟตก/เกิน หรือ PCB เสีย","fix":"ตรวจแรงดันไฟ 220V, เปลี่ยน PCB","parts":"PCB indoor"},
+        {"code":"P2","desc":"แรงดันไฟ outdoor ผิดปกติ","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ, ตรวจ capacitor","parts":"Capacitor, PCB outdoor"},
+        {"code":"P4","desc":"เซ็นเซอร์ drain ผิดปกติ / น้ำล้น","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง, ตรวจ float sensor","parts":"Float sensor"},
+        {"code":"E0","desc":"อุปกรณ์ป้องกัน (protection device) ทำงาน","cause":"แรงดันสูง/ต่ำ, อุณหภูมิสูง","fix":"ตรวจน้ำยา, ล้างคอยล์","parts":"High/low pressure switch"},
+        {"code":"E1","desc":"PCB outdoor ผิดปกติ","cause":"PCB outdoor เสีย","fix":"เปลี่ยน PCB outdoor","parts":"PCB outdoor"},
+        {"code":"E2","desc":"Zero-cross signal ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E3","desc":"Fan motor ผิดปกติ (indoor)","cause":"มอเตอร์เสีย / ใบพัดติดขัด","fix":"ตรวจใบพัด, เปลี่ยนมอเตอร์","parts":"มอเตอร์พัดลม indoor"},
+        {"code":"E4","desc":"Fan motor ผิดปกติ (outdoor)","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์พัดลม outdoor"},
+        {"code":"E5","desc":"กระแสไฟ compressor เกิน","cause":"compressor ล็อก / ไฟต่ำ","fix":"ตรวจแรงดันไฟ, เปลี่ยน compressor","parts":"Compressor"},
+        {"code":"E6","desc":"Compressor หยุดผิดปกติ","cause":"น้ำยาน้อย / compressor เสีย","fix":"ตรวจน้ำยา, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E7","desc":"Fan motor outdoor หยุดผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์","parts":"มอเตอร์พัดลม outdoor"},
+        {"code":"E8","desc":"กระแสไฟ input เกิน","cause":"ไฟกระชาก","fix":"ตรวจแรงดันไฟ, ตรวจ PCB","parts":"PCB outdoor"},
+        {"code":"E9","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้อง (indoor) เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ pipe temp (indoor) เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"F3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"F4","desc":"เซ็นเซอร์ discharge temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"F5","desc":"เซ็นเซอร์ outdoor pipe temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor pipe"},
+        {"code":"P5","desc":"อุณหภูมิ inverter สูงเกิน","cause":"ระบายความร้อน IPM ไม่ดี","fix":"ล้างคอยล์ร้อน, ตรวจพัดลม","parts":"IPM module"},
+        {"code":"P6","desc":"ตรวจพบความผิดปกติ inverter","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P8","desc":"อุณหภูมิ outdoor สูงเกิน","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"-"},
+    ],
+    "Mitsubishi Heavy": [
+        {"code":"E0","desc":"Protection device ทำงาน","cause":"High/low pressure trip","fix":"ตรวจน้ำยา, ล้างคอยล์","parts":"Pressure switch"},
+        {"code":"E1","desc":"PCB indoor ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E3","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"E5","desc":"Compressor overcurrent","cause":"ไฟต่ำ / compressor เสีย","fix":"ตรวจไฟ, เปลี่ยน compressor","parts":"Compressor"},
+        {"code":"E6","desc":"Compressor หยุดผิดปกติ","cause":"น้ำยาน้อย / compressor เสีย","fix":"ตรวจน้ำยา","parts":"Compressor"},
+        {"code":"E9","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"F3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"F4","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"P1","desc":"High pressure trip","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"P2","desc":"Low pressure trip","cause":"น้ำยารั่ว/น้อย","fix":"ตรวจน้ำยา, หาจุดรั่ว","parts":"Low pressure switch, น้ำยา"},
+        {"code":"P4","desc":"ท่อน้ำทิ้งเต็ม / drain error","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง","parts":"Float switch"},
+        {"code":"P5","desc":"IPM อุณหภูมิสูง","cause":"IPM ระบายร้อนไม่ดี","fix":"ล้างคอยล์, ตรวจพัดลม outdoor","parts":"IPM module"},
+        {"code":"P6","desc":"Inverter ผิดปกติ","cause":"IPM เสีย","fix":"เปลี่ยน IPM","parts":"IPM module"},
+        {"code":"P8","desc":"อุณหภูมิ outdoor สูง","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"-"},
+        {"code":"P9","desc":"4-way valve ผิดปกติ","cause":"คอยล์วาล์วเสีย","fix":"ตรวจ/เปลี่ยน 4-way valve","parts":"4-way valve"},
+    ],
+    "Carrier": [
+        {"code":"E1","desc":"Indoor PCB ผิดปกติ","cause":"PCB เสีย / ไฟผิดปกติ","fix":"ตรวจไฟ, เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E2","desc":"Outdoor PCB ผิดปกติ","cause":"PCB outdoor เสีย","fix":"เปลี่ยน PCB outdoor","parts":"PCB outdoor"},
+        {"code":"E3","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"E4","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"ตรวจน้ำยา, หาจุดรั่ว","parts":"Low pressure switch, น้ำยา"},
+        {"code":"E5","desc":"Compressor overcurrent","cause":"ไฟต่ำ / compressor เสีย","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"E8","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"E9","desc":"Freeze protection (คอยล์เย็นแข็ง)","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ indoor pipe เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"F3","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"F4","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"H6","desc":"Drain pump / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อ, ตรวจ float switch","parts":"Float switch"},
+        {"code":"P1","desc":"IPM / inverter protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"P2","desc":"Voltage ผิดปกติ","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+    ],
+    "Fujitsu": [
+        {"code":"00","desc":"ปกติ (ไม่มี error)","cause":"-","fix":"-","parts":"-"},
+        {"code":"03","desc":"Fan motor indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"04","desc":"Drain pump / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง","parts":"Float switch"},
+        {"code":"05","desc":"Freeze protection","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"06","desc":"High pressure trip","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"07","desc":"Low pressure trip","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"08","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"09","desc":"Inverter / IPM ผิดปกติ","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"12","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"13","desc":"PCB outdoor ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB outdoor","parts":"PCB outdoor"},
+        {"code":"14","desc":"อุณหภูมิ discharge สูงเกิน","cause":"น้ำยาน้อย / ท่ออุดตัน","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"15","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"16","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"17","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"18","desc":"เซ็นเซอร์ discharge temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"19","desc":"Fan motor outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"20","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"22","desc":"IPM อุณหภูมิสูง","cause":"ระบายความร้อนไม่ดี","fix":"ล้างคอยล์, ตรวจพัดลม","parts":"IPM module"},
+    ],
+    "Gree": [
+        {"code":"C5","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด/ช็อต","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"C4","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe indoor"},
+        {"code":"C1","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"C3","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"E1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"E2","desc":"High temperature discharge protection","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E3","desc":"Low pressure protection","cause":"น้ำยารั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E4","desc":"Compressor discharge temp สูงเกิน","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"Overcurrent protection","cause":"ไฟต่ำ / compressor เสีย","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"F0","desc":"IPM ผิดปกติ","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"F1","desc":"Compressor phase loss","cause":"ไฟ 3 เฟสผิดปกติ (เฉพาะรุ่นใหญ่)","fix":"ตรวจไฟ 3 เฟส","parts":"-"},
+        {"code":"H3","desc":"Compressor overload protection","cause":"compressor ร้อนเกิน","fix":"ตรวจน้ำยา, ตรวจการระบายความร้อน","parts":"Overload protector"},
+        {"code":"H6","desc":"ตรวจพบตำแหน่ง motor ไม่ได้","cause":"IPM เสีย / compressor เสีย","fix":"ตรวจ IPM, ตรวจ compressor","parts":"IPM module, Compressor"},
+        {"code":"Hc","desc":"มอเตอร์พัดลม outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"Ld","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"LP","desc":"Low pressure switch trip","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"Low pressure switch"},
+    ],
+    "Midea": [
+        {"code":"E1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก / น้ำยาเกิน","fix":"ล้างคอยล์ร้อน, ตรวจน้ำยา","parts":"High pressure switch"},
+        {"code":"E2","desc":"Freeze protection indoor coil","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E3","desc":"Low pressure protection","cause":"น้ำยาน้อย/รั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E4","desc":"High discharge temp protection","cause":"น้ำยาน้อย / ท่ออุดตัน","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"Overcurrent protection","cause":"ไฟต่ำ / compressor เสีย","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"PCB indoor ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB indoor","parts":"PCB indoor"},
+        {"code":"E8","desc":"กระแสไฟ input เกิน","cause":"ไฟกระชาก","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+        {"code":"E9","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"F0","desc":"IPM ผิดปกติ","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"F3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"F4","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"P0","desc":"IPM protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM","parts":"IPM module"},
+        {"code":"P1","desc":"Voltage protection","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+        {"code":"P2","desc":"เซ็นเซอร์ outdoor pipe เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor pipe"},
+    ],
+    "MAVELL": [
+        {"code":"E1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"E2","desc":"Freeze / low temp protection","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E3","desc":"Low pressure protection","cause":"น้ำยารั่ว","fix":"หาจุดรั่ว, เติมน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E4","desc":"Compressor discharge temp สูง","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"Overcurrent protection","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"F1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"F2","desc":"เซ็นเซอร์ pipe เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"P1","desc":"IPM protection","cause":"IPM เสีย","fix":"เปลี่ยน IPM","parts":"IPM module"},
+        {"code":"P2","desc":"Voltage protection","cause":"ไฟตก/เกิน","fix":"ตรวจแรงดันไฟ","parts":"PCB outdoor"},
+    ],
+    "Samsung": [
+        {"code":"C4 / C5","desc":"เซ็นเซอร์อุณหภูมิเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor"},
+        {"code":"E1","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"E2","desc":"Freeze protection","cause":"แผงสกปรก / น้ำยาน้อย","fix":"ล้างแผง, ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E3","desc":"Low pressure protection","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E4","desc":"Discharge temp สูง","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"E5","desc":"Overcurrent protection","cause":"compressor เสีย","fix":"ตรวจ compressor","parts":"Compressor"},
+        {"code":"E6","desc":"การสื่อสาร ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"E7","desc":"PCB ผิดปกติ","cause":"PCB เสีย","fix":"เปลี่ยน PCB","parts":"PCB"},
+        {"code":"E8","desc":"มอเตอร์พัดลม indoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor"},
+        {"code":"E9","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"F1","desc":"PCB outdoor เสีย","cause":"PCB เสีย","fix":"เปลี่ยน PCB outdoor","parts":"PCB outdoor"},
+        {"code":"Cl","desc":"ต้องล้างแผง (clean filter)","cause":"แผงกรองสกปรก","fix":"ล้างแผงกรอง","parts":"-"},
+    ],
+    "LG": [
+        {"code":"C1","desc":"เซ็นเซอร์อุณหภูมิห้องเสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"C2","desc":"เซ็นเซอร์ pipe indoor เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"C3","desc":"เซ็นเซอร์ outdoor temp เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"C5","desc":"เซ็นเซอร์ discharge เสีย","cause":"เทอร์มิสเตอร์ขาด","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor discharge"},
+        {"code":"CH01","desc":"เซ็นเซอร์อุณหภูมิห้องผิดปกติ","cause":"เทอร์มิสเตอร์เสีย","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor room"},
+        {"code":"CH02","desc":"เซ็นเซอร์ pipe indoor ผิดปกติ","cause":"เทอร์มิสเตอร์เสีย","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor pipe"},
+        {"code":"CH03","desc":"เซ็นเซอร์ outdoor ผิดปกติ","cause":"เทอร์มิสเตอร์เสีย","fix":"เปลี่ยนเทอร์มิสเตอร์","parts":"Thermistor outdoor"},
+        {"code":"CH05","desc":"การสื่อสาร indoor-outdoor ผิดปกติ","cause":"สายสัญญาณขาด","fix":"ตรวจสายสัญญาณ","parts":"สายสัญญาณ"},
+        {"code":"CH06","desc":"Fan motor indoor ผิดปกติ","cause":"มอเตอร์/capacitor เสีย","fix":"ตรวจ capacitor, เปลี่ยนมอเตอร์","parts":"มอเตอร์ indoor, Capacitor"},
+        {"code":"CH07","desc":"Fan motor outdoor ผิดปกติ","cause":"มอเตอร์เสีย","fix":"เปลี่ยนมอเตอร์ outdoor","parts":"มอเตอร์ outdoor"},
+        {"code":"CH09","desc":"Inverter ผิดปกติ","cause":"IPM เสีย","fix":"เปลี่ยน IPM module","parts":"IPM module"},
+        {"code":"CH10","desc":"DC peak current protection","cause":"compressor เสีย","fix":"ตรวจ compressor","parts":"Compressor"},
+        {"code":"CH21","desc":"High pressure protection","cause":"คอยล์ร้อนสกปรก","fix":"ล้างคอยล์ร้อน","parts":"High pressure switch"},
+        {"code":"CH22","desc":"Low pressure protection","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"CH23","desc":"Discharge temp สูงเกิน","cause":"น้ำยาน้อย","fix":"ตรวจน้ำยา","parts":"น้ำยาแอร์"},
+        {"code":"CH24","desc":"Compressor overcurrent","cause":"compressor เสีย / ไฟต่ำ","fix":"ตรวจไฟ, ตรวจ compressor","parts":"Compressor"},
+        {"code":"CH25","desc":"4-way valve ผิดปกติ","cause":"4-way valve เสีย","fix":"เปลี่ยน 4-way valve","parts":"4-way valve"},
+        {"code":"CH38","desc":"Drain pump / float switch ผิดปกติ","cause":"ท่อน้ำทิ้งอุดตัน","fix":"ล้างท่อน้ำทิ้ง","parts":"Float switch"},
+    ],
+}
 
-        with open(LOG_CSV, "rb") as f:
-            st.download_button("⬇️ Export ประวัติ CSV", data=f.read(),
-                               file_name="boonsuk_customer_log.csv", mime="text/csv")
+# ══════════════════════════════════════════════
+# PAGE 5: ERROR CODE LIBRARY
+# ══════════════════════════════════════════════
+if page == "🔧 คลังเออเร่อแอร์":
+    st.title("🔧 คลังเออเร่อโค้ดแอร์")
+    st.caption("รวม error code แอร์ทุกยี่ห้อ พร้อมสาเหตุ วิธีแก้ไข และอะไหล่ที่ต้องเปลี่ยน")
+
+    # ── search bar ──────────────────────────────
+    srch = st.text_input("🔍 พิมพ์ error code หรือคำค้นหา", placeholder="เช่น E1, compressor, น้ำยา, discharge").strip().lower()
+
+    # ── brand filter ────────────────────────────
+    brands = list(ERROR_DB.keys())
+    sel_brand = st.selectbox("เลือกยี่ห้อ", ["ทั้งหมด"] + brands)
+
+    # ── build filtered table ────────────────────
+    rows = []
+    for brand, errors in ERROR_DB.items():
+        if sel_brand != "ทั้งหมด" and brand != sel_brand:
+            continue
+        for e in errors:
+            rows.append({
+                "ยี่ห้อ": brand,
+                "Code": e["code"],
+                "ความหมาย": e["desc"],
+                "สาเหตุ": e["cause"],
+                "วิธีแก้ไข": e["fix"],
+                "อะไหล่ที่ต้องเปลี่ยน": e["parts"],
+            })
+    df_err = pd.DataFrame(rows)
+
+    if srch:
+        mask = pd.Series(False, index=df_err.index)
+        for col in df_err.columns:
+            mask |= df_err[col].astype(str).str.lower().str.contains(srch, na=False)
+        df_err = df_err[mask]
+
+    st.markdown(f"**พบ {len(df_err)} รายการ**")
+
+    if df_err.empty:
+        st.warning("ไม่พบ error code ที่ค้นหา")
+    else:
+        # แสดงแบบ card ถ้าเลือกยี่ห้อเดียวหรือค้นหา
+        if sel_brand != "ทั้งหมด" or srch:
+            for _, r in df_err.iterrows():
+                parts_color = "#c62828" if r["อะไหล่ที่ต้องเปลี่ยน"] not in ["-",""] else "#388e3c"
+                st.markdown(f"""
+                <div style="background:#fff;border-radius:10px;padding:14px 18px;margin-bottom:10px;
+                            border-left:5px solid #1565c0;box-shadow:0 1px 4px #0001;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:22px;font-weight:900;color:#1565c0;">{r['Code']}</span>
+                    <span style="background:#e3f2fd;color:#1565c0;padding:2px 10px;border-radius:20px;font-size:13px;">{r['ยี่ห้อ']}</span>
+                  </div>
+                  <div style="font-size:15px;font-weight:700;margin:4px 0;">📋 {r['ความหมาย']}</div>
+                  <div style="font-size:13px;color:#555;">⚡ <b>สาเหตุ:</b> {r['สาเหตุ']}</div>
+                  <div style="font-size:13px;color:#2e7d32;">🔧 <b>วิธีแก้ไข:</b> {r['วิธีแก้ไข']}</div>
+                  <div style="font-size:13px;color:{parts_color};">🔩 <b>อะไหล่:</b> {r['อะไหล่ที่ต้องเปลี่ยน']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            # แสดงแบบตารางถ้าดูทั้งหมด
+            st.dataframe(df_err, use_container_width=True, hide_index=True,
+                         column_config={
+                             "Code": st.column_config.TextColumn("Code", width="small"),
+                             "ยี่ห้อ": st.column_config.TextColumn("ยี่ห้อ", width="small"),
+                         })
+
+    # ── export ──────────────────────────────────
+    st.divider()
+    if st.button("📥 Export คลังเออเร่อ Excel", use_container_width=True):
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            all_rows = []
+            for brand, errors in ERROR_DB.items():
+                for e in errors:
+                    all_rows.append({"ยี่ห้อ":brand,"Code":e["code"],"ความหมาย":e["desc"],
+                                     "สาเหตุ":e["cause"],"วิธีแก้ไข":e["fix"],"อะไหล่":e["parts"]})
+            pd.DataFrame(all_rows).to_excel(writer, sheet_name="Error Codes", index=False)
+            wb = writer.book
+            from openpyxl.styles import Font, PatternFill, Alignment
+            ws = wb["Error Codes"]
+            for cell in ws[1]:
+                cell.fill = PatternFill("solid", fgColor="B71C1C")
+                cell.font = Font(bold=True, color="FFFFFF", name="Arial", size=11)
+                cell.alignment = Alignment(horizontal="center")
+            for col in ws.columns:
+                mlen = max((len(str(c.value or "")) for c in col), default=10)
+                ws.column_dimensions[col[0].column_letter].width = min(mlen + 4, 50)
+        st.download_button("⬇️ ดาวน์โหลด Excel คลังเออเร่อ", data=buf.getvalue(),
+                           file_name="คลังเออเร่อแอร์_บุญสุข.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                           use_container_width=True)
