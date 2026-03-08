@@ -39,20 +39,21 @@ STORE_NAME    = "ร้านบุญสุขอิเล็กทรอนิ
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # ← 3320800011106
+STORE_TAX_ID  = ""   # ← 33208000111106
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU==")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
-    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 250 บาท\n"
-    "2) ท่อน้ำยาไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 500-800 บาท\n"
-    "3) แถมท่อน้ำทิ้ง ไม่เกิน 6 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
+    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
+    "2) แถมท่อน้ำยา ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 400 บาท\n"
+    "3) แถมท่อน้ำทิ้ง ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "4) แถมสายไฟ ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "5) แถมขาแขวนหรือขายาง สำหรับติดตั้งคอยล์ร้อน\n"
-    "6) รับประกันงานตามเงื่อนไขฟรี ตลอดอายุการใช้งาน"
+    "6) กรณีไม่มีเบรคเกอร์ แถมให้ฟรี\n"
+    "7) รับประกันงานตามเงื่อนไขฟรี ตลอดอายุการใช้งาน"
 )
 
 DATA_DIR  = "."
@@ -764,27 +765,13 @@ def build_pdf_receipt(q: dict, receipt_no: str, is_tax: bool = False) -> bytes:
 # LINE
 # ──────────────────────────────────────────────
 def make_line_text(q: dict) -> str:
-    return "\n".join([
-        f"🧾 ใบเสนอราคา — {STORE_NAME}",
-        f"{'─'*30}",
-        f"📅 วันที่: {q['date']}",
-        f"👤 ลูกค้า: {safe_text(q['customer_name'])}",
-        f"📞 โทร: {safe_text(q['customer_phone'])}",
-        f"{'─'*30}",
-        f"❄️ รุ่น: {safe_text(q['model'])}  ({safe_text(q['section'])})",
-        f"🌡️ BTU รุ่น: {q['model_btu']:,} BTU",
-        f"{'─'*30}",
-        f"💰 ราคาพร้อมติดตั้ง: {fmt_baht(q['base_price'])} บาท",
-        f"🎁 ส่วนลด: {fmt_baht(q['discount'])} บาท",
-        f"🔧 ค่าติดตั้งเพิ่ม: {fmt_baht(q['extra_install'])} บาท",
-        f"✅ รวมสุทธิ: {fmt_baht(q['net_total'])} บาท",
-        f"{'─'*30}",
-        f"📞 ติดต่อร้าน: {STORE_PHONE}",
-        f"🌐 {STORE_WEB}",
-        f"",
-        f"📋 ติดตามสถานะงาน:",
-        f"{APP_URL}",
-    ])
+    return (
+        f"🧾 ใบเสนอราคา\n"
+        f"👤 {safe_text(q['customer_name'])} {safe_text(q['customer_phone'])}\n"
+        f"❄️ {safe_text(q['model'])}\n"
+        f"💰 {fmt_baht(q['net_total'])} บาท\n"
+        f"📞 {STORE_PHONE} {APP_URL}"
+    )
 
 def line_share_link(text):
     # LINE share ต้องใช้ %0A แทน newline และ encode ให้ถูกต้อง
@@ -1513,27 +1500,13 @@ if page == "🛠️ รับงานซ่อม/บริการ":
 
                 # ── LINE share ──────────────────────────
                 price_text = f"{fmt_baht(int(sv_price))} บาท" if int(sv_price) > 0 else "ยังไม่ระบุ"
-                line_text = "\n".join([
-                    f"🛠️ ใบรับงาน — {STORE_NAME}",
-                    f"{'─'*30}",
-                    f"📅 วันที่: {sv_date.strftime('%d/%m/%Y')}",
-                    f"🔧 ประเภทงาน: {sv_type}",
-                    f"{'─'*30}",
-                    f"👤 ชื่อ: {sv_name.strip()}",
-                    f"📞 เบอร์: {sv_phone.strip()}",
-                    f"📍 ที่อยู่: {sv_addr.strip() or '-'}",
-                    f"{'─'*30}",
-                    f"⚡ อาการ/งาน: {sv_symptom.strip()}",
-                    f"📌 หมายเหตุ: {sv_note.strip() or '-'}",
-                    f"💰 ค่าบริการ: {price_text}",
-                    f"📊 สถานะ: {sv_status}",
-                    f"{'─'*30}",
-                    f"📞 ติดต่อร้าน: {STORE_PHONE}",
-                    f"🌐 {STORE_WEB}",
-                    f"",
-                    f"📋 ติดตามสถานะงาน:",
-                    f"{APP_URL}",
-                ])
+                _sym = sv_symptom.strip()[:40]
+                line_text = (
+                    f"🛠️ {sv_type}\n"
+                    f"👤 {sv_name.strip()} {sv_phone.strip()}\n"
+                    f"⚡ {_sym}\n"
+                    f"📞 {STORE_PHONE} {APP_URL}"
+                )
                 line_url = line_share_link(line_text)
 
                 st.divider()
