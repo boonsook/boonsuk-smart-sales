@@ -1087,7 +1087,11 @@ with st.sidebar:
         if _role == "admin":
             _menus.append("⚙️ นำเข้า/ส่งออกข้อมูล")
 
-    page = st.radio("เมนู", _menus, label_visibility="collapsed")
+    # รองรับ navigation จาก home grid
+    _fp = st.session_state.get("_forced_page","")
+    _default_idx = _menus.index(_fp) if _fp in _menus else 0
+    if _fp: st.session_state.pop("_forced_page")
+    page = st.radio("เมนู", _menus, index=_default_idx, label_visibility="collapsed")
     st.divider()
     if _role == "customer":
         st.caption(f"👤 สวัสดี **{_name}**")
@@ -1115,8 +1119,15 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
+    # handle nav จาก home grid
+    if st.session_state.get("_nav_page"):
+        _go = st.session_state.pop("_nav_page")
+        # inject page selection via query param trick
+        st.session_state["_forced_page"] = _go
+        st.rerun()
+
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#1a237e,#0d47a1);border-radius:16px;padding:20px 24px;margin-bottom:20px;color:white;">
+    <div style="background:linear-gradient(135deg,#1a237e,#0d47a1);border-radius:16px;padding:20px 24px;margin-bottom:16px;color:white;">
         <div style="font-size:13px;opacity:0.8;">สวัสดี,</div>
         <div style="font-size:22px;font-weight:700;">{_name2} {'👑' if _role2=='admin' else '👔' if _role2=='staff' else '👤'}</div>
         <div style="font-size:12px;margin-top:4px;opacity:0.7;">{'ผู้ดูแลระบบ' if _role2=='admin' else 'พนักงาน' if _role2=='staff' else 'ลูกค้า'} • ร้านบุญสุขอิเล็กทรอนิกส์</div>
@@ -1132,66 +1143,59 @@ if page == "🏠 หน้าหลัก":
     col_s[2].metric("✅ สต๊อกปกติ",   f"{len(df_stk[df_stk['stock_qty']>2])} รุ่น")
 
     st.markdown("---")
-    st.markdown("### 📱 เมนูหลัก")
 
-    # CSS Grid สวยงาม
-    st.markdown("""
-    <style>
-    .home-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;}
-    .home-card {background:white;border-radius:14px;padding:18px 8px;text-align:center;
-                box-shadow:0 2px 8px rgba(0,0,0,0.10);cursor:pointer;transition:0.2s;border:1.5px solid #f0f0f0;}
-    .home-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.18);transform:translateY(-2px);}
-    .home-card .icon{font-size:32px;margin-bottom:6px;}
-    .home-card .label{font-size:12px;font-weight:600;color:#1a237e;line-height:1.3;}
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown("""<style>
+    div[data-testid="stButton"] > button {
+        height: auto !important;
+        min-height: 80px !important;
+        white-space: pre-wrap !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        border-radius: 14px !important;
+        border: 1.5px solid #e0e0e0 !important;
+        background: white !important;
+        color: #1a237e !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+        line-height: 1.5 !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        box-shadow: 0 4px 14px rgba(0,0,0,0.15) !important;
+        border-color: #1a237e !important;
+        background: #f0f4ff !important;
+    }
+    </style>""", unsafe_allow_html=True)
 
     if _role2 == "customer":
         menus_home = [
-            ("🧾","ขอใบเสนอราคา","🧾 ขอใบเสนอราคาแอร์"),
-            ("🛠️","แจ้งซ่อม/บริการ","🛠️ แจ้งซ่อม/บริการ"),
-            ("📋","งานของฉัน","📋 งานของฉัน"),
-            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU"),
+            ("🧾 ขอใบเสนอราคา",  "🧾 ขอใบเสนอราคาแอร์"),
+            ("🛠️ แจ้งซ่อม",       "🛠️ แจ้งซ่อม/บริการ"),
+            ("📋 งานของฉัน",      "📋 งานของฉัน"),
+            ("🧮 คำนวณ BTU",      "🧮 คำนวณ BTU"),
         ]
     else:
         menus_home = [
-            ("🧾","สร้างใบเสนอราคา","🧾 สร้างใบเสนอราคา"),
-            ("🛠️","รับงานซ่อม","🛠️ รับงานซ่อม/บริการ"),
-            ("📋","จัดการงาน","📋 จัดการงาน / สถานะ"),
-            ("📦","สต๊อกแอร์","📦 จัดการสต๊อก"),
-            ("📊","Dashboard","📊 Dashboard"),
-            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU"),
-            ("🔧","คลัง Error Code","🔧 คลังเออเร่อแอร์"),
+            ("🧾 ใบเสนอราคา",    "🧾 สร้างใบเสนอราคา"),
+            ("🛠️ รับงานซ่อม",    "🛠️ รับงานซ่อม/บริการ"),
+            ("📋 จัดการงาน",     "📋 จัดการงาน / สถานะ"),
+            ("📦 สต๊อกแอร์",     "📦 จัดการสต๊อก"),
+            ("📊 Dashboard",     "📊 Dashboard"),
+            ("🧮 คำนวณ BTU",     "🧮 คำนวณ BTU"),
+            ("🔧 Error Code",    "🔧 คลังเออเร่อแอร์"),
         ]
         if _role2 == "admin":
-            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
+            menus_home.append(("⚙️ นำเข้า/ส่งออก", "⚙️ นำเข้า/ส่งออกข้อมูล"))
 
-    # วาดไอคอน Grid ด้วย st.columns
     n_cols = 3
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
     for row in rows:
         cols = st.columns(n_cols)
-        for idx, (icon, label, target) in enumerate(row):
+        for idx, (label, target) in enumerate(row):
             with cols[idx]:
-                st.markdown(f"""
-                <div class="home-card">
-                    <div class="icon">{icon}</div>
-                    <div class="label">{label}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button(label, key=f"home_{target}", use_container_width=True, help=f"ไปที่ {label}"):
-                    st.session_state["_nav"] = target
+                if st.button(label, key=f"hnav_{target}", use_container_width=True):
+                    st.session_state["_forced_page"] = target
                     st.rerun()
-        # เติม cell ว่างให้ครบ
         for idx in range(len(row), n_cols):
-            with cols[idx]:
-                st.empty()
-
-    # Navigation จาก home
-    if "_nav" in st.session_state:
-        _nav_target = st.session_state.pop("_nav")
-        # เปลี่ยน page โดย rerun (Streamlit radio ไม่รองรับ programmatic nav ตรงๆ)
-        st.info(f"กรุณาเลือกเมนู **{_nav_target}** จากแถบซ้ายครับ ➡️")
+            with cols[idx]: st.empty()
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
