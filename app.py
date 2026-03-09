@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 from datetime import date, datetime
 from urllib.parse import quote as urlquote
+import urllib.parse
 from fpdf import FPDF
 
 # ── Auto-install missing packages ────────────
@@ -43,12 +44,12 @@ STORE_TAX_ID  = ""   # ← 3320800011106
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU==")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
-    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
-    "2) แถมท่อน้ำยา ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 400 บาท\n"
+    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 250 บาท\n"
+    "2) ท่อน้ำยาไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 500-800 บาท\n"
     "3) แถมท่อน้ำทิ้ง ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "4) แถมสายไฟ ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "5) แถมขาแขวนหรือขายาง สำหรับติดตั้งคอยล์ร้อน\n"
@@ -230,6 +231,17 @@ def suggest_capacity(btu):
 # ──────────────────────────────────────────────
 # LOGIN
 # ──────────────────────────────────────────────
+def _encode_session(data: dict) -> str:
+    import json, base64
+    return base64.urlsafe_b64encode(json.dumps(data).encode()).decode()
+
+def _decode_session(token: str) -> dict:
+    import json, base64
+    try:
+        return json.loads(base64.urlsafe_b64decode(token.encode()).decode())
+    except:
+        return {}
+
 def check_login():
     if "logged_in" not in st.session_state:
         st.session_state.logged_in  = False
@@ -237,6 +249,37 @@ def check_login():
         st.session_state.role       = ""
         st.session_state.full_name  = ""
         st.session_state.user_phone = ""
+
+    # ลอง restore session จาก query param
+    if not st.session_state.logged_in:
+        try:
+            params = st.query_params
+            token = params.get("s", "")
+            if token:
+                data = _decode_session(token)
+                import time
+                if data.get("exp", 0) > time.time():
+                    st.session_state.logged_in  = True
+                    st.session_state.username   = data.get("u", "")
+                    st.session_state.role       = data.get("r", "")
+                    st.session_state.full_name  = data.get("n", "")
+                    st.session_state.user_phone = data.get("p", "")
+                else:
+                    st.query_params.clear()
+        except:
+            pass
+
+def _save_session():
+    """บันทึก session ลง URL query param อายุ 30 วัน"""
+    import time
+    data = {
+        "u": st.session_state.get("username",""),
+        "r": st.session_state.get("role",""),
+        "n": st.session_state.get("full_name",""),
+        "p": st.session_state.get("user_phone",""),
+        "exp": time.time() + (30 * 24 * 3600),
+    }
+    st.query_params["s"] = _encode_session(data)
 
 def inject_pwa():
     """ใส่ PWA manifest inline via base64"""
@@ -303,6 +346,7 @@ def login_page():
                     st.session_state.role       = role
                     st.session_state.full_name  = username
                     st.session_state.user_phone = ""
+                    _save_session()
                     st.rerun()
                 else:
                     st.error("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
@@ -326,6 +370,7 @@ def login_page():
                             st.session_state.role       = "customer"
                             st.session_state.full_name  = user["full_name"]
                             st.session_state.user_phone = user["phone"]
+                            _save_session()
                             st.rerun()
                         else:
                             st.error(f"❌ {msg}")
@@ -1051,6 +1096,7 @@ with st.sidebar:
     if st.button("🚪 ออกจากระบบ", use_container_width=True):
         for k in ["logged_in","username","role","full_name","user_phone"]:
             st.session_state[k] = "" if k != "logged_in" else False
+        st.query_params.clear()
         st.rerun()
 
 df_all = load_stock()
