@@ -39,20 +39,21 @@ STORE_NAME    = "ร้านบุญสุขอิเล็กทรอนิ
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # ← 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU==")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
-    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 250 บาท\n"
-    "2) ท่อน้ำยาไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 500-800 บาท\n"
-    "3) แถมท่อน้ำทิ้ง ไม่เกิน 8 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
+    "1) แถมรางครอบท่อน้ำยาให้ฟรี ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 200 บาท\n"
+    "2) แถมท่อน้ำยา ไม่เกิน 4 เมตร หากเกินคิดเพิ่ม เมตรละ 400 บาท\n"
+    "3) แถมท่อน้ำทิ้ง ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "4) แถมสายไฟ ไม่เกิน 10 เมตร หากเกินคิดเพิ่ม เมตรละ 40 บาท\n"
     "5) แถมขาแขวนหรือขายาง สำหรับติดตั้งคอยล์ร้อน\n"
-    "6) รับประกันงานตามเงื่อนไขฟรี ตลอดอายุการใช้งาน"
+    "6) กรณีไม่มีเบรคเกอร์ แถมให้ฟรี\n"
+    "7) รับประกันงานตามเงื่อนไขฟรี ตลอดอายุการใช้งาน"
 )
 
 DATA_DIR  = "."
@@ -64,8 +65,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -237,7 +238,27 @@ def check_login():
         st.session_state.full_name  = ""
         st.session_state.user_phone = ""
 
+def inject_pwa():
+    """ใส่ PWA manifest + service worker"""
+    st.markdown("""
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="บุญสุข">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <meta name="theme-color" content="#1565c0">
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/sw.js')
+            .then(r => console.log('SW registered'))
+            .catch(e => console.log('SW error', e));
+    }
+    </script>
+    """, unsafe_allow_html=True)
+
 def login_page():
+    inject_pwa()
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display:none !important; }
@@ -985,6 +1006,7 @@ st.markdown("""
 # MAIN
 # ──────────────────────────────────────────────
 check_login()
+inject_pwa()
 if not st.session_state.logged_in:
     login_page(); st.stop()
 
