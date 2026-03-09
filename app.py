@@ -1068,17 +1068,20 @@ with st.sidebar:
 
     if _role == "customer":
         _menus = [
+            "🏠 หน้าหลัก",
             "🧾 ขอใบเสนอราคาแอร์",
             "🛠️ แจ้งซ่อม/บริการ",
             "📋 งานของฉัน",
         ]
     else:
         _menus = [
+            "🏠 หน้าหลัก",
             "🧾 สร้างใบเสนอราคา",
             "🛠️ รับงานซ่อม/บริการ",
             "📋 จัดการงาน / สถานะ",
             "📦 จัดการสต๊อก",
             "📊 Dashboard",
+            "🧮 คำนวณ BTU",
             "🔧 คลังเออเร่อแอร์",
         ]
         if _role == "admin":
@@ -1104,6 +1107,141 @@ if st.session_state.get("role","") != "customer":
     if not low_stock.empty:
         items = ", ".join(f"{r['model']} (เหลือ {r['stock_qty']})" for _, r in low_stock.head(5).iterrows())
         st.warning(f"⚠️ **สต๊อกใกล้หมด:** {items}")
+
+# ══════════════════════════════════════════════
+# PAGE 0: HOME GRID
+# ══════════════════════════════════════════════
+if page == "🏠 หน้าหลัก":
+    _role2 = st.session_state.get("role","staff")
+    _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#1a237e,#0d47a1);border-radius:16px;padding:20px 24px;margin-bottom:20px;color:white;">
+        <div style="font-size:13px;opacity:0.8;">สวัสดี,</div>
+        <div style="font-size:22px;font-weight:700;">{_name2} {'👑' if _role2=='admin' else '👔' if _role2=='staff' else '👤'}</div>
+        <div style="font-size:12px;margin-top:4px;opacity:0.7;">{'ผู้ดูแลระบบ' if _role2=='admin' else 'พนักงาน' if _role2=='staff' else 'ลูกค้า'} • ร้านบุญสุขอิเล็กทรอนิกส์</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # สถิติเร็ว
+    df_stk = load_stock()
+    df_lg  = load_log()
+    col_s = st.columns(3)
+    col_s[0].metric("📦 รุ่นในสต๊อก", f"{len(df_stk)} รุ่น")
+    col_s[1].metric("🧾 งานทั้งหมด",  f"{len(df_lg)} รายการ")
+    col_s[2].metric("✅ สต๊อกปกติ",   f"{len(df_stk[df_stk['stock_qty']>2])} รุ่น")
+
+    st.markdown("---")
+    st.markdown("### 📱 เมนูหลัก")
+
+    # CSS Grid สวยงาม
+    st.markdown("""
+    <style>
+    .home-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;}
+    .home-card {background:white;border-radius:14px;padding:18px 8px;text-align:center;
+                box-shadow:0 2px 8px rgba(0,0,0,0.10);cursor:pointer;transition:0.2s;border:1.5px solid #f0f0f0;}
+    .home-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.18);transform:translateY(-2px);}
+    .home-card .icon{font-size:32px;margin-bottom:6px;}
+    .home-card .label{font-size:12px;font-weight:600;color:#1a237e;line-height:1.3;}
+    </style>
+    """, unsafe_allow_html=True)
+
+    if _role2 == "customer":
+        menus_home = [
+            ("🧾","ขอใบเสนอราคา","🧾 ขอใบเสนอราคาแอร์"),
+            ("🛠️","แจ้งซ่อม/บริการ","🛠️ แจ้งซ่อม/บริการ"),
+            ("📋","งานของฉัน","📋 งานของฉัน"),
+            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU"),
+        ]
+    else:
+        menus_home = [
+            ("🧾","สร้างใบเสนอราคา","🧾 สร้างใบเสนอราคา"),
+            ("🛠️","รับงานซ่อม","🛠️ รับงานซ่อม/บริการ"),
+            ("📋","จัดการงาน","📋 จัดการงาน / สถานะ"),
+            ("📦","สต๊อกแอร์","📦 จัดการสต๊อก"),
+            ("📊","Dashboard","📊 Dashboard"),
+            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU"),
+            ("🔧","คลัง Error Code","🔧 คลังเออเร่อแอร์"),
+        ]
+        if _role2 == "admin":
+            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
+
+    # วาดไอคอน Grid ด้วย st.columns
+    n_cols = 3
+    rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
+    for row in rows:
+        cols = st.columns(n_cols)
+        for idx, (icon, label, target) in enumerate(row):
+            with cols[idx]:
+                st.markdown(f"""
+                <div class="home-card">
+                    <div class="icon">{icon}</div>
+                    <div class="label">{label}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(label, key=f"home_{target}", use_container_width=True, help=f"ไปที่ {label}"):
+                    st.session_state["_nav"] = target
+                    st.rerun()
+        # เติม cell ว่างให้ครบ
+        for idx in range(len(row), n_cols):
+            with cols[idx]:
+                st.empty()
+
+    # Navigation จาก home
+    if "_nav" in st.session_state:
+        _nav_target = st.session_state.pop("_nav")
+        # เปลี่ยน page โดย rerun (Streamlit radio ไม่รองรับ programmatic nav ตรงๆ)
+        st.info(f"กรุณาเลือกเมนู **{_nav_target}** จากแถบซ้ายครับ ➡️")
+
+# ══════════════════════════════════════════════
+# PAGE BTU CALCULATOR
+# ══════════════════════════════════════════════
+elif page == "🧮 คำนวณ BTU":
+    st.title("🧮 คำนวณ BTU ที่เหมาะสม")
+    st.markdown("กรอกข้อมูลห้องเพื่อคำนวณขนาดแอร์ที่เหมาะสมครับ")
+
+    with st.form("btu_calc_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            width  = st.number_input("📐 ความกว้างห้อง (เมตร)", min_value=1.0, max_value=30.0, value=4.0, step=0.5)
+            length = st.number_input("📐 ความยาวห้อง (เมตร)",  min_value=1.0, max_value=30.0, value=5.0, step=0.5)
+            height = st.number_input("📐 ความสูงห้อง (เมตร)",  min_value=2.0, max_value=5.0,  value=2.7, step=0.1)
+        with c2:
+            room_type_btu = st.selectbox("🏠 ประเภทห้อง", list(BTU_FACTORS.keys()))
+            floor_type    = st.selectbox("🏢 ชั้น/ตำแหน่ง", ["ชั้นล่าง/ใต้ร่มเงา","ชั้นบน/โดนแดดโดยตรง","ห้องกระจก/โดนแดดมาก"])
+            n_people      = st.number_input("👥 จำนวนคนใช้งานเฉลี่ย", min_value=1, max_value=20, value=2)
+        submitted_btu = st.form_submit_button("🔍 คำนวณ BTU", use_container_width=True, type="primary")
+
+    if submitted_btu:
+        area   = width * length
+        factor = BTU_FACTORS.get(room_type_btu, 850)
+        btu    = area * factor
+        # ปรับตามชั้น
+        if "ชั้นบน" in floor_type:   btu *= 1.15
+        if "กระจก" in floor_type:    btu *= 1.25
+        # ปรับตามคน (เพิ่ม 600 BTU/คน หลังจากคนที่ 2)
+        if n_people > 2: btu += (n_people - 2) * 600
+
+        st.success(f"### 🌡️ BTU ที่ต้องการ: **{btu:,.0f} BTU**")
+
+        # แนะนำขนาด
+        if btu <= 9500:       size = "9,000 BTU"
+        elif btu <= 13000:    size = "12,000 BTU"
+        elif btu <= 16000:    size = "15,000 BTU"
+        elif btu <= 20000:    size = "18,000 BTU"
+        elif btu <= 26000:    size = "24,000 BTU"
+        elif btu <= 32000:    size = "30,000 BTU"
+        else:                 size = "36,000 BTU ขึ้นไป"
+        st.info(f"✅ แนะนำขนาด **{size}**")
+
+        # แสดงรุ่นที่มีในสต๊อกใกล้เคียง
+        df_stk2 = load_stock()
+        btu_val = int(btu)
+        df_match = df_stk2[abs(df_stk2["btu"] - btu_val) <= 3000].sort_values("price_install")
+        if not df_match.empty:
+            st.markdown("#### 📦 รุ่นที่มีในสต๊อก (ใกล้เคียง)")
+            st.dataframe(df_match[["section","model","btu","price_install","stock_qty"]].head(8),
+                         use_container_width=True, hide_index=True)
 
 # ══════════════════════════════════════════════
 # PAGE 1: QUOTATION
