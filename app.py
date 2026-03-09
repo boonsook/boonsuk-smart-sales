@@ -434,32 +434,27 @@ def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df[(df["section"] != "") & (df["model"] != "")]
     return df.copy()
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def load_stock() -> pd.DataFrame:
     base = clean_df(pd.DataFrame(PRODUCTS))
     # ── Supabase ──
     if _use_supabase():
         try:
             sb   = _get_supabase()
-            rows = sb.table("stock").select("section,model,stock_qty").execute().data
+            rows = sb.table("stock").select("section,model,btu,price_install,w_install,w_parts,w_comp,stock_qty").execute().data
             if rows:
-                saved  = pd.DataFrame(rows)
-                saved["stock_qty"] = pd.to_numeric(saved["stock_qty"], errors="coerce").fillna(0).astype(int)
-                merged = base.merge(saved[["section","model","stock_qty"]], on=["section","model"],
-                                    how="left", suffixes=("","_s"))
-                merged["stock_qty"] = merged["stock_qty_s"].fillna(merged["stock_qty"]).astype(int)
-                return merged.drop(columns=["stock_qty_s"])
+                df = pd.DataFrame(rows)
+                for c in ["btu","price_install","stock_qty"]:
+                    if c in df.columns:
+                        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
+                return clean_df(df)
         except Exception as e:
             st.warning(f"Supabase load_stock: {e} — ใช้ข้อมูลเริ่มต้น")
         return base
     # ── CSV fallback ──
     if os.path.exists(STOCK_CSV):
         try:
-            saved  = clean_df(pd.read_csv(STOCK_CSV, encoding="utf-8-sig"))
-            merged = base.merge(saved[["section","model","stock_qty"]], on=["section","model"],
-                                how="left", suffixes=("","_s"))
-            merged["stock_qty"] = merged["stock_qty_s"].fillna(merged["stock_qty"]).astype(int)
-            return merged.drop(columns=["stock_qty_s"])
+            return clean_df(pd.read_csv(STOCK_CSV, encoding="utf-8-sig"))
         except Exception:
             pass
     return base
