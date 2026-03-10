@@ -42,11 +42,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -68,8 +68,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -1324,34 +1324,62 @@ if page == "🏠 หน้าหลัก":
         if _role2 == "admin":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล","#f1f5f9"))
 
-    # วาด icon grid ด้วย HTML + ปุ่ม Streamlit ซ่อนใต้
+    # วาด icon grid — กดที่รูปได้เลย ผ่าน Streamlit columns
     n_cols = 4
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
-    for row in rows:
-        # วาด icon HTML
-        html_row = '<div class="icon-grid">'
-        for (icon, label, target, color) in row:
-            html_row += f"""<div class="icon-wrap">
-                <div class="icon-box" style="background:{color};">{icon}</div>
-                <div class="icon-label">{label}</div>
-            </div>"""
-        # เติม cell ว่าง
-        for _ in range(n_cols - len(row)):
-            html_row += '<div class="icon-wrap"></div>'
-        html_row += '</div>'
-        st.markdown(html_row, unsafe_allow_html=True)
 
-        # ปุ่มซ่อนไว้ใต้ไอคอน (ขนาดเล็ก ใช้ columns)
+    # CSS ซ่อนข้อความในปุ่ม แสดงแค่ emoji+label สวยงาม
+    st.markdown("""<style>
+    div[data-testid="stButton"].icon-app-btn > button {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 4px 2px !important;
+        font-size: 12px !important;
+        color: #333 !important;
+        height: auto !important;
+        min-height: unset !important;
+        line-height: 1.4 !important;
+        width: 100% !important;
+    }
+    div[data-testid="stButton"].icon-app-btn > button:hover {
+        background: #f0f4ff !important;
+        border-radius: 14px !important;
+    }
+    /* ซ่อนปุ่ม streamlit เดิม ให้ใช้แค่ HTML icon */
+    .stButton { margin: 0 !important; }
+    </style>""", unsafe_allow_html=True)
+
+    for row in rows:
         cols = st.columns(n_cols)
         for idx, (icon, label, target, color) in enumerate(row):
             with cols[idx]:
-                if st.button(icon, key=f"hnav_{target}", use_container_width=True,
-                             help=label):
+                # วาด icon + label ด้วย HTML
+                st.markdown(f"""
+                <div style="text-align:center; margin-bottom:2px;">
+                  <div style="background:{color}; border-radius:18px; width:60px; height:60px;
+                    margin:0 auto 5px auto; display:flex; align-items:center;
+                    justify-content:center; font-size:28px;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.12);">{icon}</div>
+                  <div style="font-size:11px; color:#333; font-weight:500; line-height:1.3;">{label}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                # ปุ่มโปร่งใส ครอบทับ (กดได้)
+                if st.button("　", key=f"hnav_{target}", use_container_width=True):
                     st.session_state["_current_page"] = target
                     st.rerun()
+                # ดึงปุ่มขึ้นทับไอคอน
+                st.markdown("""<style>
+                div[data-testid="stButton"]:last-child > button {
+                    margin-top: -68px !important;
+                    height: 80px !important;
+                    opacity: 0 !important;
+                    position: relative; z-index: 10;
+                }
+                </style>""", unsafe_allow_html=True)
         for idx in range(len(row), n_cols):
             with cols[idx]: st.empty()
-        st.markdown("<div style='margin-bottom:-32px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
@@ -1651,7 +1679,7 @@ elif page == "📋 จัดการงาน / สถานะ":
                         except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
 
                     if u4.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
-                        _job_id = row_log.get("id")
+                        _job_id = job.get("id") if isinstance(job, dict) else job.to_dict().get("id")
                         if _job_id and delete_job(int(_job_id)):
                             st.cache_data.clear()
                             st.warning("🗑️ ลบงานแล้ว"); st.rerun()
