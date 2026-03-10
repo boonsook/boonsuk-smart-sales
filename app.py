@@ -31,6 +31,7 @@ st.set_page_config(
     page_icon="❄️",
     layout="wide",
     initial_sidebar_state="collapsed",
+    menu_items={},
 )
 
 # ──────────────────────────────────────────────
@@ -41,11 +42,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -67,8 +68,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -307,10 +308,21 @@ def login_page():
     inject_pwa()
     st.markdown("""
     <style>
-    [data-testid="stSidebar"] { display:none !important; visibility:hidden !important; width:0 !important; }
-    [data-testid="collapsedControl"] { display:none !important; }
-    .st-emotion-cache-zt5igj { display:none !important; }
-    section[data-testid="stSidebarNav"] { display:none !important; }
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarNav"],
+    [data-testid="collapsedControl"],
+    section[data-testid="stSidebar"],
+    .st-emotion-cache-zt5igj,
+    .st-emotion-cache-1cypcdb,
+    .st-emotion-cache-6qob1r {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0px !important;
+        height: 0px !important;
+        overflow: hidden !important;
+        position: absolute !important;
+    }
+    .main .block-container { padding-left: 1rem !important; padding-right: 1rem !important; max-width: 100% !important; }
     .login-wrap {
         max-width: 440px; margin: 30px auto 0 auto;
         background: #fff; border-radius: 20px;
@@ -1145,13 +1157,14 @@ if page == "🏠 หน้าหลัก":
     </div>
     """, unsafe_allow_html=True)
 
-    # สถิติเร็ว
-    df_stk = load_stock()
-    df_lg  = load_log()
-    col_s = st.columns(3)
-    col_s[0].metric("📦 รุ่นในสต๊อก", f"{len(df_stk)} รุ่น")
-    col_s[1].metric("🧾 งานทั้งหมด",  f"{len(df_lg)} รายการ")
-    col_s[2].metric("✅ สต๊อกปกติ",   f"{len(df_stk[df_stk['stock_qty']>2])} รุ่น")
+    # สถิติเร็ว — แสดงเฉพาะ admin/staff
+    if _role2 != "customer":
+        df_stk = load_stock()
+        df_lg  = load_log()
+        col_s = st.columns(3)
+        col_s[0].metric("📦 รุ่นในสต๊อก", f"{len(df_stk)} รุ่น")
+        col_s[1].metric("🧾 งานทั้งหมด",  f"{len(df_lg)} รายการ")
+        col_s[2].metric("✅ สต๊อกปกติ",   f"{len(df_stk[df_stk['stock_qty']>2])} รุ่น")
 
     # ปุ่ม logout ด้านบนขวา
     _top_c1, _top_c2 = st.columns([3,1])
@@ -1365,12 +1378,12 @@ if page == "🧾 สร้างใบเสนอราคา":
         net_total  = max(0, base_price - int(discount) + int(extra_install) + extra_equip)
 
         # สรุปราคา
-        st.markdown(f"""<div class="metric-card"><h4>สรุปราคา</h4><h2>฿ {fmt_baht(net_total)}</h2>
-        <small>ราคาพร้อมติดตั้ง {fmt_baht(base_price)}
-        {"| ส่วนลด -" + fmt_baht(discount) if discount else ""}
-        {"| ติดตั้งเพิ่ม +" + fmt_baht(extra_install) if extra_install else ""}
-        {"| อุปกรณ์เสริม +" + fmt_baht(extra_equip) if extra_equip else ""}
-        </small></div>""", unsafe_allow_html=True)
+        _summary_parts = [f"ราคาพร้อมติดตั้ง {fmt_baht(base_price)} ฿"]
+        if discount:      _summary_parts.append(f"ส่วนลด -{fmt_baht(discount)} ฿")
+        if extra_install: _summary_parts.append(f"ติดตั้งเพิ่ม +{fmt_baht(extra_install)} ฿")
+        if extra_equip:   _summary_parts.append(f"อุปกรณ์เสริม +{fmt_baht(extra_equip)} ฿")
+        _summary_text = " | ".join(_summary_parts)
+        st.markdown(f'''<div class="metric-card"><h4>สรุปราคา</h4><h2>฿ {fmt_baht(net_total)}</h2><small>{_summary_text}</small></div>''', unsafe_allow_html=True)
 
         # เก็บ equip detail สำหรับ PDF
         equip_lines = []
@@ -1384,8 +1397,8 @@ if page == "🧾 สร้างใบเสนอราคา":
     quote_data = dict(
         date=today_str, customer_name=customer_name, customer_phone=customer_phone,
         customer_address=customer_address, room_w=room_w, room_l=room_l, room_h=room_h,
-        sun=sun, people=int(people),
-        btu=int(btu) if btu else 0, suggest_cap=int(suggest_cap) if suggest_cap else 0,
+        sun="ไม่ระบุ", people=1,
+        btu=0, suggest_cap=0,
         section=section, model=model, model_btu=int(row_data["btu"]),
         w_install=row_data.get("w_install",""), w_parts=row_data.get("w_parts",""),
         w_comp=row_data.get("w_comp",""),
