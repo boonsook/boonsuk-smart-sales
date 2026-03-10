@@ -41,11 +41,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   #3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -67,8 +67,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -307,7 +307,10 @@ def login_page():
     inject_pwa()
     st.markdown("""
     <style>
-    [data-testid="stSidebar"] { display:none !important; }
+    [data-testid="stSidebar"] { display:none !important; visibility:hidden !important; width:0 !important; }
+    [data-testid="collapsedControl"] { display:none !important; }
+    .st-emotion-cache-zt5igj { display:none !important; }
+    section[data-testid="stSidebarNav"] { display:none !important; }
     .login-wrap {
         max-width: 440px; margin: 30px auto 0 auto;
         background: #fff; border-radius: 20px;
@@ -1115,12 +1118,7 @@ with st.sidebar:
 
 df_all = load_stock()
 
-# แจ้งเตือนสต๊อกใกล้หมด (เฉพาะ admin/staff เท่านั้น)
-if st.session_state.get("role","") != "customer":
-    low_stock = df_all[df_all["stock_qty"] <= LOW_STOCK_THRESHOLD]
-    if not low_stock.empty:
-        items = ", ".join(f"{r['model']} (เหลือ {r['stock_qty']})" for _, r in low_stock.head(5).iterrows())
-        st.warning(f"⚠️ **สต๊อกใกล้หมด:** {items}")
+# (ย้ายแจ้งเตือนสต๊อกใกล้หมดไปแสดงเฉพาะหน้าจัดการสต๊อกแล้ว)
 
 # ══════════════════════════════════════════════
 # PAGE 0: HOME GRID
@@ -1607,6 +1605,11 @@ elif page == "📋 จัดการงาน / สถานะ":
 elif page == "📦 จัดการสต๊อก":
     st.title("📦 จัดการสต๊อกแอร์")
     _back_home()
+    # แจ้งเตือนสต๊อกใกล้หมด (เฉพาะหน้านี้)
+    low_s = df_all[df_all["stock_qty"] <= LOW_STOCK_THRESHOLD]
+    if not low_s.empty:
+        items = ", ".join(f"{r['model']} (เหลือ {r['stock_qty']})" for _, r in low_s.head(5).iterrows())
+        st.warning(f"⚠️ **สต๊อกใกล้หมด:** {items}")
     total_m = len(df_all)
     in_s    = len(df_all[df_all["stock_qty"] > LOW_STOCK_THRESHOLD])
     low_s   = len(df_all[(df_all["stock_qty"] > 0) & (df_all["stock_qty"] <= LOW_STOCK_THRESHOLD)])
