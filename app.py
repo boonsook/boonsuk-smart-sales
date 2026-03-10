@@ -42,11 +42,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -68,8 +68,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -1271,14 +1271,7 @@ if page == "🏠 หน้าหลัก":
         </div>
         """, unsafe_allow_html=True)
 
-    # ปุ่ม logout ด้านบนขวา
-    _top_c1, _top_c2 = st.columns([3,1])
-    with _top_c2:
-        if st.button("🚪 ออกจากระบบ", use_container_width=True, key="logout_home"):
-            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-                st.session_state[k] = "" if k != "logged_in" else False
-            st.query_params.clear()
-            st.rerun()
+
 
 
     # ── CSS ไอคอนสไตล์หน้าจอมือถือ ──
@@ -1324,6 +1317,8 @@ if page == "🏠 หน้าหลัก":
         if _role2 == "admin":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล","#f1f5f9"))
 
+    menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","#fee2e2"))
+
     # วาด icon grid — กดที่รูปได้เลย ผ่าน Streamlit columns
     n_cols = 4
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
@@ -1366,8 +1361,14 @@ if page == "🏠 หน้าหลัก":
                 """, unsafe_allow_html=True)
                 # ปุ่มโปร่งใส ครอบทับ (กดได้)
                 if st.button("　", key=f"hnav_{target}", use_container_width=True):
-                    st.session_state["_current_page"] = target
-                    st.rerun()
+                    if target == "__LOGOUT__":
+                        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                            st.session_state[k] = "" if k != "logged_in" else False
+                        st.query_params.clear()
+                        st.rerun()
+                    else:
+                        st.session_state["_current_page"] = target
+                        st.rerun()
                 # ดึงปุ่มขึ้นทับไอคอน
                 st.markdown("""<style>
                 div[data-testid="stButton"]:last-child > button {
@@ -1473,16 +1474,10 @@ if page == "🧾 สร้างใบเสนอราคา":
             df_sec = df_sec.sort_values("price_install")
         model    = col_m.selectbox("Model", options=df_sec["model"].tolist())
         row_data = df_sec[df_sec["model"]==model].iloc[0].to_dict()
-        sq = int(row_data.get("stock_qty",0))
-        badge = (f'<span class="badge-in">มีสต๊อก {sq} เครื่อง</span>' if sq > LOW_STOCK_THRESHOLD
-                 else f'<span class="badge-low">เหลือ {sq} เครื่อง</span>' if sq > 0
-                 else '<span class="badge-out">สต๊อกหมด</span>')
-        ca, cb, cc, cd = st.columns(4)
+        ca, cb, cc = st.columns(3)
         ca.metric("BTU",f"{int(row_data['btu']):,}")
         cb.metric("ราคา (พร้อมติดตั้ง)",f"{fmt_baht(row_data['price_install'])} ฿")
         cc.metric("ประกันคอมฯ",row_data.get("w_comp","-"))
-        cd.markdown(f"**สต๊อก**<br>{badge}", unsafe_allow_html=True)
-        st.caption(f"ประกันติดตั้ง {safe_text(row_data.get('w_install'))} | ประกันอะไหล่ {safe_text(row_data.get('w_parts'))}")
 
     with st.expander("💰 ขั้นตอน 4 — ปรับราคาและอุปกรณ์เสริม", expanded=True):
         base_price = int(row_data["price_install"])
@@ -2128,53 +2123,69 @@ if page == "🧾 ขอใบเสนอราคาแอร์":
     _back_home()
     st.info(f"👤 สวัสดีคุณ **{cust_name}** | 📞 {cust_phone}")
 
-    with st.form("cust_quote_form"):
-        st.subheader("📍 ข้อมูลการติดตั้ง")
-        f1, f2 = st.columns(2)
-        cq_addr    = f1.text_input("📍 ที่อยู่ติดตั้ง")
-        cq_note    = f2.text_input("📌 หมายเหตุ (ถ้ามี)")
+    # โหลดสต๊อกสำหรับเลือกแอร์
+    df_cq = load_stock()
 
-        st.subheader("🏠 ขนาดห้อง")
-        room_type_c = st.selectbox("ประเภทห้อง", list(BTU_FACTORS.keys()))
-        r1, r2, r3  = st.columns(3)
-        cq_w = r1.number_input("กว้าง (ม.)", min_value=0.0, step=0.1)
-        cq_l = r2.number_input("ยาว (ม.)",   min_value=0.0, step=0.1)
-        cq_h = r3.number_input("สูง (ม.)",   min_value=0.0, step=0.1, value=2.6)
-        s1, s2 = st.columns(2)
-        cq_sun    = s1.selectbox("แดด/ทิศ", ["ไม่โดนแดด","โดนแดด (ทิศตะวันตก/ใต้/กระจก)"])
-        cq_people = s2.number_input("จำนวนคน", min_value=1, step=1, value=1)
+    with st.expander("📍 ข้อมูลการติดตั้ง", expanded=True):
+        cq_addr = st.text_area("📍 ที่อยู่ติดตั้ง", placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด", height=68)
+        cq_note = st.text_input("📌 หมายเหตุเพิ่มเติม (ถ้ามี)", placeholder="เช่น ชั้น 2, ต้องใช้บันได")
 
-        submitted_cq = st.form_submit_button("📨 ส่งคำขอใบเสนอราคา", use_container_width=True, type="primary")
+    with st.expander("❄️ เลือกรุ่นแอร์ที่สนใจ", expanded=True):
+        cq_search = st.text_input("🔍 ค้นหารุ่น", placeholder="เช่น Mitsubishi, 12000, inverter").strip().lower()
+        df_cq_v = df_cq.copy()
+        if cq_search:
+            mask = (df_cq_v["section"].str.lower().str.contains(cq_search, na=False) |
+                    df_cq_v["model"].str.lower().str.contains(cq_search, na=False))
+            df_cq_v = df_cq_v[mask]
 
-    if submitted_cq:
+        sections_cq = sorted(df_cq_v["section"].dropna().unique().tolist())
+        if not sections_cq:
+            st.warning("ไม่พบสินค้า ลองค้นหาใหม่")
+        else:
+            cq_col1, cq_col2 = st.columns(2)
+            cq_section = cq_col1.selectbox("ซีรีส์/หมวดรุ่น", sections_cq)
+            df_cq_sec  = df_cq_v[df_cq_v["section"] == cq_section].sort_values("price_install")
+            cq_model   = cq_col2.selectbox("รุ่น (Model)", df_cq_sec["model"].tolist())
+            cq_row     = df_cq_sec[df_cq_sec["model"] == cq_model].iloc[0].to_dict()
+
+            # แสดงข้อมูลรุ่นที่เลือก
+            m1, m2, m3 = st.columns(3)
+            m1.metric("❄️ BTU", f"{int(cq_row['btu']):,}")
+            m2.metric("💰 ราคา (พร้อมติดตั้ง)", f"{fmt_baht(cq_row['price_install'])} ฿")
+            m3.metric("🛡️ ประกันคอมฯ", cq_row.get("w_comp", "-"))
+            st.caption(f"ประกันติดตั้ง {safe_text(cq_row.get('w_install'))} | ประกันอะไหล่ {safe_text(cq_row.get('w_parts'))}")
+
+    cq_model_text = cq_model if sections_cq else "ไม่ระบุ"
+    cq_section_text = cq_section if sections_cq else "ไม่ระบุ"
+    cq_price_text = fmt_baht(cq_row["price_install"]) if sections_cq else "0"
+
+    if st.button("📨 ส่งคำขอใบเสนอราคา", use_container_width=True, type="primary"):
         if not cq_addr.strip():
             st.error("กรุณากรอกที่อยู่ติดตั้ง")
-        elif cq_w <= 0 or cq_l <= 0:
-            st.error("กรุณากรอกขนาดห้อง")
+        elif not sections_cq:
+            st.error("กรุณาเลือกรุ่นแอร์ก่อน")
         else:
-            sun_val = "โดนแดด" if "โดนแดด" in cq_sun else "ไม่โดนแดด"
-            btu_c   = calculate_btu(cq_w, cq_l, cq_h, sun_val, int(cq_people), room_type_c)
-            cap_c   = suggest_capacity(btu_c)
             rec = {
                 "date":             date.today().strftime("%Y-%m-%d"),
                 "service_type":     "🧾 ขอใบเสนอราคาแอร์",
                 "customer_name":    cust_name,
                 "customer_phone":   cust_phone,
                 "customer_address": cq_addr.strip(),
-                "symptom":          f"ห้อง: {room_type_c} | {cq_w}x{cq_l}x{cq_h}ม. | BTU: {btu_c:,} | แนะนำ: {cap_c:,} BTU",
+                "symptom":          f"สนใจ: {cq_section_text} | รุ่น: {cq_model_text} | ราคา: {cq_price_text} ฿",
                 "note":             cq_note.strip(),
                 "price":            0,
                 "status":           "📋 รอดำเนินการ",
                 "saved_by":         cust_phone,
             }
             log_service_job(rec)
-            st.success(f"✅ ส่งคำขอสำเร็จ! ทางร้านจะติดต่อกลับเร็วๆ นี้ครับ")
-            st.info(f"🌡️ BTU แนะนำ: **{cap_c:,} BTU** ({room_type_c})")
+            st.success("✅ ส่งคำขอสำเร็จ! ทางร้านจะติดต่อกลับเร็วๆ นี้ครับ")
+            st.balloons()
             line_notify_owner(
                 f"🧾 ลูกค้าขอใบเสนอราคา!\n"
                 f"👤 {cust_name} | 📞 {cust_phone}\n"
                 f"📍 {cq_addr.strip()}\n"
-                f"❄️ แนะนำ {cap_c:,} BTU\n"
+                f"❄️ สนใจ: {cq_section_text} รุ่น {cq_model_text}\n"
+                f"💰 ราคา: {cq_price_text} ฿\n"
                 f"🔗 {APP_URL}"
             )
 
