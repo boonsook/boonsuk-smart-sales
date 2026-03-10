@@ -42,11 +42,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -68,8 +68,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "gangboo": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -716,6 +716,10 @@ SERVICE_TYPES = [
     "👕 ซ่อมเครื่องซักผ้า",
     "📹 ติดตั้ง/ซ่อมกล้องวงจรปิด (CCTV)",
     "📺 ซ่อมทีวี LED/LCD",
+    "☀️ ติดตั้งโซล่าเซลล์",
+    "🔌 ซ่อมระบบโซล่าเซลล์",
+    "⚡ งานระบบโซล่าเซลล์",
+    "🛠️ งานบริการอื่นๆ (กรอกเอง)",
 ]
 SERVICE_STATUSES = ["📋 รอดำเนินการ", "🔧 กำลังดำเนินการ", "✅ เสร็จแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
 
@@ -1647,8 +1651,13 @@ elif page == "📋 จัดการงาน / สถานะ":
                         except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
 
                     if u4.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
-                        df_log = df_log.drop(index=idx).reset_index(drop=True)
-                        save_log(df_log); st.warning("ลบแล้ว"); st.rerun()
+                        _job_id = row_log.get("id")
+                        if _job_id and delete_job(int(_job_id)):
+                            st.cache_data.clear()
+                            st.warning("🗑️ ลบงานแล้ว"); st.rerun()
+                        else:
+                            df_log = df_log.drop(index=idx).reset_index(drop=True)
+                            save_log(df_log); st.warning("ลบแล้ว"); st.rerun()
 
             st.divider()
             if st.button("📊 Export Excel รายงานแอร์", use_container_width=True, type="primary"):
@@ -1928,7 +1937,12 @@ if page == "🛠️ รับงานซ่อม/บริการ":
 
         c1, c2 = st.columns(2)
         sv_date   = c1.date_input("📅 วันที่รับงาน", value=date.today())
-        sv_type   = c2.selectbox("🔧 ประเภทงาน", SERVICE_TYPES)
+        sv_type_sel = c2.selectbox("🔧 ประเภทงาน", SERVICE_TYPES)
+        if sv_type_sel == "🛠️ งานบริการอื่นๆ (กรอกเอง)":
+            sv_type = st.text_input("✏️ ระบุประเภทงาน", placeholder="เช่น ติดตั้งพัดลม, ซ่อมปั๊มน้ำ, เดินสายไฟ...")
+            if not sv_type.strip(): sv_type = sv_type_sel
+        else:
+            sv_type = sv_type_sel
 
         st.divider()
         c3, c4 = st.columns(2)
@@ -2147,7 +2161,12 @@ elif page == "🛠️ แจ้งซ่อม/บริการ":
     st.info(f"👤 สวัสดีคุณ **{cust_name}** | 📞 {cust_phone}")
 
     with st.form("cust_service_form"):
-        cs_type    = st.selectbox("🔧 ประเภทงาน", SERVICE_TYPES)
+        cs_type_sel = st.selectbox("🔧 ประเภทงาน", SERVICE_TYPES)
+        if cs_type_sel == "🛠️ งานบริการอื่นๆ (กรอกเอง)":
+            cs_type = st.text_input("✏️ ระบุประเภทงาน", placeholder="เช่น ติดตั้งพัดลม, ซ่อมปั๊มน้ำ...")
+            if not cs_type.strip(): cs_type = cs_type_sel
+        else:
+            cs_type = cs_type_sel
         cs_addr    = st.text_area("📍 ที่อยู่", placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด", height=70)
         cs_symptom = st.text_area("⚡ อาการเสีย / รายละเอียด", height=100)
         cs_note    = st.text_input("📌 หมายเหตุ (ถ้ามี)")
