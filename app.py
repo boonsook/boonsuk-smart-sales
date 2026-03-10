@@ -42,11 +42,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -68,8 +68,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -1073,60 +1073,49 @@ if not st.session_state.logged_in:
     login_page(); st.stop()
 
 # Sidebar
-def _back_home():
+def _back_home(key_suffix=""):
     """ปุ่มกลับหน้าหลักสำหรับทุกหน้า"""
-    if st.button("🏠 หน้าหลัก", key=f"back_home_{id(st)}", help="กลับหน้าหลัก"):
-        st.session_state["_forced_page"] = "🏠 หน้าหลัก"
+    if st.button("🏠 หน้าหลัก", key=f"bh_{key_suffix}", help="กลับหน้าหลัก"):
+        st.session_state["_current_page"] = "🏠 หน้าหลัก"
         st.rerun()
 
 
-with st.sidebar:
-    logo_path = os.path.join("assets","logo.png")
-    if os.path.exists(logo_path): st.image(logo_path, use_container_width=True)
-    st.markdown(f"## ❄️ {STORE_NAME}")
-    st.markdown(f"📍 {STORE_ADDRESS}")
-    st.markdown(f"📞 **{STORE_PHONE}**")
-    st.markdown(f"🌐 [Facebook]({STORE_WEB})")
-    st.divider()
-    _role = st.session_state.get("role","staff")
-    _name = st.session_state.get("full_name", st.session_state.get("username",""))
+# ── Navigation ไม่ใช้ sidebar — ใช้ session_state แทน ──
+_role = st.session_state.get("role","staff")
+_name = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    if _role == "customer":
-        _menus = [
-            "🏠 หน้าหลัก",
-            "🧾 ขอใบเสนอราคาแอร์",
-            "🛠️ แจ้งซ่อม/บริการ",
-            "📋 งานของฉัน",
-        ]
-    else:
-        _menus = [
-            "🏠 หน้าหลัก",
-            "🧾 สร้างใบเสนอราคา",
-            "🛠️ รับงานซ่อม/บริการ",
-            "📋 จัดการงาน / สถานะ",
-            "📦 จัดการสต๊อก",
-            "📊 Dashboard",
-            "🧮 คำนวณ BTU",
-            "🔧 คลังเออเร่อแอร์",
-        ]
-        if _role == "admin":
-            _menus.append("⚙️ นำเข้า/ส่งออกข้อมูล")
+if _role == "customer":
+    _menus = [
+        "🏠 หน้าหลัก",
+        "🧾 ขอใบเสนอราคาแอร์",
+        "🛠️ แจ้งซ่อม/บริการ",
+        "📋 งานของฉัน",
+        "🧮 คำนวณ BTU",
+    ]
+else:
+    _menus = [
+        "🏠 หน้าหลัก",
+        "🧾 สร้างใบเสนอราคา",
+        "🛠️ รับงานซ่อม/บริการ",
+        "📋 จัดการงาน / สถานะ",
+        "📦 จัดการสต๊อก",
+        "📊 Dashboard",
+        "🧮 คำนวณ BTU",
+        "🔧 คลังเออเร่อแอร์",
+    ]
+    if _role == "admin":
+        _menus.append("⚙️ นำเข้า/ส่งออกข้อมูล")
 
-    # รองรับ navigation จาก home grid
-    _fp = st.session_state.get("_forced_page","")
-    _default_idx = _menus.index(_fp) if _fp in _menus else 0
-    if _fp: st.session_state.pop("_forced_page")
-    page = st.radio("เมนู", _menus, index=_default_idx, label_visibility="collapsed")
-    st.divider()
-    if _role == "customer":
-        st.caption(f"👤 สวัสดี **{_name}**")
-    else:
-        st.caption(f"👤 ล็อกอิน: **{st.session_state.username}** ({_role})")
-    if st.button("🚪 ออกจากระบบ", use_container_width=True):
-        for k in ["logged_in","username","role","full_name","user_phone"]:
-            st.session_state[k] = "" if k != "logged_in" else False
-        st.query_params.clear()
-        st.rerun()
+# ตั้งค่า page จาก session_state
+if "_forced_page" in st.session_state:
+    _fp = st.session_state.pop("_forced_page")
+    if _fp in _menus:
+        st.session_state["_current_page"] = _fp
+
+if "_current_page" not in st.session_state or st.session_state["_current_page"] not in _menus:
+    st.session_state["_current_page"] = "🏠 หน้าหลัก"
+
+page = st.session_state["_current_page"]
 
 df_all = load_stock()
 
@@ -1139,12 +1128,7 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # handle nav จาก home grid
-    if st.session_state.get("_nav_page"):
-        _go = st.session_state.pop("_nav_page")
-        # inject page selection via query param trick
-        st.session_state["_forced_page"] = _go
-        st.rerun()
+
 
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#1a237e,#0d47a1);border-radius:16px;padding:16px 20px;margin-bottom:16px;color:white;display:flex;align-items:center;gap:16px;">
@@ -1169,8 +1153,8 @@ if page == "🏠 หน้าหลัก":
     # ปุ่ม logout ด้านบนขวา
     _top_c1, _top_c2 = st.columns([3,1])
     with _top_c2:
-        if st.button("🚪 ออกจากระบบ", use_container_width=True):
-            for k in ["logged_in","username","role","full_name","user_phone"]:
+        if st.button("🚪 ออกจากระบบ", use_container_width=True, key="logout_home"):
+            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                 st.session_state[k] = "" if k != "logged_in" else False
             st.query_params.clear()
             st.rerun()
@@ -1225,7 +1209,7 @@ if page == "🏠 หน้าหลัก":
         for idx, (label, target) in enumerate(row):
             with cols[idx]:
                 if st.button(label, key=f"hnav_{target}", use_container_width=True):
-                    st.session_state["_forced_page"] = target
+                    st.session_state["_current_page"] = target
                     st.rerun()
         for idx in range(len(row), n_cols):
             with cols[idx]: st.empty()
