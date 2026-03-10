@@ -42,11 +42,11 @@ LOGO_B64      = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAEAAElEQVR42jz965I
 STORE_PHONE   = "086-2613829"
 STORE_WEB     = "https://www.facebook.com/boonsukele/"
 STORE_ADDRESS = "87 หมู่ 12 ต.คาละแมะ อ.ศรีขรภูมิ จ.สุรินทร์ 32110"
-STORE_TAX_ID  = ""   # 3320800011106
+STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษีถ้ามี
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN    = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN    = os.environ.get("LINE_TOKEN", "bUdQFnVFHeMC2k0cFEXrxgnb8164xrPJ5HOLe/aEA/MhUVDlBfR2wxCb1nRXkQAqLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW5209tXjGb0vqMaQlN1Fj6VL8ELfcQCFt17ZILCjm4XshwdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID  = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 
 INSTALL_CONDITIONS = (
@@ -68,8 +68,8 @@ SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 # เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": hashlib.sha256("boonsuk2024".encode()).hexdigest(),
+    "staff": hashlib.sha256("staff1234".encode()).hexdigest(),
 }
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
@@ -1141,14 +1141,20 @@ if page == "🏠 หน้าหลัก":
     </div>
     """, unsafe_allow_html=True)
 
-    # สถิติเร็ว — แสดงเฉพาะ admin/staff
+    # สถิติเร็ว — แถบเล็กแถวเดียว เฉพาะ admin/staff
     if _role2 != "customer":
         df_stk = load_stock()
         df_lg  = load_log()
-        col_s = st.columns(3)
-        col_s[0].metric("📦 รุ่นในสต๊อก", f"{len(df_stk)} รุ่น")
-        col_s[1].metric("🧾 งานทั้งหมด",  f"{len(df_lg)} รายการ")
-        col_s[2].metric("✅ สต๊อกปกติ",   f"{len(df_stk[df_stk['stock_qty']>2])} รุ่น")
+        _s1 = len(df_stk)
+        _s2 = len(df_lg)
+        _s3 = len(df_stk[df_stk['stock_qty']>2])
+        st.markdown(f"""
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px 0;">
+            <span style="background:#e8f4fd;border-radius:20px;padding:3px 12px;font-size:12px;color:#1a237e;">📦 สต๊อก <b>{_s1}</b> รุ่น</span>
+            <span style="background:#e8f4fd;border-radius:20px;padding:3px 12px;font-size:12px;color:#1a237e;">🧾 งาน <b>{_s2}</b> รายการ</span>
+            <span style="background:#e8f4fd;border-radius:20px;padding:3px 12px;font-size:12px;color:#1a237e;">✅ ปกติ <b>{_s3}</b> รุ่น</span>
+        </div>
+        """, unsafe_allow_html=True)
 
     # ปุ่ม logout ด้านบนขวา
     _top_c1, _top_c2 = st.columns([3,1])
@@ -1159,60 +1165,78 @@ if page == "🏠 หน้าหลัก":
             st.query_params.clear()
             st.rerun()
 
-    st.markdown("---")
 
+    # ── CSS ไอคอนสไตล์หน้าจอมือถือ ──
     st.markdown("""<style>
-    div[data-testid="stButton"] > button {
-        height: auto !important;
-        min-height: 80px !important;
-        white-space: pre-wrap !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        border-radius: 14px !important;
-        border: 1.5px solid #e0e0e0 !important;
-        background: white !important;
-        color: #1a237e !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
-        line-height: 1.5 !important;
+    .icon-grid { display:flex; flex-wrap:wrap; gap:0px; padding:8px 0; justify-content:flex-start; }
+    .icon-wrap { width:25%; padding:6px; box-sizing:border-box; text-align:center; }
+    .icon-box  {
+        background:white; border-radius:20px;
+        width:62px; height:62px; margin:0 auto 6px auto;
+        display:flex; align-items:center; justify-content:center;
+        font-size:30px; box-shadow:0 2px 8px rgba(0,0,0,0.12);
+        cursor:pointer;
     }
-    div[data-testid="stButton"] > button:hover {
-        box-shadow: 0 4px 14px rgba(0,0,0,0.15) !important;
-        border-color: #1a237e !important;
-        background: #f0f4ff !important;
+    .icon-label { font-size:11px; color:#222; font-weight:500; line-height:1.3; word-break:break-word; }
+    /* ซ่อนปุ่ม Streamlit ที่ใช้เป็น trigger */
+    .icon-btn-row { display:flex; flex-wrap:wrap; gap:0; }
+    div[data-testid="stButton"].icon-btn > button {
+        background:transparent !important; border:none !important;
+        box-shadow:none !important; padding:0 !important;
+        width:62px !important; height:62px !important;
+        font-size:30px !important; border-radius:20px !important;
+        margin:0 auto !important; display:block !important;
     }
     </style>""", unsafe_allow_html=True)
 
     if _role2 == "customer":
         menus_home = [
-            ("🧾 ขอใบเสนอราคา",  "🧾 ขอใบเสนอราคาแอร์"),
-            ("🛠️ แจ้งซ่อม",       "🛠️ แจ้งซ่อม/บริการ"),
-            ("📋 งานของฉัน",      "📋 งานของฉัน"),
-            ("🧮 คำนวณ BTU",      "🧮 คำนวณ BTU"),
+            ("🧾","ขอใบเสนอราคา","🧾 ขอใบเสนอราคาแอร์","#dbeafe"),
+            ("🛠️","แจ้งซ่อม","🛠️ แจ้งซ่อม/บริการ","#fce7f3"),
+            ("📋","งานของฉัน","📋 งานของฉัน","#dcfce7"),
+            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU","#fef9c3"),
         ]
     else:
         menus_home = [
-            ("🧾 ใบเสนอราคา",    "🧾 สร้างใบเสนอราคา"),
-            ("🛠️ รับงานซ่อม",    "🛠️ รับงานซ่อม/บริการ"),
-            ("📋 จัดการงาน",     "📋 จัดการงาน / สถานะ"),
-            ("📦 สต๊อกแอร์",     "📦 จัดการสต๊อก"),
-            ("📊 Dashboard",     "📊 Dashboard"),
-            ("🧮 คำนวณ BTU",     "🧮 คำนวณ BTU"),
-            ("🔧 Error Code",    "🔧 คลังเออเร่อแอร์"),
+            ("🧾","ใบเสนอราคา","🧾 สร้างใบเสนอราคา","#dbeafe"),
+            ("🛠️","รับงานซ่อม","🛠️ รับงานซ่อม/บริการ","#fce7f3"),
+            ("📋","จัดการงาน","📋 จัดการงาน / สถานะ","#dcfce7"),
+            ("📦","สต๊อกแอร์","📦 จัดการสต๊อก","#ffedd5"),
+            ("📊","Dashboard","📊 Dashboard","#ede9fe"),
+            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU","#fef9c3"),
+            ("🔧","Error Code","🔧 คลังเออเร่อแอร์","#fee2e2"),
         ]
         if _role2 == "admin":
-            menus_home.append(("⚙️ นำเข้า/ส่งออก", "⚙️ นำเข้า/ส่งออกข้อมูล"))
+            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล","#f1f5f9"))
 
-    n_cols = 3
+    # วาด icon grid ด้วย HTML + ปุ่ม Streamlit ซ่อนใต้
+    n_cols = 4
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
     for row in rows:
+        # วาด icon HTML
+        html_row = '<div class="icon-grid">'
+        for (icon, label, target, color) in row:
+            html_row += f"""<div class="icon-wrap">
+                <div class="icon-box" style="background:{color};">{icon}</div>
+                <div class="icon-label">{label}</div>
+            </div>"""
+        # เติม cell ว่าง
+        for _ in range(n_cols - len(row)):
+            html_row += '<div class="icon-wrap"></div>'
+        html_row += '</div>'
+        st.markdown(html_row, unsafe_allow_html=True)
+
+        # ปุ่มซ่อนไว้ใต้ไอคอน (ขนาดเล็ก ใช้ columns)
         cols = st.columns(n_cols)
-        for idx, (label, target) in enumerate(row):
+        for idx, (icon, label, target, color) in enumerate(row):
             with cols[idx]:
-                if st.button(label, key=f"hnav_{target}", use_container_width=True):
+                if st.button(icon, key=f"hnav_{target}", use_container_width=True,
+                             help=label):
                     st.session_state["_current_page"] = target
                     st.rerun()
         for idx in range(len(row), n_cols):
             with cols[idx]: st.empty()
+        st.markdown("<div style='margin-bottom:-32px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
