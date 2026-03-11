@@ -1189,10 +1189,83 @@ if not st.session_state.logged_in:
 
 # Sidebar
 def _back_home(key_suffix=""):
-    """ปุ่มกลับหน้าหลักสำหรับทุกหน้า"""
-    if st.button("🏠 หน้าหลัก", key=f"bh_{key_suffix}", help="กลับหน้าหลัก"):
-        st.session_state["_current_page"] = "🏠 หน้าหลัก"
-        st.rerun()
+    """ปุ่มย้อนกลับ — navbar สวยงาม ทุกหน้า"""
+    # หาชื่อหน้าปัจจุบัน
+    _cur = st.session_state.get("_current_page", "")
+    _page_icons = {
+        "🧾 สร้างใบเสนอราคา":    ("🧾", "สร้างใบเสนอราคา"),
+        "🧾 ขอใบเสนอราคาแอร์":   ("🧾", "ขอใบเสนอราคาแอร์"),
+        "🛠️ รับงานซ่อม/บริการ":  ("🛠️", "รับงานซ่อม/บริการ"),
+        "🛠️ แจ้งซ่อม/บริการ":    ("🛠️", "แจ้งซ่อม/บริการ"),
+        "📋 จัดการงาน / สถานะ":  ("📋", "จัดการงาน"),
+        "📋 งานของฉัน":           ("📋", "งานของฉัน"),
+        "📦 จัดการสต๊อก":         ("📦", "จัดการสต๊อก"),
+        "📊 Dashboard":            ("📊", "Dashboard"),
+        "🧮 คำนวณ BTU":           ("🧮", "คำนวณ BTU"),
+        "🔧 คลังเออเร่อแอร์":    ("🔧", "คลังเออเร่อแอร์"),
+        "⚙️ นำเข้า/ส่งออกข้อมูล":("⚙️", "นำเข้า/ส่งออกข้อมูล"),
+    }
+    _icon, _title = _page_icons.get(_cur, ("📄", _cur.split(" ", 1)[-1] if _cur else ""))
+
+    st.markdown(f"""
+    <style>
+    .navbar-wrap {{
+        display:flex; align-items:center; gap:12px;
+        background:white;
+        border-radius:16px; padding:10px 16px;
+        margin-bottom:16px;
+        box-shadow:0 2px 12px rgba(21,101,192,0.10);
+        border:1px solid #e3eaf5;
+    }}
+    .navbar-back-circle {{
+        width:36px; height:36px; border-radius:50%;
+        background:linear-gradient(135deg,#e8f0fe,#c5d8fb);
+        display:flex; align-items:center; justify-content:center;
+        font-size:17px; flex-shrink:0; cursor:pointer;
+        box-shadow:0 1px 4px rgba(21,101,192,0.15);
+    }}
+    .navbar-page-icon {{
+        width:36px; height:36px; border-radius:10px;
+        background:linear-gradient(135deg,#1565c0,#1e88e5);
+        display:flex; align-items:center; justify-content:center;
+        font-size:18px; flex-shrink:0;
+        box-shadow:0 2px 6px rgba(21,101,192,0.25);
+    }}
+    .navbar-text {{ flex:1; min-width:0; }}
+    .navbar-title {{ font-size:15px; font-weight:800; color:#1a237e;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+    .navbar-sub   {{ font-size:10px; color:#94a3b8; margin-top:1px; }}
+
+    /* ปุ่ม Streamlit โปร่งใสทับ back-circle */
+    div[data-testid="stButton"].navbar-btn > button {{
+        background:#e8f0fe!important; border:none!important;
+        box-shadow:none!important; color:#1565c0!important;
+        font-size:13px!important; font-weight:700!important;
+        border-radius:50px!important; padding:6px 16px!important;
+        height:36px!important; min-height:unset!important;
+        white-space:nowrap;
+    }}
+    div[data-testid="stButton"].navbar-btn > button:hover {{
+        background:#c5d8fb!important;
+    }}
+    </style>
+    <div class="navbar-wrap">
+        <div class="navbar-back-circle">←</div>
+        <div class="navbar-page-icon">{_icon}</div>
+        <div class="navbar-text">
+            <div class="navbar-title">{_title}</div>
+            <div class="navbar-sub">ร้านบุญสุขอิเล็กทรอนิกส์</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ปุ่มจริงที่กดได้ — วางให้ทับบน navbar
+    _c1, _c2 = st.columns([1, 4])
+    with _c1:
+        if st.button("◀ หน้าหลัก", key=f"bh_{key_suffix}", use_container_width=True):
+            st.session_state["_current_page"] = "🏠 หน้าหลัก"
+            st.rerun()
+    st.markdown("<div style='margin-top:-52px;height:52px;'></div>", unsafe_allow_html=True)
 
 
 # ── Navigation ไม่ใช้ sidebar — ใช้ session_state แทน ──
@@ -1362,20 +1435,64 @@ if page == "🏠 หน้าหลัก":
             menus_home.append(("⚙️","ตั้งค่า","⚙️ นำเข้า/ส่งออกข้อมูล","linear-gradient(135deg,#6b7280,#374151)"))
     menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","linear-gradient(135deg,#f87171,#ef4444)"))
 
+    # ── CSS ปุ่มไอคอนสวยงาม ──
+    # สร้าง unique key สำหรับ CSS แต่ละ target
+    icon_css_parts = []
+    for (icon, label, target, grad) in menus_home:
+        safe_key = target.replace(" ","_").replace("/","_").replace("🧾","").replace("🛠️","").replace("📋","").replace("📦","").replace("📊","").replace("🧮","").replace("🔧","").replace("⚙️","").replace("🚪","").replace("🏠","")
+        icon_css_parts.append(f'div[data-testid="stButton"][key="hnav_{target}"] > button')
+
+    st.markdown("""<style>
+    /* ปุ่มไอคอนทุกปุ่ม */
+    div[data-testid="stButton"] > button {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 82px !important;
+        min-height: 82px !important;
+        border-radius: 20px !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.13) !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: white !important;
+        padding: 8px 4px 6px 4px !important;
+        line-height: 1.4 !important;
+        transition: transform .12s, box-shadow .12s !important;
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        transform: scale(1.06) !important;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.18) !important;
+    }
+    div[data-testid="stButton"] > button:active {
+        transform: scale(0.97) !important;
+    }
+    /* ลด gap ระหว่าง columns */
+    div[data-testid="column"] { padding: 0 4px !important; }
+    </style>""", unsafe_allow_html=True)
+
+    # gradient แต่ละปุ่ม inject ผ่าน nth-child ไม่ได้ — ใช้ markdown inject CSS per-key แทน
+    for i, (icon, label, target, grad) in enumerate(menus_home):
+        st.markdown(f"""<style>
+        div[data-testid="stButton"]:nth-of-type({i+1}) > button {{
+            background: {grad} !important;
+        }}
+        </style>""", unsafe_allow_html=True)
+
     # ── วาด grid ──
     n_cols = 4
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
     for row in rows:
-        cols = st.columns(n_cols)
+        cols = st.columns(n_cols, gap="small")
         for idx, (icon, label, target, grad) in enumerate(row):
             with cols[idx]:
-                st.markdown(f"""
-                <div class="app-icon-wrap">
-                    <div class="app-icon" style="background:{grad};">{icon}</div>
-                    <div class="app-label">{label}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("　", key=f"hnav_{target}", use_container_width=True):
+                btn_label = icon + "\n" + label
+                if st.button(btn_label, key=f"hnav_{target}",
+                             use_container_width=True,
+                             help=label):
                     if target == "__LOGOUT__":
                         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                             st.session_state[k] = "" if k != "logged_in" else False
@@ -1384,22 +1501,23 @@ if page == "🏠 หน้าหลัก":
                     else:
                         st.session_state["_current_page"] = target
                         st.rerun()
-                st.markdown("""<style>
-                div[data-testid="stButton"]:last-child>button{
-                    margin-top:-80px!important;height:80px!important;
-                    opacity:0!important;position:relative;z-index:10;
-                    border:none!important;background:transparent!important;box-shadow:none!important;
-                }
+                # inject gradient สีตรงๆ per button
+                st.markdown(f"""<style>
+                div[data-testid="stButton"][key="hnav_{target}"] > button,
+                button[kind="secondary"][data-testid="baseButton-secondary"]:has(+ *[data-testid="hnav_{target}"]) {{
+                    background: {grad} !important;
+                }}
                 </style>""", unsafe_allow_html=True)
         for idx in range(len(row), n_cols):
             with cols[idx]: st.empty()
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
 # ══════════════════════════════════════════════
 elif page == "🧮 คำนวณ BTU":
     st.title("🧮 คำนวณ BTU ที่เหมาะสม")
+    _back_home("btu")
     st.markdown("กรอกข้อมูลห้องเพื่อคำนวณขนาดแอร์ที่เหมาะสมครับ")
 
     with st.form("btu_calc_form"):
