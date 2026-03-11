@@ -1242,124 +1242,139 @@ df_all = load_stock()
 if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
+    _role_label = "ผู้ดูแลระบบ" if _role2=="admin" else "พนักงาน" if _role2=="staff" else "ลูกค้า"
+    _role_icon  = "👑" if _role2=="admin" else "👔" if _role2=="staff" else "👤"
 
+    # ── CSS หน้าหลัก ──
+    st.markdown("""<style>
+    /* ซ่อน padding ด้านบนของ streamlit */
+    .block-container { padding-top: 1rem !important; }
 
+    /* Header card */
+    .home-header {
+        background: linear-gradient(135deg, #0f2460 0%, #1565c0 60%, #1e88e5 100%);
+        border-radius: 20px; padding: 18px 20px; margin-bottom: 14px;
+        color: white; display: flex; align-items: center; gap: 14px;
+        box-shadow: 0 4px 20px rgba(21,101,192,0.35);
+    }
+    .home-header .avatar {
+        width: 58px; height: 58px; border-radius: 50%; object-fit: cover;
+        border: 2.5px solid rgba(255,255,255,0.5); flex-shrink: 0;
+    }
+    .home-header .greet { font-size: 11px; opacity: 0.75; letter-spacing:.5px; }
+    .home-header .uname { font-size: 22px; font-weight: 800; letter-spacing:.3px; }
+    .home-header .role  { font-size: 11px; opacity: 0.7; margin-top: 2px; }
 
+    /* badge สถิติ */
+    .stat-row { display:flex; gap:8px; flex-wrap:wrap; margin: 0 0 14px 0; }
+    .stat-pill {
+        display:flex; align-items:center; gap:5px;
+        background:white; border:1px solid #e3eaf5;
+        border-radius:24px; padding:5px 13px;
+        font-size:12px; color:#1a237e; font-weight:600;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .stat-pill span.num { font-size:15px; font-weight:800; color:#1565c0; }
+
+    /* Section title */
+    .section-title {
+        font-size:12px; font-weight:700; color:#888;
+        letter-spacing:1px; text-transform:uppercase;
+        margin: 4px 0 10px 2px;
+    }
+
+    /* App icon grid */
+    .app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:8px; }
+    .app-icon-wrap {
+        display:flex; flex-direction:column; align-items:center;
+        gap:6px; cursor:pointer;
+    }
+    .app-icon {
+        width:64px; height:64px; border-radius:18px;
+        display:flex; align-items:center; justify-content:center;
+        font-size:30px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
+        transition: transform .15s, box-shadow .15s;
+    }
+    .app-icon:hover { transform:scale(1.07); box-shadow:0 6px 18px rgba(0,0,0,0.16); }
+    .app-label {
+        font-size:11px; color:#222; font-weight:600;
+        text-align:center; line-height:1.3; word-break:break-word;
+        max-width:72px;
+    }
+
+    /* ปุ่มโปร่งใสทับไอคอน */
+    div[data-testid="stButton"].app-nav-btn > button {
+        opacity: 0 !important; position:relative; z-index:9;
+        margin-top:-80px !important; height:80px !important;
+        border:none !important; background:transparent !important;
+        box-shadow:none !important; width:100% !important;
+    }
+    /* logout button สีแดง */
+    .logout-btn { background:linear-gradient(135deg,#ff5252,#e53935) !important; }
+    </style>""", unsafe_allow_html=True)
+
+    # ── Header card ──
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#1a237e,#0d47a1);border-radius:16px;padding:16px 20px;margin-bottom:16px;color:white;display:flex;align-items:center;gap:16px;">
-        <img src='data:image/png;base64,{LOGO_B64}' style='width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid rgba(255,255,255,0.4);'>
+    <div class="home-header">
+        <img class="avatar" src="data:image/png;base64,{LOGO_B64}">
         <div>
-            <div style="font-size:12px;opacity:0.8;">สวัสดี,</div>
-            <div style="font-size:20px;font-weight:700;">{_name2} {'👑' if _role2=='admin' else '👔' if _role2=='staff' else '👤'}</div>
-            <div style="font-size:11px;margin-top:2px;opacity:0.7;">{'ผู้ดูแลระบบ' if _role2=='admin' else 'พนักงาน' if _role2=='staff' else 'ลูกค้า'} • ร้านบุญสุขอิเล็กทรอนิกส์</div>
+            <div class="greet">สวัสดี,</div>
+            <div class="uname">{_name2} {_role_icon}</div>
+            <div class="role">{_role_label} • ร้านบุญสุขอิเล็กทรอนิกส์</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # สถิติเร็ว — แถบเล็กแถวเดียว เฉพาะ admin/staff
+    # ── สถิติ (admin/staff) ──
     if _role2 != "customer":
         df_stk = load_stock()
         df_lg  = load_log()
-        _s1 = len(df_stk)
-        _s2 = len(df_lg)
-        _s3 = len(df_stk[df_stk['stock_qty']>2])
+        _s1, _s2 = len(df_stk), len(df_lg)
+        _slow = len(df_stk[(df_stk["stock_qty"]>0)&(df_stk["stock_qty"]<=2)])
         st.markdown(f"""
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px 0;">
-            <span style="background:#e8f4fd;border-radius:20px;padding:3px 12px;font-size:12px;color:#1a237e;">📦 สต๊อก <b>{_s1}</b> รุ่น</span>
-            <span style="background:#e8f4fd;border-radius:20px;padding:3px 12px;font-size:12px;color:#1a237e;">🧾 งาน <b>{_s2}</b> รายการ</span>
-            <span style="background:#e8f4fd;border-radius:20px;padding:3px 12px;font-size:12px;color:#1a237e;">✅ ปกติ <b>{_s3}</b> รุ่น</span>
+        <div class="stat-row">
+            <div class="stat-pill">📦 สต๊อก <span class="num">{_s1}</span> รุ่น</div>
+            <div class="stat-pill">🧾 งาน <span class="num">{_s2}</span> รายการ</div>
+            {"" if _slow==0 else f'<div class="stat-pill" style="border-color:#fca5a5;color:#b91c1c;">⚠️ ใกล้หมด <span class="num" style="color:#e53935;">{_slow}</span> รุ่น</div>'}
         </div>
         """, unsafe_allow_html=True)
 
-
-
-
-    # ── CSS ไอคอนสไตล์หน้าจอมือถือ ──
-    st.markdown("""<style>
-    .icon-grid { display:flex; flex-wrap:wrap; gap:0px; padding:8px 0; justify-content:flex-start; }
-    .icon-wrap { width:25%; padding:6px; box-sizing:border-box; text-align:center; }
-    .icon-box  {
-        background:white; border-radius:20px;
-        width:62px; height:62px; margin:0 auto 6px auto;
-        display:flex; align-items:center; justify-content:center;
-        font-size:30px; box-shadow:0 2px 8px rgba(0,0,0,0.12);
-        cursor:pointer;
-    }
-    .icon-label { font-size:11px; color:#222; font-weight:500; line-height:1.3; word-break:break-word; }
-    /* ซ่อนปุ่ม Streamlit ที่ใช้เป็น trigger */
-    .icon-btn-row { display:flex; flex-wrap:wrap; gap:0; }
-    div[data-testid="stButton"].icon-btn > button {
-        background:transparent !important; border:none !important;
-        box-shadow:none !important; padding:0 !important;
-        width:62px !important; height:62px !important;
-        font-size:30px !important; border-radius:20px !important;
-        margin:0 auto !important; display:block !important;
-    }
-    </style>""", unsafe_allow_html=True)
-
+    # ── เมนูหลัก ──
     if _role2 == "customer":
         menus_home = [
-            ("🧾","ขอใบเสนอราคา","🧾 ขอใบเสนอราคาแอร์","#dbeafe"),
-            ("🛠️","แจ้งซ่อม","🛠️ แจ้งซ่อม/บริการ","#fce7f3"),
-            ("📋","งานของฉัน","📋 งานของฉัน","#dcfce7"),
-            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU","#fef9c3"),
+            ("🧾","ใบเสนอราคา","🧾 ขอใบเสนอราคาแอร์","linear-gradient(135deg,#60a5fa,#3b82f6)"),
+            ("🛠️","แจ้งซ่อม","🛠️ แจ้งซ่อม/บริการ","linear-gradient(135deg,#f472b6,#ec4899)"),
+            ("📋","งานของฉัน","📋 งานของฉัน","linear-gradient(135deg,#34d399,#10b981)"),
+            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU","linear-gradient(135deg,#fbbf24,#f59e0b)"),
         ]
     else:
         menus_home = [
-            ("🧾","ใบเสนอราคา","🧾 สร้างใบเสนอราคา","#dbeafe"),
-            ("🛠️","รับงานซ่อม","🛠️ รับงานซ่อม/บริการ","#fce7f3"),
-            ("📋","จัดการงาน","📋 จัดการงาน / สถานะ","#dcfce7"),
-            ("📦","สต๊อกแอร์","📦 จัดการสต๊อก","#ffedd5"),
-            ("📊","Dashboard","📊 Dashboard","#ede9fe"),
-            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU","#fef9c3"),
-            ("🔧","Error Code","🔧 คลังเออเร่อแอร์","#fee2e2"),
+            ("🧾","ใบเสนอราคา","🧾 สร้างใบเสนอราคา","linear-gradient(135deg,#60a5fa,#2563eb)"),
+            ("🛠️","รับงานซ่อม","🛠️ รับงานซ่อม/บริการ","linear-gradient(135deg,#f472b6,#db2777)"),
+            ("📋","จัดการงาน","📋 จัดการงาน / สถานะ","linear-gradient(135deg,#34d399,#059669)"),
+            ("📦","สต๊อกแอร์","📦 จัดการสต๊อก","linear-gradient(135deg,#fb923c,#ea580c)"),
+            ("📊","Dashboard","📊 Dashboard","linear-gradient(135deg,#a78bfa,#7c3aed)"),
+            ("🧮","คำนวณ BTU","🧮 คำนวณ BTU","linear-gradient(135deg,#fbbf24,#d97706)"),
+            ("🔧","Error Code","🔧 คลังเออเร่อแอร์","linear-gradient(135deg,#94a3b8,#475569)"),
         ]
         if _role2 == "admin":
-            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล","#f1f5f9"))
+            menus_home.append(("⚙️","ตั้งค่า","⚙️ นำเข้า/ส่งออกข้อมูล","linear-gradient(135deg,#6b7280,#374151)"))
+    menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","linear-gradient(135deg,#f87171,#ef4444)"))
 
-    menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","#fee2e2"))
-
-    # วาด icon grid — กดที่รูปได้เลย ผ่าน Streamlit columns
+    # ── วาด grid ──
     n_cols = 4
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
-
-    # CSS ซ่อนข้อความในปุ่ม แสดงแค่ emoji+label สวยงาม
-    st.markdown("""<style>
-    div[data-testid="stButton"].icon-app-btn > button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 4px 2px !important;
-        font-size: 12px !important;
-        color: #333 !important;
-        height: auto !important;
-        min-height: unset !important;
-        line-height: 1.4 !important;
-        width: 100% !important;
-    }
-    div[data-testid="stButton"].icon-app-btn > button:hover {
-        background: #f0f4ff !important;
-        border-radius: 14px !important;
-    }
-    /* ซ่อนปุ่ม streamlit เดิม ให้ใช้แค่ HTML icon */
-    .stButton { margin: 0 !important; }
-    </style>""", unsafe_allow_html=True)
-
     for row in rows:
         cols = st.columns(n_cols)
-        for idx, (icon, label, target, color) in enumerate(row):
+        for idx, (icon, label, target, grad) in enumerate(row):
             with cols[idx]:
-                # วาด icon + label ด้วย HTML
                 st.markdown(f"""
-                <div style="text-align:center; margin-bottom:2px;">
-                  <div style="background:{color}; border-radius:18px; width:60px; height:60px;
-                    margin:0 auto 5px auto; display:flex; align-items:center;
-                    justify-content:center; font-size:28px;
-                    box-shadow:0 2px 8px rgba(0,0,0,0.12);">{icon}</div>
-                  <div style="font-size:11px; color:#333; font-weight:500; line-height:1.3;">{label}</div>
+                <div class="app-icon-wrap">
+                    <div class="app-icon" style="background:{grad};">{icon}</div>
+                    <div class="app-label">{label}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                # ปุ่มโปร่งใส ครอบทับ (กดได้)
                 if st.button("　", key=f"hnav_{target}", use_container_width=True):
                     if target == "__LOGOUT__":
                         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
@@ -1369,18 +1384,16 @@ if page == "🏠 หน้าหลัก":
                     else:
                         st.session_state["_current_page"] = target
                         st.rerun()
-                # ดึงปุ่มขึ้นทับไอคอน
                 st.markdown("""<style>
-                div[data-testid="stButton"]:last-child > button {
-                    margin-top: -68px !important;
-                    height: 80px !important;
-                    opacity: 0 !important;
-                    position: relative; z-index: 10;
+                div[data-testid="stButton"]:last-child>button{
+                    margin-top:-80px!important;height:80px!important;
+                    opacity:0!important;position:relative;z-index:10;
+                    border:none!important;background:transparent!important;box-shadow:none!important;
                 }
                 </style>""", unsafe_allow_html=True)
         for idx in range(len(row), n_cols):
             with cols[idx]: st.empty()
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
