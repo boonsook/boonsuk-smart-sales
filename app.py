@@ -1197,8 +1197,8 @@ st.markdown("""
     max-width: 100% !important;
   }
 
-  /* ปุ่มใหญ่ขึ้น กดง่าย */
-  .stButton > button {
+  /* ปุ่มใหญ่ขึ้น กดง่าย — ยกเว้น home grid */
+  .stButton:not(.home-icon-btn) > button {
     height: 3rem !important;
     font-size: 16px !important;
     border-radius: 10px !important;
@@ -1377,61 +1377,60 @@ if page == "🏠 หน้าหลัก":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
 
-    # ── CSS ──
+    # ── CSS: force 3-col + card style ──
     st.markdown("""<style>
     .main, .block-container { background:#f0f4f8 !important; }
 
-    /* บังคับทุก column ใน home grid ให้เท่ากัน */
-    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-        flex: 1 1 0% !important; min-width: 0 !important; padding: 0 4px !important;
+    /* ── บังคับ 3 คอลัมน์บน mobile ── */
+    div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+    }
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        width: 33.33% !important;
+        max-width: 33.33% !important;
+        overflow: hidden !important;
+        padding: 0 !important;
     }
 
-    /* ── Card button style ── */
-    [data-testid="stButton"] > button {
+    /* ── Card icon button ── */
+    .home-icon-btn > div > button {
         background: white !important;
         border: 1.5px solid #e8edf5 !important;
         border-radius: 16px !important;
         box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important;
+        height: 80px !important;
         min-height: 80px !important;
-        max-height: 100px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 8px 4px !important;
-        font-size: 28px !important;
-        line-height: 1.0 !important;
-        color: #1a237e !important;
-        transition: all 0.15s !important;
-        white-space: pre-line !important;
+        font-size: 32px !important;
+        line-height: 1 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        color: #000 !important;
+        transition: all 0.14s !important;
     }
-    [data-testid="stButton"] > button:hover {
-        box-shadow: 0 5px 18px rgba(21,101,192,0.16) !important;
+    .home-icon-btn > div > button:hover {
+        box-shadow: 0 5px 16px rgba(21,101,192,0.15) !important;
         border-color: #bbdefb !important;
         transform: translateY(-2px) !important;
     }
-    [data-testid="stButton"] > button:active {
-        transform: scale(0.93) !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+    .home-icon-btn > div > button:active {
+        transform: scale(0.92) !important;
     }
-    [data-testid="stButton"] > button:focus {
+    .home-icon-btn > div > button:focus {
         outline: none !important;
         box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
     }
-    [data-testid="stButton"] > button p {
-        font-size: 28px !important;
-        margin: 0 !important;
-        line-height: 1.1 !important;
-    }
-    /* label text ใต้ปุ่ม */
-    .card-label {
-        text-align:center; font-size:11.5px; font-weight:700;
-        color:#1a237e; margin:-4px 0 8px 0; line-height:1.25;
-        word-break:keep-all;
-    }
-    .card-label-red { color:#c62828 !important; }
+    .home-icon-btn > div > button p { font-size:32px !important; margin:0 !important; }
+    .home-icon-btn-logout > div > button { background: #fff5f5 !important; }
+
+    /* label ใต้ปุ่ม */
+    .hib-label { text-align:center; font-size:11px; font-weight:700;
+        color:#1a237e; margin:-2px 0 6px 0; line-height:1.3; word-break:keep-all; }
+    .hib-label-red { color:#c62828 !important; }
     </style>""", unsafe_allow_html=True)
 
     # ── Header ──
@@ -1474,7 +1473,7 @@ if page == "🏠 หน้าหลัก":
           </div>
         </div>""", unsafe_allow_html=True)
 
-    # ── Grid: 3 cols, emoji button + label below ──
+    # ── Grid ──
     n_cols = 3
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
     for row in rows:
@@ -1486,9 +1485,12 @@ if page == "🏠 หน้าหลัก":
                     st.empty(); continue
                 emoji, label, target = item
                 is_logout = (target == "__LOGOUT__")
+                css_cls = "home-icon-btn home-icon-btn-logout" if is_logout else "home-icon-btn"
+                lbl_cls = "hib-label hib-label-red" if is_logout else "hib-label"
+                st.markdown(f'<div class="{css_cls}">', unsafe_allow_html=True)
                 clicked = st.button(emoji, key=f"hm_{ci}_{target[:10]}", use_container_width=True)
-                lbl_class = "card-label card-label-red" if is_logout else "card-label"
-                st.markdown(f'<div class="{lbl_class}">{label}</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="{lbl_cls}">{label}</div>', unsafe_allow_html=True)
                 if clicked:
                     if is_logout:
                         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
@@ -1496,7 +1498,6 @@ if page == "🏠 หน้าหลัก":
                         st.query_params.clear(); st.rerun()
                     else:
                         st.session_state["_current_page"] = target; st.rerun()
-        st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
