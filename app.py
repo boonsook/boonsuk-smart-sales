@@ -1318,6 +1318,7 @@ else:
     _menus = [
         "🏠 หน้าหลัก",
         "🧾 สร้างใบเสนอราคา",
+        "🏗️ ติดตั้งแอร์",
         "🛠️ รับงานซ่อม/บริการ",
         "📋 จัดการงาน / สถานะ",
         "📦 จัดการสต๊อก",
@@ -1367,6 +1368,7 @@ if page == "🏠 หน้าหลัก":
     else:
         menus_home = [
             ("🧾", "ใบเสนอราคา",  "🧾 สร้างใบเสนอราคา"),
+            ("🏗️", "ติดตั้งแอร์",  "🏗️ ติดตั้งแอร์"),
             ("🛠️", "รับงานซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
             ("📋", "จัดการงาน",   "📋 จัดการงาน / สถานะ"),
             ("📦", "สต๊อกแอร์",   "📦 จัดการสต๊อก"),
@@ -1690,6 +1692,175 @@ if page == "🧾 สร้างใบเสนอราคา":
         💬 ส่ง LINE</a>""", unsafe_allow_html=True)
     with st.expander("📝 ดูข้อความ LINE"):
         st.text_area("ข้อความ", value=line_text, height=180)
+
+# ══════════════════════════════════════════════
+# PAGE: ติดตั้งแอร์ (ใหม่/เก่า)
+# ══════════════════════════════════════════════
+elif page == "🏗️ ติดตั้งแอร์":
+    st.title("🏗️ งานติดตั้งแอร์")
+    _back_home()
+
+    mode = st.radio("ประเภทงาน", ["❄️ แอร์ใหม่ (เลือกรุ่น)", "🔄 แอร์เก่า (ไม่ต้องเลือกรุ่น)"],
+                    horizontal=True, key="install_mode")
+    is_new_ac = mode.startswith("❄️")
+
+    st.divider()
+
+    # ── ขั้นตอน 1: ข้อมูลลูกค้า ──
+    with st.expander("👤 ขั้นตอน 1 — ข้อมูลลูกค้า", expanded=True):
+        ic1, ic2 = st.columns(2)
+        inst_name    = ic1.text_input("ชื่อลูกค้า", key="inst_name")
+        inst_phone   = ic2.text_input("เบอร์โทร", key="inst_phone")
+        inst_address = st.text_area("ที่อยู่/สถานที่ติดตั้ง", height=68, key="inst_addr")
+
+    # ── ขั้นตอน 2: เลือกรุ่น (เฉพาะแอร์ใหม่) ──
+    inst_section = ""; inst_model = ""; inst_btu = 0
+    inst_base_price = 0; inst_warranty = {}
+    df_all_inst = load_stock()
+
+    if is_new_ac:
+        with st.expander("❄️ ขั้นตอน 2 — เลือกรุ่นแอร์", expanded=True):
+            iq = st.text_input("🔍 ค้นหา", placeholder="เช่น Fujitsu, 12000, inverter", key="inst_q").strip().lower()
+            df_iv = df_all_inst.copy()
+            if iq:
+                mask = (df_iv["section"].str.lower().str.contains(iq,na=False) |
+                        df_iv["model"].str.lower().str.contains(iq,na=False))
+                df_iv = df_iv[mask]
+            inst_sections = sorted(df_iv["section"].dropna().unique().tolist())
+            if not inst_sections:
+                st.warning("ไม่พบสินค้า"); st.stop()
+            is1, is2 = st.columns([2,2])
+            inst_section = is1.selectbox("ซีรีส์/หมวดรุ่น", inst_sections, key="inst_sec")
+            df_isec = df_iv[df_iv["section"]==inst_section].sort_values("price_install")
+            inst_model   = is2.selectbox("Model", df_isec["model"].tolist(), key="inst_mod")
+            irow = df_isec[df_isec["model"]==inst_model].iloc[0].to_dict()
+            inst_btu        = int(irow["btu"])
+            inst_base_price = int(irow["price_install"])
+            inst_warranty   = {"w_install": irow.get("w_install",""), "w_parts": irow.get("w_parts",""), "w_comp": irow.get("w_comp","")}
+            ia, ib, ic = st.columns(3)
+            ia.metric("BTU", f"{inst_btu:,}")
+            ib.metric("ราคาพร้อมติดตั้ง", f"{fmt_baht(inst_base_price)} ฿")
+            ic.metric("ประกันคอมฯ", irow.get("w_comp","-"))
+    else:
+        # แอร์เก่า — กรอกค่าติดตั้งเอง
+        with st.expander("🔄 ขั้นตอน 2 — ข้อมูลแอร์เก่า", expanded=True):
+            oe1, oe2 = st.columns(2)
+            inst_section    = oe1.text_input("ยี่ห้อ/รุ่น (ถ้าทราบ)", placeholder="เช่น Daikin 12000", key="inst_old_model")
+            inst_model      = inst_section
+            inst_btu        = oe2.number_input("BTU (ถ้าทราบ)", min_value=0, step=1000, value=0, key="inst_old_btu")
+            inst_base_price = st.number_input("💰 ค่าติดตั้ง/ค่าบริการ (บาท)", min_value=0, step=100, value=0, key="inst_old_price")
+
+    # ── ขั้นตอน 3: ปรับราคา + อุปกรณ์เสริม ──
+    with st.expander("💰 ขั้นตอน 3 — ปรับราคาและอุปกรณ์เสริม", expanded=True):
+        ip1, ip2 = st.columns(2)
+        inst_discount      = ip1.number_input("ส่วนลด (บาท)", min_value=0, step=100, value=0, key="inst_disc")
+        inst_extra_install = ip2.number_input("ค่าติดตั้งเพิ่ม (บาท)", min_value=0, step=100, value=0, key="inst_extra")
+
+        st.markdown("---")
+        st.markdown("**🔧 อุปกรณ์เสริม**")
+
+        # ขาแขวนคอยล์ร้อน
+        ie1c1, ie1c2, ie1c3 = st.columns([3,2,2])
+        ie1_use   = ie1c1.checkbox("🔩 ขาแขวนคอยล์ร้อน", key="ie1u")
+        ie1_price = ie1c2.number_input("ราคา/ชุด (฿)", min_value=0, step=50, value=500, key="ie1p", label_visibility="collapsed" if not ie1_use else "visible")
+        ie1_qty   = ie1c3.number_input("จำนวน", min_value=1, step=1, value=1, key="ie1q", label_visibility="collapsed" if not ie1_use else "visible")
+        ie1_total = (ie1_price * ie1_qty) if ie1_use else 0
+        if ie1_use: st.caption(f"  → ขาแขวน {ie1_qty} ชุด × {fmt_baht(ie1_price)} = **{fmt_baht(ie1_total)} ฿**")
+
+        # รางครอบท่อ
+        ie2c1, ie2c2, ie2c3 = st.columns([3,2,2])
+        ie2_use   = ie2c1.checkbox("📦 รางครอบท่อแอร์", key="ie2u")
+        ie2_price = ie2c2.number_input("ราคา/เมตร (฿)", min_value=0, step=10, value=250, key="ie2p", label_visibility="collapsed" if not ie2_use else "visible")
+        ie2_qty   = ie2c3.number_input("จำนวนเมตร", min_value=1, step=1, value=4, key="ie2q", label_visibility="collapsed" if not ie2_use else "visible")
+        ie2_total = (ie2_price * ie2_qty) if ie2_use else 0
+        if ie2_use: st.caption(f"  → รางครอบ {ie2_qty} ม. × {fmt_baht(ie2_price)} = **{fmt_baht(ie2_total)} ฿**")
+
+        # สายไฟ
+        WIRE_SIZES = ["1.5 mm²","2.5 mm²","4 mm²","6 mm²","10 mm²","16 mm²","25 mm²","35 mm²"]
+        WIRE_DEFAULT = {"1.5 mm²":25,"2.5 mm²":35,"4 mm²":50,"6 mm²":70,"10 mm²":110,"16 mm²":160,"25 mm²":230,"35 mm²":320}
+        ie3c1, ie3c2, ie3c3, ie3c4 = st.columns([2,2,2,2])
+        ie3_use   = ie3c1.checkbox("⚡ สายไฟ", key="ie3u")
+        ie3_size  = ie3c2.selectbox("เบอร์สาย", WIRE_SIZES, key="ie3s", label_visibility="collapsed" if not ie3_use else "visible")
+        ie3_price = ie3c3.number_input("ราคา/เมตร (฿)", min_value=0, step=5, value=WIRE_DEFAULT.get(ie3_size,25), key="ie3p", label_visibility="collapsed" if not ie3_use else "visible")
+        ie3_qty   = ie3c4.number_input("จำนวนเมตร", min_value=1, step=1, value=10, key="ie3q", label_visibility="collapsed" if not ie3_use else "visible")
+        ie3_total = (ie3_price * ie3_qty) if ie3_use else 0
+        if ie3_use: st.caption(f"  → สายไฟ {ie3_size} {ie3_qty} ม. × {fmt_baht(ie3_price)} = **{fmt_baht(ie3_total)} ฿**")
+
+        # อุปกรณ์เสริมเพิ่มเติม (custom)
+        st.markdown("---")
+        ie4c1, ie4c2, ie4c3 = st.columns([3,2,2])
+        ie4_use   = ie4c1.checkbox("➕ อุปกรณ์อื่นๆ", key="ie4u")
+        ie4_name  = ie4c1.text_input("ชื่ออุปกรณ์", key="ie4n", label_visibility="collapsed" if not ie4_use else "visible") if ie4_use else ""
+        ie4_price = ie4c2.number_input("ราคา/ชิ้น (฿)", min_value=0, step=50, value=0, key="ie4p", label_visibility="collapsed" if not ie4_use else "visible")
+        ie4_qty   = ie4c3.number_input("จำนวน", min_value=1, step=1, value=1, key="ie4q", label_visibility="collapsed" if not ie4_use else "visible")
+        ie4_total = (ie4_price * ie4_qty) if ie4_use else 0
+        if ie4_use and ie4_name: st.caption(f"  → {ie4_name} {ie4_qty} ชิ้น × {fmt_baht(ie4_price)} = **{fmt_baht(ie4_total)} ฿**")
+
+        inst_extra_equip = ie1_total + ie2_total + ie3_total + ie4_total
+        inst_net = max(0, inst_base_price - int(inst_discount) + int(inst_extra_install) + inst_extra_equip)
+
+        st.markdown("---")
+        _iparts = [f"ค่าติดตั้ง {fmt_baht(inst_base_price)} ฿"]
+        if inst_discount:      _iparts.append(f"ส่วนลด -{fmt_baht(inst_discount)} ฿")
+        if inst_extra_install: _iparts.append(f"ติดตั้งเพิ่ม +{fmt_baht(inst_extra_install)} ฿")
+        if inst_extra_equip:   _iparts.append(f"อุปกรณ์ +{fmt_baht(inst_extra_equip)} ฿")
+        st.markdown(f'''<div class="metric-card"><h4>สรุปราคา</h4><h2>฿ {fmt_baht(inst_net)}</h2>
+        <small>{" | ".join(_iparts)}</small></div>''', unsafe_allow_html=True)
+
+    # ── ดำเนินการ ──
+    today_str_i = date.today().strftime("%d/%m/%Y")
+    inst_equip_lines = []
+    if ie1_use: inst_equip_lines.append(f"ขาแขวนคอยล์ร้อน {ie1_qty} ชุด = {fmt_baht(ie1_total)} ฿")
+    if ie2_use: inst_equip_lines.append(f"รางครอบท่อ {ie2_qty} ม. = {fmt_baht(ie2_total)} ฿")
+    if ie3_use: inst_equip_lines.append(f"สายไฟ {ie3_size} {ie3_qty} ม. = {fmt_baht(ie3_total)} ฿")
+    if ie4_use and ie4_name: inst_equip_lines.append(f"{ie4_name} {ie4_qty} ชิ้น = {fmt_baht(ie4_total)} ฿")
+    inst_equip_note = " | ".join(inst_equip_lines)
+
+    inst_type_label = "แอร์ใหม่" if is_new_ac else "แอร์เก่า"
+
+    inst_quote = dict(
+        date=today_str_i, customer_name=inst_name, customer_phone=inst_phone,
+        customer_address=inst_address,
+        room_w=0, room_l=0, room_h=2.6, sun="ไม่ระบุ", people=1, btu=0, suggest_cap=0,
+        section=inst_section or inst_type_label,
+        model=inst_model or inst_type_label,
+        model_btu=inst_btu,
+        w_install=inst_warranty.get("w_install",""),
+        w_parts=inst_warranty.get("w_parts",""),
+        w_comp=inst_warranty.get("w_comp",""),
+        base_price=inst_base_price, discount=int(inst_discount),
+        extra_install=int(inst_extra_install), net_total=inst_net,
+        status=JOB_STATUSES[0], saved_by=st.session_state.username,
+    )
+
+    st.divider(); st.subheader("📤 ดำเนินการ")
+    ia1, ia2, ia3 = st.columns(3)
+    if ia1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="inst_save"):
+        log_customer_job(inst_quote)
+        st.success("บันทึกแล้ว ✅")
+        notify_msg = "\n".join([
+            f"🏗️ งานติดตั้ง ({inst_type_label})",
+            f"👤 ลูกค้า: {inst_name or '-'}",
+            f"📞 โทร: {inst_phone or '-'}",
+            f"❄️ แอร์: {inst_model or '-'}",
+            f"💰 รวม: {fmt_baht(inst_net)} บาท",
+            f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
+        ])
+        line_notify_owner(notify_msg)
+    if ia2.button("📄 สร้าง PDF", use_container_width=True, key="inst_pdf"):
+        try:
+            pdf_b = build_pdf_quotation(inst_quote)
+            fname = f"ติดตั้งแอร์_{inst_name or 'ลูกค้า'}_{today_str_i.replace('/','')}.pdf"
+            st.success("สร้าง PDF สำเร็จ ✅")
+            st.download_button("⬇️ ดาวน์โหลด PDF", data=pdf_b, file_name=fname,
+                               mime="application/pdf", use_container_width=True, key="inst_dl")
+        except Exception as e:
+            st.error(f"ไม่สำเร็จ: {e}")
+    inst_line = make_line_text(inst_quote)
+    ia3.markdown(f'''<a href="{line_share_link(inst_line)}" target="_blank" style="
+        display:block;text-align:center;background:#00c300;color:white;
+        padding:10px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-top:4px;">
+        💬 ส่ง LINE</a>''', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE 2: JOB MANAGEMENT
