@@ -1355,154 +1355,148 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # ── Menu data per role ──
     if _role2 == "customer":
         menus_home = [
-            ("🧾", "ใบเสนอราคา",   "🧾 ขอใบเสนอราคาแอร์"),
-            ("🛠️", "แจ้งซ่อม",     "🛠️ แจ้งซ่อม/บริการ"),
-            ("📋", "งานของฉัน",    "📋 งานของฉัน"),
-            ("🧮", "คำนวณ BTU",    "🧮 คำนวณ BTU"),
-            ("🚪", "ออกจากระบบ",   "__LOGOUT__"),
+            ("🧾", "ใบเสนอราคา",  "🧾 ขอใบเสนอราคาแอร์"),
+            ("🛠️", "แจ้งซ่อม",    "🛠️ แจ้งซ่อม/บริการ"),
+            ("📋", "งานของฉัน",   "📋 งานของฉัน"),
+            ("🧮", "BTU",         "🧮 คำนวณ BTU"),
+            ("🚪", "ออกจากระบบ",  "__LOGOUT__"),
         ]
     else:
         menus_home = [
-            ("🧾", "ใบเสนอราคา",   "🧾 สร้างใบเสนอราคา"),
-            ("🛠️", "รับงานซ่อม",   "🛠️ รับงานซ่อม/บริการ"),
-            ("📋", "จัดการงาน",    "📋 จัดการงาน / สถานะ"),
-            ("📦", "สต๊อกแอร์",    "📦 จัดการสต๊อก"),
-            ("📊", "Dashboard",    "📊 Dashboard"),
-            ("🧮", "คำนวณ BTU",    "🧮 คำนวณ BTU"),
-            ("⚠️", "Error Code",   "🔧 คลังเออเร่อแอร์"),
+            ("🧾", "ใบเสนอราคา",  "🧾 สร้างใบเสนอราคา"),
+            ("🛠️", "รับงานซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
+            ("📋", "จัดการงาน",   "📋 จัดการงาน / สถานะ"),
+            ("📦", "สต๊อกแอร์",   "📦 จัดการสต๊อก"),
+            ("📊", "Dashboard",   "📊 Dashboard"),
+            ("🧮", "คำนวณ BTU",   "🧮 คำนวณ BTU"),
+            ("⚠️", "Error Code",  "🔧 คลังเออเร่อแอร์"),
         ]
         if _role2 == "admin":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
 
+    # ── CSS ──
+    st.markdown("""<style>
+    .main, .block-container { background:#f0f4f8 !important; }
+
+    /* บังคับทุก column ใน home grid ให้เท่ากัน */
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        flex: 1 1 0% !important; min-width: 0 !important; padding: 0 4px !important;
+    }
+
+    /* ── Card button style ── */
+    [data-testid="stButton"] > button {
+        background: white !important;
+        border: 1.5px solid #e8edf5 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        min-height: 80px !important;
+        max-height: 100px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px 4px !important;
+        font-size: 28px !important;
+        line-height: 1.0 !important;
+        color: #1a237e !important;
+        transition: all 0.15s !important;
+        white-space: pre-line !important;
+    }
+    [data-testid="stButton"] > button:hover {
+        box-shadow: 0 5px 18px rgba(21,101,192,0.16) !important;
+        border-color: #bbdefb !important;
+        transform: translateY(-2px) !important;
+    }
+    [data-testid="stButton"] > button:active {
+        transform: scale(0.93) !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+    }
+    [data-testid="stButton"] > button:focus {
+        outline: none !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
+    }
+    [data-testid="stButton"] > button p {
+        font-size: 28px !important;
+        margin: 0 !important;
+        line-height: 1.1 !important;
+    }
+    /* label text ใต้ปุ่ม */
+    .card-label {
+        text-align:center; font-size:11.5px; font-weight:700;
+        color:#1a237e; margin:-4px 0 8px 0; line-height:1.25;
+        word-break:keep-all;
+    }
+    .card-label-red { color:#c62828 !important; }
+    </style>""", unsafe_allow_html=True)
+
+    # ── Header ──
+    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#1a237e 0%,#1976d2 65%,#42a5f5 100%);
+        border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
+        display:flex;align-items:center;gap:14px;
+        box-shadow:0 6px 20px rgba(13,71,161,0.28);">
+      <img src='data:image/png;base64,{LOGO_B64}'
+        style='width:58px;height:58px;border-radius:50%;object-fit:cover;
+        flex-shrink:0;border:3px solid rgba(255,255,255,0.4);'>
+      <div>
+        <div style="font-size:12px;opacity:0.82;">สวัสดี,</div>
+        <div style="font-size:22px;font-weight:800;">{_name2}</div>
+        <div style="background:rgba(255,255,255,0.22);border-radius:20px;
+          display:inline-block;padding:2px 12px;font-size:11px;margin-top:4px;">{role_badge}</div>
+      </div>
+    </div>""", unsafe_allow_html=True)
+
     # ── Stats ──
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log()
         _s1=len(df_stk); _s2=len(df_lg)
-    else:
-        _s1=_s2=0
-
-    # ── Build card HTML ──
-    cards_html = ""
-    for emoji, label, target in menus_home:
-        is_logout = (target == "__LOGOUT__")
-        bg = "#fff5f5" if is_logout else "#ffffff"
-        icon_bg = "#ffebee" if is_logout else "#e8f0fe"
-        txt_color = "#c62828" if is_logout else "#1a237e"
-        href = "?nav=__LOGOUT__" if is_logout else f"?nav={urlquote(target)}"
-        cards_html += f"""
-        <a href="{href}" class="hcard {'hcard-logout' if is_logout else ''}"
-           style="background:{bg};" onclick="if('{target}'=='__LOGOUT__'){{event.preventDefault();doLogout()}}">
-          <div class="hcard-icon" style="background:{icon_bg};">{emoji}</div>
-          <div class="hcard-label" style="color:{txt_color};">{label}</div>
-        </a>"""
-
-    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
-    stats_html = ""
-    if _role2 != "customer":
-        stats_html = f"""
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-          <div style="background:white;border-radius:14px;padding:12px 14px;
-              box-shadow:0 1px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
-            <div style="background:#e3f2fd;border-radius:10px;width:38px;height:38px;
-                display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
-            <div><div style="font-size:11px;color:#888;margin-bottom:1px;">สต๊อก</div>
-              <div style="font-size:20px;font-weight:800;color:#1565c0;line-height:1;">{_s1}<span style="font-size:11px;font-weight:400;color:#aaa;"> รุ่น</span></div></div>
+        st.markdown(f"""
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:white;border-radius:14px;padding:11px 13px;
+              box-shadow:0 1px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;">
+            <div style="background:#e3f2fd;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;">📦</div>
+            <div><div style="font-size:10px;color:#888;">สต๊อก</div>
+              <div style="font-size:19px;font-weight:800;color:#1565c0;">{_s1}<span style="font-size:10px;color:#aaa;"> รุ่น</span></div></div>
           </div>
-          <div style="background:white;border-radius:14px;padding:12px 14px;
-              box-shadow:0 1px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
-            <div style="background:#e8f5e9;border-radius:10px;width:38px;height:38px;
-                display:flex;align-items:center;justify-content:center;font-size:20px;">📋</div>
-            <div><div style="font-size:11px;color:#888;margin-bottom:1px;">งานทั้งหมด</div>
-              <div style="font-size:20px;font-weight:800;color:#2e7d32;line-height:1;">{_s2}<span style="font-size:11px;font-weight:400;color:#aaa;"> รายการ</span></div></div>
+          <div style="background:white;border-radius:14px;padding:11px 13px;
+              box-shadow:0 1px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;">
+            <div style="background:#e8f5e9;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;">📋</div>
+            <div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>
+              <div style="font-size:19px;font-weight:800;color:#2e7d32;">{_s2}<span style="font-size:10px;color:#aaa;"> รายการ</span></div></div>
           </div>
-        </div>"""
+        </div>""", unsafe_allow_html=True)
 
-    full_html = f"""
-    <style>
-      body, .stApp {{ background:#f0f4f8 !important; }}
-      .main, section.main > div.block-container {{
-        background:#f0f4f8 !important; padding:0 !important; max-width:100% !important;
-      }}
-      /* hide streamlit default padding */
-      .block-container {{ padding-top: 0.5rem !important; }}
-    </style>
-    <div id="boonsuk-home" style="background:#f0f4f8;padding:0 4px 24px 4px;font-family:sans-serif;">
-
-      <!-- Header -->
-      <div style="background:linear-gradient(135deg,#1a237e 0%,#1976d2 65%,#42a5f5 100%);
-          border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
-          display:flex;align-items:center;gap:14px;
-          box-shadow:0 6px 20px rgba(13,71,161,0.28);">
-        <img src="data:image/png;base64,{LOGO_B64}"
-            style="width:58px;height:58px;border-radius:50%;object-fit:cover;
-            flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
-        <div>
-          <div style="font-size:12px;opacity:0.82;margin-bottom:1px;">สวัสดี,</div>
-          <div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;">{_name2}</div>
-          <div style="background:rgba(255,255,255,0.22);border-radius:20px;
-              display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      {stats_html}
-
-      <!-- Grid -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-        {cards_html}
-      </div>
-    </div>
-
-    <style>
-      .hcard {{
-        display:flex; flex-direction:column; align-items:center; justify-content:center;
-        background:white; border-radius:18px; padding:16px 8px 14px 8px;
-        box-shadow:0 2px 10px rgba(0,0,0,0.08);
-        text-decoration:none; cursor:pointer;
-        transition:transform .12s, box-shadow .15s;
-        -webkit-tap-highlight-color: rgba(21,101,192,0.10);
-        min-height:90px;
-      }}
-      .hcard:active {{ transform:scale(0.93); box-shadow:0 1px 4px rgba(0,0,0,0.10); }}
-      .hcard-icon {{
-        width:52px; height:52px; border-radius:14px; font-size:26px;
-        display:flex; align-items:center; justify-content:center;
-        margin-bottom:8px;
-      }}
-      .hcard-label {{
-        font-size:12px; font-weight:700; text-align:center;
-        line-height:1.3; word-break:keep-all;
-      }}
-    </style>
-
-    <script>
-    function doLogout() {{
-      window.parent.postMessage({{type:"streamlit:setComponentValue", value:"__LOGOUT__"}}, "*");
-      // fallback: navigate to logout query param
-      window.parent.location.href = window.parent.location.pathname + "?nav=__LOGOUT__";
-    }}
-    // intercept all card clicks and navigate parent frame
-    document.querySelectorAll(".hcard:not(.hcard-logout)").forEach(function(a){{
-      a.addEventListener("click", function(e){{
-        e.preventDefault();
-        window.parent.location.href = a.getAttribute("href");
-      }});
-    }});
-    </script>
-    """
-
-    st.markdown(full_html, unsafe_allow_html=True)
-
-    # ── Handle LOGOUT via query param ──
-    if st.query_params.get("nav","") == "__LOGOUT__":
-        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-            st.session_state[k] = "" if k != "logged_in" else False
-        st.query_params.clear()
-        st.rerun()
+    # ── Grid: 3 cols, emoji button + label below ──
+    n_cols = 3
+    rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
+    for row in rows:
+        padded = row + [None]*(n_cols - len(row))
+        cols = st.columns(n_cols, gap="small")
+        for ci, item in enumerate(padded):
+            with cols[ci]:
+                if item is None:
+                    st.empty(); continue
+                emoji, label, target = item
+                is_logout = (target == "__LOGOUT__")
+                clicked = st.button(emoji, key=f"hm_{ci}_{target[:10]}", use_container_width=True)
+                lbl_class = "card-label card-label-red" if is_logout else "card-label"
+                st.markdown(f'<div class="{lbl_class}">{label}</div>', unsafe_allow_html=True)
+                if clicked:
+                    if is_logout:
+                        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                            st.session_state[k] = "" if k!="logged_in" else False
+                        st.query_params.clear(); st.rerun()
+                    else:
+                        st.session_state["_current_page"] = target; st.rerun()
+        st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
