@@ -1464,14 +1464,16 @@ if page == "🏠 หน้าหลัก":
     js = """
 function doNav(target) {
   target = target.replace(/APOS/g, "'");
-  var parentUrl = window.parent.location.href;
-  var sMatch = parentUrl.match(/[?&]s=([^&]*)/);
+  // window.top = browser tab จริง (ข้าม Streamlit iframe ทั้งหมด)
+  var topUrl = window.top.location.href;
+  var sMatch = topUrl.match(/[?&]s=([^&]*)/);
   var sToken = sMatch ? sMatch[1] : "";
+  var basePath = window.top.location.pathname;
   if (target === "__LOGOUT__") {
-    window.parent.location.href = window.parent.location.pathname;
+    window.top.location.href = basePath;
   } else {
-    var newUrl = window.parent.location.pathname + "?s=" + sToken + "&nav=" + encodeURIComponent(target);
-    window.parent.location.href = newUrl;
+    var newUrl = basePath + "?s=" + sToken + "&nav=" + encodeURIComponent(target);
+    window.top.location.href = newUrl;
   }
 }"""
 
