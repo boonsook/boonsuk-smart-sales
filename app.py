@@ -1602,16 +1602,16 @@ if page == "🧾 สร้างใบเสนอราคา":
         # ── ขาแขวนคอยล์ร้อน ──
         eq1_c1, eq1_c2, eq1_c3 = st.columns([3,2,2])
         eq1_use   = eq1_c1.checkbox("🔩 ขาแขวนคอยล์ร้อน", value=False)
-        eq1_price = eq1_c2.number_input("ราคา/ชุด (฿)", min_value=0, step=50, value=500, key="eq1p", label_visibility="collapsed" if not eq1_use else "visible")
-        eq1_qty   = eq1_c3.number_input("จำนวน", min_value=1, step=1, value=1, key="eq1q", label_visibility="collapsed" if not eq1_use else "visible")
+        eq1_price = eq1_c2.number_input("💵 ราคา/ชุด (฿)", min_value=0, step=50, value=500, key="eq1p")
+        eq1_qty   = eq1_c3.number_input("📦 จำนวน (ชุด)", min_value=1, step=1, value=1, key="eq1q")
         eq1_total = (eq1_price * eq1_qty) if eq1_use else 0
         if eq1_use: st.caption(f"  → ขาแขวนคอยล์ร้อน {eq1_qty} ชุด × {fmt_baht(eq1_price)} ฿ = **{fmt_baht(eq1_total)} ฿**")
 
         # ── รางครอบท่อแอร์ ──
         eq2_c1, eq2_c2, eq2_c3 = st.columns([3,2,2])
         eq2_use   = eq2_c1.checkbox("📦 รางครอบท่อแอร์", value=False)
-        eq2_price = eq2_c2.number_input("ราคา/เมตร (฿)", min_value=0, step=10, value=250, key="eq2p", label_visibility="collapsed" if not eq2_use else "visible")
-        eq2_qty   = eq2_c3.number_input("จำนวนเมตร", min_value=1, step=1, value=4, key="eq2q", label_visibility="collapsed" if not eq2_use else "visible")
+        eq2_price = eq2_c2.number_input("💵 ราคา/เมตร (฿)", min_value=0, step=10, value=250, key="eq2p")
+        eq2_qty   = eq2_c3.number_input("📏 จำนวน (เมตร)", min_value=1, step=1, value=4, key="eq2q")
         eq2_total = (eq2_price * eq2_qty) if eq2_use else 0
         if eq2_use: st.caption(f"  → รางครอบท่อ {eq2_qty} ม. × {fmt_baht(eq2_price)} ฿/ม. = **{fmt_baht(eq2_total)} ฿**")
 
@@ -1620,9 +1620,9 @@ if page == "🧾 สร้างใบเสนอราคา":
         WIRE_DEFAULT = {"1.5 mm²":25,"2.5 mm²":35,"4 mm²":50,"6 mm²":70,"10 mm²":110,"16 mm²":160,"25 mm²":230,"35 mm²":320}
         eq3_c1, eq3_c2, eq3_c3, eq3_c4 = st.columns([2,2,2,2])
         eq3_use   = eq3_c1.checkbox("⚡ สายไฟ", value=False)
-        eq3_size  = eq3_c2.selectbox("เบอร์สาย", WIRE_SIZES, index=0, key="eq3s", label_visibility="collapsed" if not eq3_use else "visible")
-        eq3_price = eq3_c3.number_input("ราคา/เมตร (฿)", min_value=0, step=5, value=WIRE_DEFAULT.get(eq3_size,25), key="eq3p", label_visibility="collapsed" if not eq3_use else "visible")
-        eq3_qty   = eq3_c4.number_input("จำนวนเมตร", min_value=1, step=1, value=10, key="eq3q", label_visibility="collapsed" if not eq3_use else "visible")
+        eq3_size  = eq3_c2.selectbox("🔌 เบอร์สาย", WIRE_SIZES, index=0, key="eq3s")
+        eq3_price = eq3_c3.number_input("💵 ราคา/เมตร (฿)", min_value=0, step=5, value=WIRE_DEFAULT.get(eq3_size,25), key="eq3p")
+        eq3_qty   = eq3_c4.number_input("📏 จำนวน (เมตร)", min_value=1, step=1, value=10, key="eq3q")
         eq3_total = (eq3_price * eq3_qty) if eq3_use else 0
         if eq3_use: st.caption(f"  → สายไฟ {eq3_size} {eq3_qty} ม. × {fmt_baht(eq3_price)} ฿/ม. = **{fmt_baht(eq3_total)} ฿**")
 
@@ -1762,39 +1762,39 @@ elif page == "🏗️ ติดตั้งแอร์":
         # ขาแขวนคอยล์ร้อน
         ie1c1, ie1c2, ie1c3 = st.columns([3,2,2])
         ie1_use   = ie1c1.checkbox("🔩 ขาแขวนคอยล์ร้อน", key="ie1u")
-        ie1_price = ie1c2.number_input("ราคา/ชุด (฿)", min_value=0, step=50, value=500, key="ie1p", label_visibility="collapsed" if not ie1_use else "visible")
-        ie1_qty   = ie1c3.number_input("จำนวน", min_value=1, step=1, value=1, key="ie1q", label_visibility="collapsed" if not ie1_use else "visible")
+        ie1_price = ie1c2.number_input("💵 ราคา/ชุด (฿)", min_value=0, step=50, value=500, key="ie1p")
+        ie1_qty   = ie1c3.number_input("📦 จำนวน (ชุด)", min_value=1, step=1, value=1, key="ie1q")
         ie1_total = (ie1_price * ie1_qty) if ie1_use else 0
-        if ie1_use: st.caption(f"  → ขาแขวน {ie1_qty} ชุด × {fmt_baht(ie1_price)} = **{fmt_baht(ie1_total)} ฿**")
+        if ie1_use: st.caption(f"  → ขาแขวน {ie1_qty} ชุด × {fmt_baht(ie1_price)} ฿ = **{fmt_baht(ie1_total)} ฿**")
 
         # รางครอบท่อ
         ie2c1, ie2c2, ie2c3 = st.columns([3,2,2])
         ie2_use   = ie2c1.checkbox("📦 รางครอบท่อแอร์", key="ie2u")
-        ie2_price = ie2c2.number_input("ราคา/เมตร (฿)", min_value=0, step=10, value=250, key="ie2p", label_visibility="collapsed" if not ie2_use else "visible")
-        ie2_qty   = ie2c3.number_input("จำนวนเมตร", min_value=1, step=1, value=4, key="ie2q", label_visibility="collapsed" if not ie2_use else "visible")
+        ie2_price = ie2c2.number_input("💵 ราคา/เมตร (฿)", min_value=0, step=10, value=250, key="ie2p")
+        ie2_qty   = ie2c3.number_input("📏 จำนวน (เมตร)", min_value=1, step=1, value=4, key="ie2q")
         ie2_total = (ie2_price * ie2_qty) if ie2_use else 0
-        if ie2_use: st.caption(f"  → รางครอบ {ie2_qty} ม. × {fmt_baht(ie2_price)} = **{fmt_baht(ie2_total)} ฿**")
+        if ie2_use: st.caption(f"  → รางครอบ {ie2_qty} ม. × {fmt_baht(ie2_price)} ฿/ม. = **{fmt_baht(ie2_total)} ฿**")
 
         # สายไฟ
         WIRE_SIZES = ["1.5 mm²","2.5 mm²","4 mm²","6 mm²","10 mm²","16 mm²","25 mm²","35 mm²"]
         WIRE_DEFAULT = {"1.5 mm²":25,"2.5 mm²":35,"4 mm²":50,"6 mm²":70,"10 mm²":110,"16 mm²":160,"25 mm²":230,"35 mm²":320}
         ie3c1, ie3c2, ie3c3, ie3c4 = st.columns([2,2,2,2])
         ie3_use   = ie3c1.checkbox("⚡ สายไฟ", key="ie3u")
-        ie3_size  = ie3c2.selectbox("เบอร์สาย", WIRE_SIZES, key="ie3s", label_visibility="collapsed" if not ie3_use else "visible")
-        ie3_price = ie3c3.number_input("ราคา/เมตร (฿)", min_value=0, step=5, value=WIRE_DEFAULT.get(ie3_size,25), key="ie3p", label_visibility="collapsed" if not ie3_use else "visible")
-        ie3_qty   = ie3c4.number_input("จำนวนเมตร", min_value=1, step=1, value=10, key="ie3q", label_visibility="collapsed" if not ie3_use else "visible")
+        ie3_size  = ie3c2.selectbox("🔌 เบอร์สาย", WIRE_SIZES, key="ie3s")
+        ie3_price = ie3c3.number_input("💵 ราคา/เมตร (฿)", min_value=0, step=5, value=WIRE_DEFAULT.get(ie3_size,25), key="ie3p")
+        ie3_qty   = ie3c4.number_input("📏 จำนวน (เมตร)", min_value=1, step=1, value=10, key="ie3q")
         ie3_total = (ie3_price * ie3_qty) if ie3_use else 0
-        if ie3_use: st.caption(f"  → สายไฟ {ie3_size} {ie3_qty} ม. × {fmt_baht(ie3_price)} = **{fmt_baht(ie3_total)} ฿**")
+        if ie3_use: st.caption(f"  → สายไฟ {ie3_size} {ie3_qty} ม. × {fmt_baht(ie3_price)} ฿/ม. = **{fmt_baht(ie3_total)} ฿**")
 
         # อุปกรณ์เสริมเพิ่มเติม (custom)
         st.markdown("---")
         ie4c1, ie4c2, ie4c3 = st.columns([3,2,2])
         ie4_use   = ie4c1.checkbox("➕ อุปกรณ์อื่นๆ", key="ie4u")
-        ie4_name  = ie4c1.text_input("ชื่ออุปกรณ์", key="ie4n", label_visibility="collapsed" if not ie4_use else "visible") if ie4_use else ""
-        ie4_price = ie4c2.number_input("ราคา/ชิ้น (฿)", min_value=0, step=50, value=0, key="ie4p", label_visibility="collapsed" if not ie4_use else "visible")
-        ie4_qty   = ie4c3.number_input("จำนวน", min_value=1, step=1, value=1, key="ie4q", label_visibility="collapsed" if not ie4_use else "visible")
+        ie4_name  = ie4c1.text_input("✏️ ชื่ออุปกรณ์", key="ie4n") if ie4_use else ""
+        ie4_price = ie4c2.number_input("💵 ราคา/ชิ้น (฿)", min_value=0, step=50, value=0, key="ie4p")
+        ie4_qty   = ie4c3.number_input("📦 จำนวน (ชิ้น)", min_value=1, step=1, value=1, key="ie4q")
         ie4_total = (ie4_price * ie4_qty) if ie4_use else 0
-        if ie4_use and ie4_name: st.caption(f"  → {ie4_name} {ie4_qty} ชิ้น × {fmt_baht(ie4_price)} = **{fmt_baht(ie4_total)} ฿**")
+        if ie4_use and ie4_name: st.caption(f"  → {ie4_name} {ie4_qty} ชิ้น × {fmt_baht(ie4_price)} ฿ = **{fmt_baht(ie4_total)} ฿**")
 
         inst_extra_equip = ie1_total + ie2_total + ie3_total + ie4_total
         inst_net = max(0, inst_base_price - int(inst_discount) + int(inst_extra_install) + inst_extra_equip)
