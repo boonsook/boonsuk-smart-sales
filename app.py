@@ -1356,6 +1356,7 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
+    # handle LOGOUT
     if st.query_params.get("nav","") == "__LOGOUT__":
         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
             st.session_state[k] = "" if k!="logged_in" else False
@@ -1383,84 +1384,39 @@ if page == "🏠 หน้าหลัก":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
 
-    # ── inject CSS into parent document via iframe (bypass Streamlit column CSS) ──
-    st_html.html("""
-    <script>
-    (function apply() {
-      var css = `
-        /* force 3-col no-overflow */
-        [data-testid="stHorizontalBlock"] {
-          flex-wrap: nowrap !important;
-          overflow: hidden !important;
-          gap: 6px !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          box-sizing: border-box !important;
-        }
-        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-          flex: 0 0 calc(33.33vw - 16px) !important;
-          width: calc(33.33vw - 16px) !important;
-          min-width: 0 !important;
-          max-width: calc(33.33vw - 16px) !important;
-          overflow: hidden !important;
-          padding: 0 !important;
-          box-sizing: border-box !important;
-        }
-        /* home card buttons */
-        .home-btn > div > button,
-        .home-btn-logout > div > button {
-          background: white !important;
-          border: 1.5px solid #e8edf5 !important;
-          border-radius: 16px !important;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
-          height: 86px !important;
-          min-height: 86px !important;
-          max-height: 86px !important;
-          width: 100% !important;
-          font-size: 28px !important;
-          padding: 0 !important;
-          color: #000 !important;
-        }
-        .home-btn > div > button p,
-        .home-btn-logout > div > button p { font-size: 28px !important; margin: 0 !important; }
-        .home-btn > div > button:focus,
-        .home-btn-logout > div > button:focus { outline:none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important; }
-        .home-btn-logout > div > button { background: #fff5f5 !important; }
-        .home-lbl { text-align:center; font-size:11px; font-weight:700; color:#1e3a5f; margin:-2px 0 6px; line-height:1.3; word-break:keep-all; }
-        .home-lbl-red { color:#dc2626 !important; }
-      `;
-      var doc = window.parent.document;
-      var el = doc.getElementById('boonsuk-home-css');
-      if (!el) {
-        el = doc.createElement('style');
-        el.id = 'boonsuk-home-css';
-        doc.head.appendChild(el);
-      }
-      el.innerHTML = css;
-    })();
-    </script>
-    """, height=0)
-
-    # ── Header ──
-    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
-    st.markdown(f"""<div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
-        border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
-        display:flex;align-items:center;gap:14px;
-        box-shadow:0 6px 20px rgba(30,58,138,0.3);">
-      <img src='data:image/png;base64,{LOGO_B64}' style='width:58px;height:58px;border-radius:50%;
-        object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.4);'>
-      <div>
-        <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
-        <div style="font-size:23px;font-weight:800;">{_name2}</div>
-        <div style="background:rgba(255,255,255,0.22);border-radius:20px;
-          display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
-      </div></div>""", unsafe_allow_html=True)
-
-    # ── Stats ──
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log()
         _s1=len(df_stk); _s2=len(df_lg)
-        st.markdown(f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+    else:
+        _s1=_s2=0
+
+    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
+
+    # build cards HTML
+    cards_html = ""
+    for emoji, label, target in menus_home:
+        nav_val = urlquote(target)
+        is_out  = target == "__LOGOUT__"
+        cbg  = "#fff5f5" if is_out else "#ffffff"
+        ibg  = "#fee2e2" if is_out else "#eff6ff"
+        lcol = "#dc2626" if is_out else "#1e3a5f"
+        cards_html += f"""<button onclick="goNav('{nav_val}')" style="
+            background:{cbg};border-radius:16px;padding:12px 4px 10px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);border:1.5px solid #edf2f7;
+            cursor:pointer;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            min-height:84px;width:100%;font-family:inherit;
+            -webkit-appearance:none;-webkit-tap-highlight-color:rgba(0,0,0,0.05);">
+          <div style="background:{ibg};border-radius:12px;width:46px;height:46px;
+              display:flex;align-items:center;justify-content:center;
+              font-size:24px;margin-bottom:6px;">{emoji}</div>
+          <div style="font-size:11.5px;font-weight:700;color:{lcol};
+              text-align:center;line-height:1.3;word-break:keep-all;">{label}</div>
+        </button>"""
+
+    stats_html = ""
+    if _role2 != "customer":
+        stats_html = f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
           <div style="background:white;border-radius:14px;padding:12px;
               box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
             <div style="background:#dbeafe;border-radius:10px;width:38px;height:38px;
@@ -1474,33 +1430,54 @@ if page == "🏠 หน้าหลัก":
                 display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📋</div>
             <div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>
               <div style="font-size:20px;font-weight:800;color:#16a34a;">{_s2}<span style="font-size:10px;color:#aaa;"> รายการ</span></div></div>
-          </div></div>""", unsafe_allow_html=True)
+          </div></div>"""
 
-    # ── Grid ──
-    n_cols = 3
-    rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
-    for row in rows:
-        padded = row + [None]*(n_cols - len(row))
-        cols = st.columns(n_cols, gap="small")
-        for ci, item in enumerate(padded):
-            with cols[ci]:
-                if item is None:
-                    st.empty(); continue
-                emoji, label, target = item
-                is_logout = (target == "__LOGOUT__")
-                css_cls = "home-btn home-btn-logout" if is_logout else "home-btn"
-                lbl_cls = "home-lbl home-lbl-red" if is_logout else "home-lbl"
-                st.markdown(f'<div class="{css_cls}">', unsafe_allow_html=True)
-                clicked = st.button(emoji, key=f"hm_{ci}_{target[:10]}", use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="{lbl_cls}">{label}</div>', unsafe_allow_html=True)
-                if clicked:
-                    if is_logout:
-                        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-                            st.session_state[k] = "" if k!="logged_in" else False
-                        st.query_params.clear(); st.rerun()
-                    else:
-                        st.session_state["_current_page"] = target; st.rerun()
+    n_rows = (len(menus_home) + 2) // 3
+    iframe_h = 160 + (110 if _role2 != "customer" else 0) + n_rows * 110 + 40
+
+    html = f"""<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 0 16px;}}
+button:active{{transform:scale(0.92);opacity:0.85;}}
+</style></head><body>
+<div style="padding:0 2px;">
+  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
+      border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
+      display:flex;align-items:center;gap:14px;
+      box-shadow:0 6px 20px rgba(30,58,138,0.3);">
+    <img src="data:image/png;base64,{LOGO_B64}" style="width:56px;height:56px;border-radius:50%;
+        object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
+    <div>
+      <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
+      <div style="font-size:23px;font-weight:800;">{_name2}</div>
+      <div style="background:rgba(255,255,255,0.22);border-radius:20px;
+          display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
+    </div>
+  </div>
+  {stats_html}
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+    {cards_html}
+  </div>
+</div>
+<script>
+function goNav(target) {{
+  try {{
+    var base = window.top.location.pathname;
+    window.top.location.href = base + '?nav=' + target;
+  }} catch(e) {{
+    try {{
+      window.parent.location.href = window.parent.location.pathname + '?nav=' + target;
+    }} catch(e2) {{
+      window.location.href = '?nav=' + target;
+    }}
+  }}
+}}
+</script>
+</body></html>"""
+
+    st_html.html(html, height=iframe_h, scrolling=False)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
