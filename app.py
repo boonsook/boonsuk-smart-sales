@@ -1356,7 +1356,6 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # handle LOGOUT
     if st.query_params.get("nav","") == "__LOGOUT__":
         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
             st.session_state[k] = "" if k!="logged_in" else False
@@ -1384,102 +1383,115 @@ if page == "🏠 หน้าหลัก":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
 
+    # ── inject CSS into parent document via iframe (bypass Streamlit column CSS) ──
+    st_html.html("""
+    <script>
+    (function() {
+      var css = `
+        [data-testid="stHorizontalBlock"] {
+          flex-wrap: nowrap !important;
+          gap: 8px !important;
+        }
+        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+          flex: 1 1 0% !important;
+          min-width: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+        .home-btn > div > button {
+          background: white !important;
+          border: 1.5px solid #e8edf5 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
+          height: 88px !important;
+          min-height: 88px !important;
+          width: 100% !important;
+          font-size: 30px !important;
+          padding: 0 !important;
+          color: #000 !important;
+          transition: transform 0.12s !important;
+        }
+        .home-btn > div > button:active { transform: scale(0.91) !important; }
+        .home-btn > div > button:focus { outline: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important; }
+        .home-btn > div > button p { font-size: 30px !important; margin: 0 !important; }
+        .home-btn-logout > div > button { background: #fff5f5 !important; }
+        .home-lbl { text-align:center; font-size:11px; font-weight:700; color:#1e3a5f; margin:-2px 0 6px; line-height:1.3; }
+        .home-lbl-red { color:#dc2626 !important; }
+        .stButton:not(.home-btn):not(.home-btn-logout) > button {
+          height: 3rem !important; font-size: 16px !important;
+        }
+      `;
+      var el = window.parent.document.getElementById('boonsuk-home-css');
+      if (!el) {
+        el = window.parent.document.createElement('style');
+        el.id = 'boonsuk-home-css';
+        window.parent.document.head.appendChild(el);
+      }
+      el.innerHTML = css;
+    })();
+    </script>
+    """, height=0)
+
+    # ── Header ──
+    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
+    st.markdown(f"""<div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
+        border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
+        display:flex;align-items:center;gap:14px;
+        box-shadow:0 6px 20px rgba(30,58,138,0.3);">
+      <img src='data:image/png;base64,{LOGO_B64}' style='width:58px;height:58px;border-radius:50%;
+        object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.4);'>
+      <div>
+        <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
+        <div style="font-size:23px;font-weight:800;">{_name2}</div>
+        <div style="background:rgba(255,255,255,0.22);border-radius:20px;
+          display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
+      </div></div>""", unsafe_allow_html=True)
+
+    # ── Stats ──
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log()
         _s1=len(df_stk); _s2=len(df_lg)
-    else:
-        _s1=_s2=0
+        st.markdown(f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:white;border-radius:14px;padding:12px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
+            <div style="background:#dbeafe;border-radius:10px;width:38px;height:38px;
+                display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📦</div>
+            <div><div style="font-size:10px;color:#888;">สต๊อก</div>
+              <div style="font-size:20px;font-weight:800;color:#1d4ed8;">{_s1}<span style="font-size:10px;color:#aaa;"> รุ่น</span></div></div>
+          </div>
+          <div style="background:white;border-radius:14px;padding:12px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
+            <div style="background:#dcfce7;border-radius:10px;width:38px;height:38px;
+                display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📋</div>
+            <div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>
+              <div style="font-size:20px;font-weight:800;color:#16a34a;">{_s2}<span style="font-size:10px;color:#aaa;"> รายการ</span></div></div>
+          </div></div>""", unsafe_allow_html=True)
 
-    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
-
-    # build cards — ใช้ <form target="_parent"> ส่ง GET param ไปที่ parent Streamlit
-    cards = ""
-    for emoji, label, target in menus_home:
-        nav_val = urlquote(target)
-        is_out  = target == "__LOGOUT__"
-        cbg  = "#fff5f5" if is_out else "#ffffff"
-        ibg  = "#fee2e2" if is_out else "#eff6ff"
-        lcol = "#dc2626" if is_out else "#1e3a5f"
-        cards += (
-            f'<form method="GET" target="_parent" action="" style="margin:0;padding:0;">'
-            f'<input type="hidden" name="nav" value="{nav_val}">'
-            f'<button type="submit" style="background:{cbg};border-radius:16px;'
-            f'padding:14px 6px 12px;box-shadow:0 2px 10px rgba(0,0,0,0.07);'
-            f'border:1.5px solid #edf2f7;cursor:pointer;display:flex;flex-direction:column;'
-            f'align-items:center;justify-content:center;min-height:86px;width:100%;'
-            f'-webkit-tap-highlight-color:rgba(0,0,0,0.06);font-family:inherit;'
-            f'transition:transform 0.1s;-webkit-appearance:none;">'
-            f'<div style="background:{ibg};border-radius:12px;width:46px;height:46px;'
-            f'display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:7px;">{emoji}</div>'
-            f'<div style="font-size:11.5px;font-weight:700;color:{lcol};'
-            f'text-align:center;line-height:1.3;word-break:keep-all;">{label}</div>'
-            f'</button></form>'
-        )
-
-    stats_rows = ""
-    if _role2 != "customer":
-        stats_rows = (
-            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
-            f'<div style="background:white;border-radius:14px;padding:11px 12px;'
-            f'box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">'
-            f'<div style="background:#dbeafe;border-radius:10px;width:38px;height:38px;'
-            f'display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📦</div>'
-            f'<div><div style="font-size:10px;color:#888;">สต๊อก</div>'
-            f'<div style="font-size:20px;font-weight:800;color:#1d4ed8;">{_s1}'
-            f'<span style="font-size:10px;color:#aaa;"> รุ่น</span></div></div></div>'
-            f'<div style="background:white;border-radius:14px;padding:11px 12px;'
-            f'box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">'
-            f'<div style="background:#dcfce7;border-radius:10px;width:38px;height:38px;'
-            f'display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📋</div>'
-            f'<div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>'
-            f'<div style="font-size:20px;font-weight:800;color:#16a34a;">{_s2}'
-            f'<span style="font-size:10px;color:#aaa;"> รายการ</span></div></div></div>'
-            f'</div>'
-        )
-
-    n_items = len(menus_home)
-    grid_h  = ((n_items + 2) // 3) * 110 + 200
-    total_h = grid_h + (120 if _role2 != "customer" else 0) + 160
-
-    component_html = """<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { background:#f0f4f8; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding:0 2px 16px; }
-a { display:block; }
-a:active { transform:scale(0.93); opacity:0.85; }
-</style>
-</head>
-<body>
-""" + f"""
-<div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
-    border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
-    display:flex;align-items:center;gap:14px;
-    box-shadow:0 6px 20px rgba(30,58,138,0.3);">
-  <img src="data:image/png;base64,{LOGO_B64}"
-      style="width:56px;height:56px;border-radius:50%;object-fit:cover;
-      flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
-  <div>
-    <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
-    <div style="font-size:23px;font-weight:800;">{_name2}</div>
-    <div style="background:rgba(255,255,255,0.22);border-radius:20px;
-        display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:5px;">{role_badge}</div>
-  </div>
-</div>
-
-{stats_rows}
-
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-  {cards}
-</div>
-
-
-</body></html>
-"""
-
-    st_html.html(component_html, height=total_h, scrolling=False)
+    # ── Grid ──
+    n_cols = 3
+    rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
+    for row in rows:
+        padded = row + [None]*(n_cols - len(row))
+        cols = st.columns(n_cols, gap="small")
+        for ci, item in enumerate(padded):
+            with cols[ci]:
+                if item is None:
+                    st.empty(); continue
+                emoji, label, target = item
+                is_logout = (target == "__LOGOUT__")
+                css_cls = "home-btn home-btn-logout" if is_logout else "home-btn"
+                lbl_cls = "home-lbl home-lbl-red" if is_logout else "home-lbl"
+                st.markdown(f'<div class="{css_cls}">', unsafe_allow_html=True)
+                clicked = st.button(emoji, key=f"hm_{ci}_{target[:10]}", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="{lbl_cls}">{label}</div>', unsafe_allow_html=True)
+                if clicked:
+                    if is_logout:
+                        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                            st.session_state[k] = "" if k!="logged_in" else False
+                        st.query_params.clear(); st.rerun()
+                    else:
+                        st.session_state["_current_page"] = target; st.rerun()
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
