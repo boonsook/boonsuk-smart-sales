@@ -1386,21 +1386,14 @@ if page == "🏠 หน้าหลัก":
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
-    # ── CSS: ซ่อน hidden buttons + background ──
     st.markdown("""<style>
     .main, .block-container { background:#f0f4f8 !important; }
-    .hid-btn { position:absolute !important; opacity:0 !important;
-               pointer-events:none !important; height:0 !important;
-               width:0 !important; overflow:hidden !important; }
+    #hid-btn-container, #hid-btn-container * { display:none !important; }
     </style>""", unsafe_allow_html=True)
 
-    # ── Hidden buttons — กดโดย JS ใน iframe ──
-    btn_keys = []
+    st.markdown('<div id="hid-btn-container">', unsafe_allow_html=True)
     for i, (_, _, target) in enumerate(menus_home):
-        key = f"hbtn_{i}"
-        btn_keys.append(key)
-        st.markdown(f'<div class="hid-btn" id="hid-wrap-{i}">', unsafe_allow_html=True)
-        if st.button(target, key=key):
+        if st.button(target, key=f"hbtn_{i}"):
             if target == "__LOGOUT__":
                 for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                     st.session_state[k] = "" if k!="logged_in" else False
@@ -1408,7 +1401,7 @@ if page == "🏠 หน้าหลัก":
             else:
                 st.session_state["_current_page"] = target
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Build iframe HTML ──
     cards_html = ""
@@ -1417,7 +1410,8 @@ if page == "🏠 หน้าหลัก":
         cbg  = "#fff5f5" if is_out else "#ffffff"
         ibg  = "#fee2e2" if is_out else "#eff6ff"
         lcol = "#dc2626" if is_out else "#1e3a5f"
-        cards_html += f"""<button onclick="clickBtn({i})" style="
+        safe_t = target.replace("'", "\\'")
+        cards_html += f"""<button onclick="clickBtn('{safe_t}')" style="
             background:{cbg};border-radius:16px;padding:12px 4px 10px;
             box-shadow:0 2px 10px rgba(0,0,0,0.08);border:1.5px solid #edf2f7;
             cursor:pointer;display:flex;flex-direction:column;
@@ -1478,16 +1472,15 @@ button:active{{transform:scale(0.93);transition:transform 0.1s;}}
   </div>
 </div>
 <script>
-function clickBtn(i) {{
-  // หา hidden button ใน parent document แล้วกด
-  var wrap = window.parent.document.getElementById("hid-wrap-" + i);
-  if (wrap) {{
-    var btn = wrap.querySelector("button");
-    if (btn) {{ btn.click(); return; }}
+function clickBtn(target) {{
+  // ค้นหา hidden button จาก text content ที่ตรงกับ target
+  var btns = window.parent.document.querySelectorAll("button");
+  for (var b of btns) {{
+    if (b.innerText.trim() === target) {{
+      b.click();
+      return;
+    }}
   }}
-  // fallback: หา button จาก key attribute
-  var btns = window.parent.document.querySelectorAll('button[data-testid="baseButton-secondary"]');
-  if (btns[i]) btns[i].click();
 }}
 </script>
 </body></html>"""
