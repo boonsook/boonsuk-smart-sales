@@ -1381,10 +1381,18 @@ if page == "🏠 หน้าหลัก":
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
 
     if _role2 != "customer":
-        df_stk = load_stock(); df_lg = load_log()
-        _s1=len(df_stk); _s2=len(df_lg)
+        df_stk = load_stock(); df_lg = load_log(); df_sv = load_service()
+        _s1 = len(df_stk)
+        _CLOSED_AC = ["💰 รับเงินแล้ว", "✅ ติดตั้งแล้ว", "❌ ยกเลิก"]
+        _CLOSED_SV = ["💰 รับเงินแล้ว", "✅ เสร็จแล้ว", "❌ ยกเลิก"]
+        _ac_pend   = len(df_lg[~df_lg["status"].isin(_CLOSED_AC)]) if not df_lg.empty and "status" in df_lg.columns else 0
+        _ac_closed = len(df_lg[ df_lg["status"].isin(_CLOSED_AC)]) if not df_lg.empty and "status" in df_lg.columns else 0
+        _sv_pend   = len(df_sv[~df_sv["status"].isin(_CLOSED_SV)]) if not df_sv.empty and "status" in df_sv.columns else 0
+        _sv_closed = len(df_sv[ df_sv["status"].isin(_CLOSED_SV)]) if not df_sv.empty and "status" in df_sv.columns else 0
+        _total_pend   = _ac_pend + _sv_pend
+        _total_closed = _ac_closed + _sv_closed
     else:
-        _s1=_s2=0
+        _s1=_total_pend=_total_closed=_ac_pend=_sv_pend=_ac_closed=_sv_closed=0
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
@@ -1429,24 +1437,34 @@ if page == "🏠 หน้าหลัก":
 
     stats_html = ""
     if _role2 != "customer":
-        stats_html = f"""<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-          <div style="background:white;border-radius:14px;padding:12px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
-            <div style="background:#dbeafe;border-radius:10px;width:38px;height:38px;
-                display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📦</div>
-            <div><div style="font-size:10px;color:#888;">สต๊อก</div>
-              <div style="font-size:20px;font-weight:800;color:#1d4ed8;">{_s1}<span style="font-size:10px;color:#aaa;"> รุ่น</span></div></div>
+        stats_html = f"""<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:white;border-radius:14px;padding:10px 10px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+            <div style="background:#dbeafe;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📦</div>
+            <div><div style="font-size:9px;color:#888;">สต๊อก</div>
+              <div style="font-size:18px;font-weight:800;color:#1d4ed8;line-height:1.1;">{_s1}<span style="font-size:9px;color:#aaa;"> รุ่น</span></div></div>
           </div>
-          <div style="background:white;border-radius:14px;padding:12px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
-            <div style="background:#dcfce7;border-radius:10px;width:38px;height:38px;
-                display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📋</div>
-            <div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>
-              <div style="font-size:20px;font-weight:800;color:#16a34a;">{_s2}<span style="font-size:10px;color:#aaa;"> รายการ</span></div></div>
-          </div></div>"""
+          <div style="background:white;border-radius:14px;padding:10px 10px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+            <div style="background:#fef9c3;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⏳</div>
+            <div><div style="font-size:9px;color:#888;">งานค้าง</div>
+              <div style="font-size:18px;font-weight:800;color:#b45309;line-height:1.1;">{_total_pend}<span style="font-size:9px;color:#aaa;"> งาน</span></div>
+              <div style="font-size:8px;color:#999;">แอร์ {_ac_pend} | ซ่อม {_sv_pend}</div></div>
+          </div>
+          <div style="background:white;border-radius:14px;padding:10px 10px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+            <div style="background:#dcfce7;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✅</div>
+            <div><div style="font-size:9px;color:#888;">ปิดงานแล้ว</div>
+              <div style="font-size:18px;font-weight:800;color:#16a34a;line-height:1.1;">{_total_closed}<span style="font-size:9px;color:#aaa;"> งาน</span></div>
+              <div style="font-size:8px;color:#999;">แอร์ {_ac_closed} | ซ่อม {_sv_closed}</div></div>
+          </div>
+        </div>"""
 
     n_rows = (len(menus_home) + 2) // 3
-    iframe_h = 200 + (130 if _role2 != "customer" else 0) + n_rows * 110
+    iframe_h = 200 + (115 if _role2 != "customer" else 0) + n_rows * 110
 
     html = f"""<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
