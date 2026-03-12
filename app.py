@@ -1444,30 +1444,38 @@ if page == "🏠 หน้าหลัก":
 
     stats_html = ""
     if _role2 != "customer":
+        _nav_stock  = "%F0%9F%93%A6%20%E0%B8%88%E0%B8%B1%E0%B8%94%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AA%E0%B8%95%E0%B9%8A%E0%B8%AD%E0%B8%81"
+        _nav_manage = "%F0%9F%93%8B%20%E0%B8%88%E0%B8%B1%E0%B8%94%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%87%E0%B8%B2%E0%B8%99%20%2F%20%E0%B8%AA%E0%B8%96%E0%B8%B2%E0%B8%99%E0%B8%B0"
         stats_html = f"""<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
-          <div style="background:white;border-radius:14px;padding:10px 10px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+          <button onclick="clickBtn('📦 จัดการสต๊อก')" style="background:white;border-radius:14px;padding:10px 8px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;
+              border:1.5px solid #e8edf5;cursor:pointer;width:100%;text-align:left;font-family:inherit;
+              -webkit-tap-highlight-color:rgba(0,0,0,0.05);">
             <div style="background:#dbeafe;border-radius:10px;width:36px;height:36px;
                 display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📦</div>
             <div><div style="font-size:9px;color:#888;">สต๊อก</div>
               <div style="font-size:18px;font-weight:800;color:#1d4ed8;line-height:1.1;">{_s1}<span style="font-size:9px;color:#aaa;"> รุ่น</span></div></div>
-          </div>
-          <div style="background:white;border-radius:14px;padding:10px 10px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+          </button>
+          <button onclick="clickBtn('📋 จัดการงาน / สถานะ')" style="background:white;border-radius:14px;padding:10px 8px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;
+              border:1.5px solid #e8edf5;cursor:pointer;width:100%;text-align:left;font-family:inherit;
+              -webkit-tap-highlight-color:rgba(0,0,0,0.05);">
             <div style="background:#fef9c3;border-radius:10px;width:36px;height:36px;
                 display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⏳</div>
             <div><div style="font-size:9px;color:#888;">งานค้าง</div>
               <div style="font-size:18px;font-weight:800;color:#b45309;line-height:1.1;">{_total_pend}<span style="font-size:9px;color:#aaa;"> งาน</span></div>
               <div style="font-size:8px;color:#999;">แอร์ {_ac_pend} | ซ่อม {_sv_pend}</div></div>
-          </div>
-          <div style="background:white;border-radius:14px;padding:10px 10px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;">
+          </button>
+          <button onclick="clickBtn('📋 จัดการงาน / สถานะ')" style="background:white;border-radius:14px;padding:10px 8px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;
+              border:1.5px solid #e8edf5;cursor:pointer;width:100%;text-align:left;font-family:inherit;
+              -webkit-tap-highlight-color:rgba(0,0,0,0.05);">
             <div style="background:#dcfce7;border-radius:10px;width:36px;height:36px;
                 display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✅</div>
             <div><div style="font-size:9px;color:#888;">ปิดงานแล้ว</div>
               <div style="font-size:18px;font-weight:800;color:#16a34a;line-height:1.1;">{_total_closed}<span style="font-size:9px;color:#aaa;"> งาน</span></div>
               <div style="font-size:8px;color:#999;">แอร์ {_ac_closed} | ซ่อม {_sv_closed}</div></div>
-          </div>
+          </button>
         </div>"""
 
     n_rows = (len(menus_home) + 2) // 3
