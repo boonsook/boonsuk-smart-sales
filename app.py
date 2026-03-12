@@ -1405,141 +1405,127 @@ if page == "🏠 หน้าหลัก":
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
     # ── CSS: ซ่อน st.button ทุกตัวในหน้า home (iframe ใช้ HTML button แยก) ──
-    # ── CSS: force 3-column grid + card style for real st.buttons ──
-    st.markdown("""<style>
-    .main, .block-container { background:#f0f4f8 !important; }
+    # ── Background color ──
+    st.markdown('<style>.main,.block-container{background:#f0f4f8 !important;}</style>', unsafe_allow_html=True)
 
-    /* ── stat cards + header via HTML ── */
-    .home-header { background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
-        border-radius:20px; padding:18px 20px; margin-bottom:14px; color:white;
-        display:flex; align-items:center; gap:14px;
-        box-shadow:0 6px 20px rgba(30,58,138,0.3); }
+    # ── Hidden text_input as nav bridge (iframe → Streamlit) ──
+    nav_val = st.text_input("__nav__", value="", key="__nav_bridge__", label_visibility="collapsed")
+    if nav_val and nav_val != "_none_":
+        st.session_state["__nav_bridge__"] = "_none_"
+        if nav_val == "__LOGOUT__":
+            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                st.session_state[k] = "" if k != "logged_in" else False
+            st.query_params.clear()
+        else:
+            st.session_state["_current_page"] = nav_val
+        st.rerun()
 
-    /* ── Force columns to never stack ── */
-    [data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-        gap: 6px !important;
-        align-items: stretch !important;
-    }
-    [data-testid="column"] {
-        min-width: 0 !important;
-        flex: 1 1 0 !important;
-        width: 33% !important;
-        max-width: 33.5% !important;
-        padding: 0 !important;
-    }
+    # ── Build iframe HTML ──
+    cards_html = ""
+    for i, (emoji, label, target) in enumerate(menus_home):
+        is_out = target == "__LOGOUT__"
+        cbg  = "#fff5f5" if is_out else "#ffffff"
+        ibg  = "#fee2e2" if is_out else "#eff6ff"
+        lcol = "#dc2626" if is_out else "#1e3a5f"
+        safe_t = target.replace("'", "\'").replace('"', '&quot;')
+        cards_html += f"""<button onclick="sendNav('{safe_t}')" style="background:{cbg};border-radius:16px;
+            padding:12px 4px 10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);
+            border:1.5px solid #edf2f7;cursor:pointer;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;min-height:84px;width:100%;
+            font-family:inherit;-webkit-appearance:none;">
+          <div style="background:{ibg};border-radius:12px;width:46px;height:46px;
+              display:flex;align-items:center;justify-content:center;
+              font-size:24px;margin-bottom:6px;">{emoji}</div>
+          <div style="font-size:11.5px;font-weight:700;color:{lcol};
+              text-align:center;line-height:1.3;word-break:keep-all;">{label}</div>
+        </button>"""
 
-    /* ── Menu button cards ── */
-    .menu-btn > button {
-        background: white !important;
-        border: 1.5px solid #edf2f7 !important;
-        border-radius: 16px !important;
-        padding: 10px 2px 10px !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08) !important;
-        width: 100% !important;
-        min-height: 82px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #1e3a5f !important;
-        line-height: 1.3 !important;
-        white-space: normal !important;
-        word-break: keep-all !important;
-        text-align: center !important;
-        transition: transform 0.1s !important;
-    }
-    .menu-btn > button:active { transform: scale(0.93) !important; }
-
-    /* logout red button */
-    .menu-btn-logout > button {
-        background: #fff5f5 !important;
-        border-color: #fecaca !important;
-        color: #dc2626 !important;
-    }
-
-    /* ── Stat card buttons ── */
-    .stat-btn > button {
-        background: white !important;
-        border: 1.5px solid #e8edf5 !important;
-        border-radius: 14px !important;
-        padding: 10px 8px !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-        width: 100% !important;
-        min-height: 72px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        justify-content: center !important;
-        font-size: 9px !important;
-        color: #888 !important;
-        text-align: left !important;
-        white-space: normal !important;
-    }
-
-    /* ── Hide icon text prefix in button (emoji shown via label) ── */
-    .stButton p { margin:0; }
-    </style>""", unsafe_allow_html=True)
-
-    # ── Header card (HTML only — no interaction) ──
-    logo_src = f"data:image/png;base64,{LOGO_B64}"
-    st.markdown(f"""<div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
-        border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
-        display:flex;align-items:center;gap:14px;
-        box-shadow:0 6px 20px rgba(30,58,138,0.3);">
-      <img src="{logo_src}" style="width:56px;height:56px;border-radius:50%;
-          object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
-      <div>
-        <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
-        <div style="font-size:23px;font-weight:800;">{_name2}</div>
-        <div style="background:rgba(255,255,255,0.22);border-radius:20px;
-            display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
-      </div>
-    </div>""", unsafe_allow_html=True)
-
-    # ── Stat cards (real st.button → works on Android) ──
+    stats_html = ""
     if _role2 != "customer":
-        sc1, sc2, sc3 = st.columns(3)
-        with sc1:
-            st.markdown('<div class="stat-btn">', unsafe_allow_html=True)
-            if st.button(f"📦\nสต๊อก\n**{_s1} รุ่น**", key="stat_stock", use_container_width=True):
-                st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc2:
-            st.markdown('<div class="stat-btn">', unsafe_allow_html=True)
-            if st.button(f"⏳\nงานค้าง\n**{_total_pend} งาน**\nแอร์ {_ac_pend} | ซ่อม {_sv_pend}", key="stat_pend", use_container_width=True):
-                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc3:
-            st.markdown('<div class="stat-btn">', unsafe_allow_html=True)
-            if st.button(f"✅\nปิดงานแล้ว\n**{_total_closed} งาน**\nแอร์ {_ac_closed} | ซ่อม {_sv_closed}", key="stat_close", use_container_width=True):
-                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+        stats_html = f"""<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+          <button onclick="sendNav('📦 จัดการสต๊อก')" style="background:white;border-radius:14px;padding:10px 8px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;
+              border:1.5px solid #e8edf5;cursor:pointer;width:100%;text-align:left;font-family:inherit;">
+            <div style="background:#dbeafe;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📦</div>
+            <div><div style="font-size:9px;color:#888;">สต๊อก</div>
+              <div style="font-size:18px;font-weight:800;color:#1d4ed8;line-height:1.1;">{_s1}<span style="font-size:9px;color:#aaa;"> รุ่น</span></div></div>
+          </button>
+          <button onclick="sendNav('📋 จัดการงาน / สถานะ')" style="background:white;border-radius:14px;padding:10px 8px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;
+              border:1.5px solid #e8edf5;cursor:pointer;width:100%;text-align:left;font-family:inherit;">
+            <div style="background:#fef9c3;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⏳</div>
+            <div><div style="font-size:9px;color:#888;">งานค้าง</div>
+              <div style="font-size:18px;font-weight:800;color:#b45309;line-height:1.1;">{_total_pend}<span style="font-size:9px;color:#aaa;"> งาน</span></div>
+              <div style="font-size:8px;color:#999;">แอร์ {_ac_pend} | ซ่อม {_sv_pend}</div></div>
+          </button>
+          <button onclick="sendNav('📋 จัดการงาน / สถานะ')" style="background:white;border-radius:14px;padding:10px 8px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;
+              border:1.5px solid #e8edf5;cursor:pointer;width:100%;text-align:left;font-family:inherit;">
+            <div style="background:#dcfce7;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✅</div>
+            <div><div style="font-size:9px;color:#888;">ปิดงานแล้ว</div>
+              <div style="font-size:18px;font-weight:800;color:#16a34a;line-height:1.1;">{_total_closed}<span style="font-size:9px;color:#aaa;"> งาน</span></div>
+              <div style="font-size:8px;color:#999;">แอร์ {_ac_closed} | ซ่อม {_sv_closed}</div></div>
+          </button>
+        </div>"""
 
-    # ── Menu grid: real st.button in 3-column rows ──
-    for row_start in range(0, len(menus_home), 3):
-        row_items = menus_home[row_start:row_start+3]
-        cols = st.columns(3)
-        for col_idx, (emoji, label, target) in enumerate(row_items):
-            is_out = target == "__LOGOUT__"
-            css_cls = "menu-btn-logout" if is_out else "menu-btn"
-            with cols[col_idx]:
-                st.markdown(f'<div class="{css_cls} menu-btn">', unsafe_allow_html=True)
-                if st.button(f"{emoji}\n{label}", key=f"mbtn_{row_start+col_idx}", use_container_width=True):
-                    if target == "__LOGOUT__":
-                        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-                            st.session_state[k] = "" if k!="logged_in" else False
-                        st.query_params.clear()
-                    else:
-                        st.session_state["_current_page"] = target
-                    st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-        # fill empty slots if last row is not full
-        for fill in range(len(row_items), 3):
-            with cols[fill]:
-                st.empty()
+    n_rows = (len(menus_home) + 2) // 3
+    iframe_h = 220 + (115 if _role2 != "customer" else 0) + n_rows * 110
+
+    html = f"""<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 0 8px;}}
+button:active{{transform:scale(0.93);transition:transform 0.1s;}}
+</style></head><body>
+<div style="padding:0 2px;">
+  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
+      border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
+      display:flex;align-items:center;gap:14px;
+      box-shadow:0 6px 20px rgba(30,58,138,0.3);">
+    <img src="data:image/png;base64,{LOGO_B64}" style="width:56px;height:56px;border-radius:50%;
+        object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
+    <div>
+      <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
+      <div style="font-size:23px;font-weight:800;">{_name2}</div>
+      <div style="background:rgba(255,255,255,0.22);border-radius:20px;
+          display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
+    </div>
+  </div>
+  {{stats_html}}
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+    {{cards_html}}
+  </div>
+</div>
+<script>
+function sendNav(target) {{
+  // React synthetic event trick — reliable on ALL browsers incl. Android WebView
+  var doc = window.parent.document;
+  // Find the hidden nav text input by its aria-label
+  var inputs = doc.querySelectorAll('input[aria-label="__nav__"]');
+  if (inputs.length === 0) {{
+    // fallback: find by placeholder or just all inputs and pick the right one
+    inputs = doc.querySelectorAll('input[type="text"]');
+  }}
+  for (var inp of inputs) {{
+    // Use React's internal value setter to bypass synthetic event
+    var nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value');
+    if (nativeSetter && nativeSetter.set) {{
+      nativeSetter.set.call(inp, target);
+      inp.dispatchEvent(new Event('input', {{ bubbles: true }}));
+      return;
+    }}
+  }}
+}}
+</script>
+</body></html>"""
+
+    # Use .format() instead of f-string to avoid issues with curly braces in html template
+    html = html.replace("{stats_html}", stats_html).replace("{cards_html}", cards_html)
+    st_html.html(html, height=iframe_h, scrolling=False)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
