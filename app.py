@@ -1381,17 +1381,21 @@ if page == "🏠 หน้าหลัก":
     st.markdown("""<style>
     .main, .block-container { background:#f0f4f8 !important; }
 
-    /* ── บังคับ 3 คอลัมน์บน mobile ── */
+    /* ── บังคับ 3 คอลัมน์ fit-in-screen ── */
     div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
         flex-wrap: nowrap !important;
-        gap: 8px !important;
-        align-items: stretch !important;
+        gap: 6px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }
     div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-        flex: 1 1 0% !important;
+        flex: 0 0 calc(33.33% - 4px) !important;
+        width: calc(33.33% - 4px) !important;
         min-width: 0 !important;
-        width: 33.33% !important;
-        max-width: 33.33% !important;
+        max-width: calc(33.33% - 4px) !important;
+        box-sizing: border-box !important;
         overflow: hidden !important;
         padding: 0 !important;
     }
