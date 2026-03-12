@@ -1045,13 +1045,60 @@ def build_pdf_receipt(q: dict, receipt_no: str, is_tax: bool = False) -> bytes:
 # LINE
 # ──────────────────────────────────────────────
 def make_line_text(q: dict) -> str:
-    return (
-        f"🧾 ใบเสนอราคา\n"
-        f"👤 {safe_text(q['customer_name'])} {safe_text(q['customer_phone'])}\n"
-        f"❄️ {safe_text(q['model'])}\n"
-        f"💰 {fmt_baht(q['net_total'])} บาท\n"
-        f"📞 {STORE_PHONE} {APP_URL}"
-    )
+    """ใบเสนอราคา — ส่งให้ลูกค้า"""
+    try:
+        btu_str = f"{int(q.get('model_btu', 0)):,} BTU"
+    except Exception:
+        btu_str = str(q.get('model_btu', ''))
+    return "\n".join([
+        f"🧾 ใบเสนอราคา — {STORE_NAME}",
+        "────────────────────",
+        f"👤 ลูกค้า: {safe_text(q.get('customer_name',''))}",
+        f"📞 โทร: {safe_text(q.get('customer_phone',''))}",
+        f"📍 ที่อยู่: {safe_text(q.get('customer_address',''))}",
+        f"❄️ รุ่น: {safe_text(q.get('model',''))} {btu_str}",
+        f"💰 ราคาสุทธิ: ฿{fmt_baht(q.get('net_total', 0))}",
+        f"📅 วันที่: {safe_text(q.get('date',''))}",
+        "────────────────────",
+    ])
+
+def make_job_line_text(job) -> str:
+    """งานแอร์ — แชร์จากหน้าจัดการงาน"""
+    try:
+        btu_str = f"{int(job.get('model_btu', 0)):,} BTU"
+    except Exception:
+        btu_str = str(job.get('model_btu', ''))
+    task = f"{safe_text(job.get('section',''))} {safe_text(job.get('model',''))} {btu_str}".strip()
+    return "\n".join([
+        f"❄️ งานแอร์ — {STORE_NAME}",
+        "────────────────────",
+        f"👤 ลูกค้า: {safe_text(job.get('customer_name',''))}",
+        f"📞 โทร: {safe_text(job.get('customer_phone',''))}",
+        f"📍 ที่อยู่: {safe_text(job.get('customer_address',''))}",
+        f"💰 ราคาสุทธิ: ฿{fmt_baht(job.get('net_total', 0))}",
+        f"📅 วันที่: {safe_text(job.get('date',''))}",
+        f"🗂️ บันทึกโดย: {safe_text(job.get('saved_by',''))}",
+        f"⚡ งาน: {task}",
+        f"📌 สถานะ: {safe_text(job.get('status',''))}",
+        "────────────────────",
+    ])
+
+def make_service_line_text(r) -> str:
+    """งานซ่อม/บริการ — แชร์จากหน้าจัดการงาน"""
+    return "\n".join([
+        f"🛠️ งานซ่อม/บริการ — {STORE_NAME}",
+        "────────────────────",
+        f"👤 ลูกค้า: {safe_text(r.get('customer_name',''))}",
+        f"📞 โทร: {safe_text(r.get('customer_phone',''))}",
+        f"📍 ที่อยู่: {safe_text(r.get('customer_address',''))}",
+        f"🔧 ประเภทงาน: {safe_text(r.get('service_type',''))}",
+        f"💰 ค่าบริการ: ฿{fmt_baht(r.get('price', 0))}",
+        f"📅 วันที่: {safe_text(r.get('date',''))}",
+        f"🗂️ บันทึกโดย: {safe_text(r.get('saved_by',''))}",
+        f"⚡ อาการ/งาน: {safe_text(r.get('symptom',''))}",
+        f"📌 สถานะ: {safe_text(r.get('status',''))}",
+        "────────────────────",
+    ])
 
 def line_share_link(text):
     # LINE share ต้องใช้ %0A แทน newline และ encode ให้ถูกต้อง
@@ -1601,7 +1648,6 @@ if page == "🧾 สร้างใบเสนอราคา":
             f"❄️ รุ่น: {quote_data.get('model','-')}",
             f"💰 ราคา: {fmt_baht(quote_data.get('net_total',0))} บาท",
             f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
-            f"🔗 {APP_URL}",
         ])
         line_notify_owner(notify_msg)
     if a2.button("📄 สร้าง PDF ใบเสนอราคา", use_container_width=True):
@@ -1674,7 +1720,7 @@ elif page == "📋 จัดการงาน / สถานะ":
                     receipt_no  = e2.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
                     paid_amount = e3.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
 
-                    u1, u2, u3, u4 = st.columns(4)
+                    u1, u2, u3, u4, u5 = st.columns(5)
                     if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
                         df_log.at[idx,"status"]      = new_status
                         df_log.at[idx,"receipt_no"]  = receipt_no
@@ -1686,7 +1732,6 @@ elif page == "📋 จัดการงาน / สถานะ":
                             f"❄️ รุ่น: {job.get('model','-')}",
                             f"📊 สถานะใหม่: {new_status}",
                             f"👤 อัปเดตโดย: {st.session_state.get('username','-')}",
-                            f"🔗 {APP_URL}",
                         ])
                         line_notify_owner(notify_msg)
                         st.success("อัปเดตแล้ว ✅"); st.rerun()
@@ -1709,7 +1754,18 @@ elif page == "📋 จัดการงาน / สถานะ":
                                                mime="application/pdf", key=f"dltx_{idx}")
                         except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
 
-                    if u4.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
+                    # ── ปุ่ม LINE share งานแอร์ ──
+                    _jlt = make_job_line_text(job)
+                    u4.markdown(
+                        f'''<a href="{line_share_link(_jlt)}" target="_blank" style="
+                        display:block;text-align:center;background:#06C755;color:white;
+                        padding:7px 2px;border-radius:8px;text-decoration:none;
+                        font-weight:700;font-size:13px;">💬 LINE</a>''',
+                        unsafe_allow_html=True)
+                    with st.expander("📝 ดูข้อความ LINE", expanded=False):
+                        st.text_area("", value=_jlt, height=200, key=f"jlt_{idx}")
+
+                    if u5.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
                         _job_id = job.get("id") if isinstance(job, dict) else job.to_dict().get("id")
                         if _job_id and delete_job(int(_job_id)):
                             st.cache_data.clear()
@@ -1767,7 +1823,7 @@ elif page == "📋 จัดการงาน / สถานะ":
                         st.markdown(f"**📌 หมายเหตุ:** {r2.get('note','')}")
                     st.divider()
 
-                    sv2_u1, sv2_u2, sv2_u3 = st.columns([3,2,1])
+                    sv2_u1, sv2_u2, sv2_u3, sv2_u4 = st.columns([3,2,1,1])
                     new_st2 = sv2_u1.selectbox("เปลี่ยนสถานะ", SERVICE_STATUSES,
                                 index=SERVICE_STATUSES.index(st2) if st2 in SERVICE_STATUSES else 0,
                                 key=f"sv2_st_{idx2}")
@@ -1784,10 +1840,20 @@ elif page == "📋 จัดการงาน / สถานะ":
                             f"📊 สถานะใหม่: {new_st2}",
                             f"💰 ค่าบริการ: {fmt_baht(new_price2)} บาท",
                             f"👤 อัปเดตโดย: {st.session_state.get('username','-')}",
-                            f"🔗 {APP_URL}",
                         ])
                         line_notify_owner(notify_msg)
                         st.success("✅ อัปเดตแล้ว"); st.rerun()
+
+                    # ── ปุ่ม LINE share งานซ่อม ──
+                    _slt = make_service_line_text(r2)
+                    sv2_u4.markdown(
+                        f'''<a href="{line_share_link(_slt)}" target="_blank" style="
+                        display:block;text-align:center;background:#06C755;color:white;
+                        padding:6px 2px;border-radius:8px;text-decoration:none;
+                        font-weight:700;font-size:12px;">💬 LINE</a>''',
+                        unsafe_allow_html=True)
+                    with st.expander("📝 ดูข้อความ LINE", expanded=False):
+                        st.text_area("", value=_slt, height=200, key=f"slt_{idx2}")
 
                     if st.button("🗑️ ลบงานนี้", key=f"sv2_del_{idx2}", use_container_width=True):
                         df_sv2 = df_sv2.drop(index=idx2).reset_index(drop=True)
@@ -2051,19 +2117,24 @@ if page == "🛠️ รับงานซ่อม/บริการ":
                     f"📞 โทร: {sv_phone.strip()}",
                     f"⚡ อาการ: {sv_symptom.strip()[:50]}",
                     f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
-                    f"🔗 {APP_URL}",
                 ])
                 line_notify_owner(notify_msg)
 
                 # ── LINE share ──────────────────────────
                 price_text = f"{fmt_baht(int(sv_price))} บาท" if int(sv_price) > 0 else "ยังไม่ระบุ"
                 _sym = sv_symptom.strip()[:40]
-                line_text = (
-                    f"🛠️ {sv_type}\n"
-                    f"👤 {sv_name.strip()} {sv_phone.strip()}\n"
-                    f"⚡ {_sym}\n"
-                    f"📞 {STORE_PHONE} {APP_URL}"
-                )
+                line_text = "\n".join([
+                    f"🛠️ งานซ่อม/บริการ — {STORE_NAME}",
+                    "────────────────────",
+                    f"👤 ลูกค้า: {sv_name.strip()}",
+                    f"📞 โทร: {sv_phone.strip()}",
+                    f"📍 ที่อยู่: {sv_addr.strip()}",
+                    f"🔧 ประเภทงาน: {sv_type}",
+                    f"⚡ อาการ/งาน: {_sym}",
+                    f"📅 วันที่: {today_str}",
+                    f"🗂️ บันทึกโดย: {st.session_state.get('username','-')}",
+                    "────────────────────",
+                ])
                 line_url = line_share_link(line_text)
 
                 st.divider()
@@ -2222,7 +2293,6 @@ if page == "🧾 ขอใบเสนอราคาแอร์":
                 f"📍 {cq_addr.strip()}\n"
                 f"❄️ สนใจ: {cq_section_text} รุ่น {cq_model_text}\n"
                 f"💰 ราคา: {cq_price_text} ฿\n"
-                f"🔗 {APP_URL}"
             )
 
 # ══════════════════════════════════════════════
@@ -2271,7 +2341,6 @@ elif page == "🛠️ แจ้งซ่อม/บริการ":
                 f"🔧 {cs_type}\n"
                 f"👤 {cust_name} | 📞 {cust_phone}\n"
                 f"⚡ {cs_symptom.strip()[:60]}\n"
-                f"🔗 {APP_URL}"
             )
 
 # ══════════════════════════════════════════════
