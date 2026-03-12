@@ -747,7 +747,6 @@ def delete_service_job(job_id):
 # SERVICE DATA LAYER
 # ──────────────────────────────────────────────
 SERVICE_TYPES = [
-    "🆕 ติดตั้งแอร์ใหม่",
     "🔧 ซ่อมแอร์",
     "🚿 ล้างแอร์",
     "🚚 ย้ายแอร์",
@@ -756,10 +755,16 @@ SERVICE_TYPES = [
     "👕 ซ่อมเครื่องซักผ้า",
     "📹 ติดตั้ง/ซ่อมกล้องวงจรปิด (CCTV)",
     "📺 ซ่อมทีวี LED/LCD",
-    "☀️ ติดตั้งโซล่าเซลล์",
-    "🔌 ซ่อมระบบโซล่าเซลล์",
-    "⚡ งานระบบโซล่าเซลล์",
     "🛠️ งานบริการอื่นๆ (กรอกเอง)",
+]
+
+SOLAR_TYPES = [
+    "💧 ติดตั้งปั๊มน้ำโซล่าเซลล์",
+    "⚡ ติดตั้งชุดออนกริดโซล่าเซลล์",
+    "🔋 ติดตั้งชุดออฟกริดโซล่าเซลล์",
+    "🔌 งานซ่อม & เซอร์วิสระบบโซล่าเซลล์",
+    "🌐 ติดตั้งชุดไฮบริดโซล่าเซลล์",
+    "🛠️ งานโซล่าเซลล์อื่นๆ (กรอกเอง)",
 ]
 SERVICE_STATUSES = ["📋 รอดำเนินการ", "🔧 กำลังดำเนินการ", "✅ เสร็จแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
 
@@ -1319,6 +1324,7 @@ else:
         "🏠 หน้าหลัก",
         "🧾 สร้างใบเสนอราคา",
         "🏗️ ติดตั้งแอร์",
+        "☀️ งานโซล่าเซลล์",
         "🛠️ รับงานซ่อม/บริการ",
         "📋 จัดการงาน / สถานะ",
         "📦 จัดการสต๊อก",
@@ -1369,6 +1375,7 @@ if page == "🏠 หน้าหลัก":
         menus_home = [
             ("🧾", "ใบเสนอราคา",  "🧾 สร้างใบเสนอราคา"),
             ("🏗️", "ติดตั้งแอร์",  "🏗️ ติดตั้งแอร์"),
+            ("☀️", "โซล่าเซลล์",  "☀️ งานโซล่าเซลล์"),
             ("🛠️", "รับงานซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
             ("📋", "จัดการงาน",   "📋 จัดการงาน / สถานะ"),
             ("📦", "สต๊อกแอร์",   "📦 จัดการสต๊อก"),
@@ -2273,6 +2280,117 @@ elif page == "📊 Dashboard":
                             st.rerun()
                     except Exception as e:
                         st.error(f"อ่านไฟล์ไม่สำเร็จ: {e}")
+
+# ══════════════════════════════════════════════
+# PAGE: งานโซล่าเซลล์
+# ══════════════════════════════════════════════
+elif page == "☀️ งานโซล่าเซลล์":
+    st.title("☀️ งานโซล่าเซลล์")
+    _back_home()
+
+    # เลือกประเภทงานโซล่า
+    sol_type_sel = st.selectbox("☀️ ประเภทงานโซล่าเซลล์", SOLAR_TYPES, key="sol_type_sel")
+    if sol_type_sel.endswith("(กรอกเอง)"):
+        sol_type = st.text_input("✏️ ระบุประเภทงาน", placeholder="เช่น ติดตั้งอินเวอร์เตอร์, เปลี่ยนแบตเตอรี่...", key="sol_type_custom")
+    else:
+        sol_type = sol_type_sel
+
+    st.divider()
+
+    # ── ข้อมูลลูกค้า ──
+    with st.expander("👤 ข้อมูลลูกค้า", expanded=True):
+        sc1, sc2 = st.columns(2)
+        sol_name    = sc1.text_input("👤 ชื่อลูกค้า", placeholder="ชื่อ-นามสกุล", key="sol_name")
+        sol_phone   = sc2.text_input("📞 เบอร์โทร", placeholder="08X-XXXXXXX", key="sol_phone")
+        sol_address = st.text_area("📍 ที่อยู่", placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด", height=68, key="sol_addr")
+
+    # ── รายละเอียดงาน ──
+    with st.expander("⚡ รายละเอียดงาน", expanded=True):
+        sol_symptom = st.text_area("📋 รายละเอียด / ขนาดระบบ / หมายเหตุ",
+            placeholder="เช่น ระบบ 3kW, จำนวนแผง 8 แผง, อินเวอร์เตอร์ยี่ห้อ...",
+            height=100, key="sol_symptom")
+
+        # อุปกรณ์/วัสดุ
+        st.markdown("**🔧 อุปกรณ์ / วัสดุ (ถ้ามี)**")
+        sp1, sp2, sp3 = st.columns([3,2,2])
+        sol_eq1_use   = sp1.checkbox("🔩 อุปกรณ์ 1", key="sol_e1u")
+        sol_eq1_name  = sp1.text_input("ชื่ออุปกรณ์ 1", key="sol_e1n") if sol_eq1_use else ""
+        sol_eq1_price = sp2.number_input("💵 ราคา/ชิ้น (฿)", min_value=0, step=100, value=0, key="sol_e1p")
+        sol_eq1_qty   = sp3.number_input("📦 จำนวน (ชิ้น)", min_value=1, step=1, value=1, key="sol_e1q")
+        sol_eq1_total = (sol_eq1_price * sol_eq1_qty) if sol_eq1_use else 0
+        if sol_eq1_use and sol_eq1_name:
+            st.caption(f"  → {sol_eq1_name} {sol_eq1_qty} ชิ้น × {fmt_baht(sol_eq1_price)} ฿ = **{fmt_baht(sol_eq1_total)} ฿**")
+
+        sp2a, sp2b, sp2c = st.columns([3,2,2])
+        sol_eq2_use   = sp2a.checkbox("🔩 อุปกรณ์ 2", key="sol_e2u")
+        sol_eq2_name  = sp2a.text_input("ชื่ออุปกรณ์ 2", key="sol_e2n") if sol_eq2_use else ""
+        sol_eq2_price = sp2b.number_input("💵 ราคา/ชิ้น (฿)", min_value=0, step=100, value=0, key="sol_e2p")
+        sol_eq2_qty   = sp2c.number_input("📦 จำนวน (ชิ้น)", min_value=1, step=1, value=1, key="sol_e2q")
+        sol_eq2_total = (sol_eq2_price * sol_eq2_qty) if sol_eq2_use else 0
+        if sol_eq2_use and sol_eq2_name:
+            st.caption(f"  → {sol_eq2_name} {sol_eq2_qty} ชิ้น × {fmt_baht(sol_eq2_price)} ฿ = **{fmt_baht(sol_eq2_total)} ฿**")
+
+        sol_equip_total = sol_eq1_total + sol_eq2_total
+
+    # ── ราคา ──
+    with st.expander("💰 ราคาค่าบริการ", expanded=True):
+        spr1, spr2 = st.columns(2)
+        sol_labor   = spr1.number_input("🔨 ค่าแรง/ค่าบริการ (฿)", min_value=0, step=100, value=0, key="sol_labor")
+        sol_discount= spr2.number_input("💸 ส่วนลด (฿)", min_value=0, step=100, value=0, key="sol_disc")
+        sol_net     = max(0, sol_labor + sol_equip_total - sol_discount)
+
+        _sol_parts = [f"ค่าแรง {fmt_baht(sol_labor)} ฿"]
+        if sol_equip_total: _sol_parts.append(f"อุปกรณ์ +{fmt_baht(sol_equip_total)} ฿")
+        if sol_discount:    _sol_parts.append(f"ส่วนลด -{fmt_baht(sol_discount)} ฿")
+        st.markdown(f'''<div class="metric-card"><h4>สรุปราคา</h4><h2>฿ {fmt_baht(sol_net)}</h2>
+        <small>{" | ".join(_sol_parts)}</small></div>''', unsafe_allow_html=True)
+
+    # ── ดำเนินการ ──
+    today_sol = date.today().strftime("%d/%m/%Y")
+    sol_equip_note = " | ".join(filter(None, [
+        f"{sol_eq1_name} {sol_eq1_qty} ชิ้น = {fmt_baht(sol_eq1_total)} ฿" if sol_eq1_use and sol_eq1_name else "",
+        f"{sol_eq2_name} {sol_eq2_qty} ชิ้น = {fmt_baht(sol_eq2_total)} ฿" if sol_eq2_use and sol_eq2_name else "",
+    ]))
+
+    sol_record = {
+        "date": today_sol, "service_type": sol_type,
+        "customer_name": sol_name, "customer_phone": sol_phone,
+        "customer_address": sol_address,
+        "symptom": sol_symptom + (" | " + sol_equip_note if sol_equip_note else ""),
+        "price": sol_net, "status": SERVICE_STATUSES[0],
+        "saved_by": st.session_state.get("username", "-"),
+        "paid_amount": 0,
+    }
+
+    st.divider(); st.subheader("📤 ดำเนินการ")
+    sa1, sa2, sa3 = st.columns(3)
+    if sa1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="sol_save"):
+        save_service(sol_record)
+        st.success("บันทึกงานโซล่าเซลล์แล้ว ✅")
+        notify_msg = "\n".join([
+            f"☀️ งานโซล่าเซลล์ใหม่!",
+            f"📋 ประเภท: {sol_type}",
+            f"👤 ลูกค้า: {sol_name or '-'}",
+            f"📞 โทร: {sol_phone or '-'}",
+            f"💰 ราคา: {fmt_baht(sol_net)} บาท",
+            f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
+        ])
+        line_notify_owner(notify_msg)
+
+    sol_line_text = "\n".join(filter(None,[
+        f"☀️ งานโซล่าเซลล์ — {sol_type}",
+        f"━━━━━━━━━━━━━━━━━━",
+        f"👤 ลูกค้า: {sol_name}" if sol_name else "",
+        f"📞 โทร: {sol_phone}" if sol_phone else "",
+        f"📍 ที่อยู่: {sol_address}" if sol_address else "",
+        f"📋 รายละเอียด: {sol_symptom}" if sol_symptom else "",
+        f"💰 ราคา: {fmt_baht(sol_net)} บาท",
+        f"📅 วันที่: {today_sol}",
+    ]))
+    sa3.markdown(f'''<a href="{line_share_link(sol_line_text)}" target="_blank" style="
+        display:block;text-align:center;background:#00c300;color:white;
+        padding:10px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-top:4px;">
+        💬 ส่ง LINE</a>''', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE: รับงานซ่อม/บริการ
