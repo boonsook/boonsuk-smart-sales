@@ -1369,6 +1369,7 @@ if page == "🏠 หน้าหลัก":
             ("🛠️", "แจ้งซ่อม",   "🛠️ แจ้งซ่อม/บริการ"),
             ("📋", "งานของฉัน",  "📋 งานของฉัน"),
             ("🧮", "BTU",        "🧮 คำนวณ BTU"),
+            ("⚠️", "Error Code", "🔧 คลังเออเร่อแอร์"),
             ("🚪", "ออกจากระบบ", "__LOGOUT__"),
         ]
     else:
@@ -1406,9 +1407,9 @@ if page == "🏠 หน้าหลัก":
     # ── CSS: ซ่อน st.button ทุกตัวในหน้า home (iframe ใช้ HTML button แยก) ──
     st.markdown("""<style>
     .main, .block-container { background:#f0f4f8 !important; }
-    .stButton { position:fixed !important; left:-9999px !important;
-                top:-9999px !important; width:1px !important; height:1px !important;
-                overflow:hidden !important; opacity:0 !important; }
+    .stButton > button { visibility:hidden !important; height:0 !important;
+                min-height:0 !important; padding:0 !important; margin:0 !important;
+                border:none !important; font-size:0 !important; line-height:0 !important; }
     </style>""", unsafe_allow_html=True)
 
     for i, (_, _, target) in enumerate(menus_home):
@@ -3058,49 +3059,70 @@ ERROR_DB = {
     ],
 }
 
+WASHER_DB = {'Samsung (เครื่องซักผ้า)': [{'code': '4E / 4C', 'desc': 'น้ำไม่เข้า / แรงดันน้ำต่ำ', 'cause': 'ก๊อกน้ำปิด / ตะแกรงกรองอุดตัน / วาล์วน้ำเสีย', 'fix': 'เปิดก๊อกน้ำ, ล้างตะแกรงกรองน้ำ, ตรวจวาล์วน้ำ', 'parts': 'วาล์วน้ำเข้า (Water inlet valve)'}, {'code': '5E / 5C', 'desc': 'น้ำไม่ออก / ระบายน้ำไม่ได้', 'cause': 'ท่อระบายอุดตัน / ปั๊มน้ำทิ้งเสีย / ฟิลเตอร์อุดตัน', 'fix': 'ล้างฟิลเตอร์ปั๊ม, ตรวจท่อน้ำทิ้ง, เปลี่ยนปั๊ม', 'parts': 'ปั๊มน้ำทิ้ง (Drain pump)'}, {'code': 'E2', 'desc': 'ระบบน้ำเข้า/ระบาย ผิดปกติ', 'cause': 'วาล์วน้ำเสีย / ปั๊มเสีย', 'fix': 'ตรวจวาล์วและปั๊ม', 'parts': 'วาล์วน้ำ, ปั๊มน้ำ'}, {'code': '3E', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์ร้อนเกิน / โหลดหนักเกิน', 'fix': 'ลดผ้า, รอให้เย็น, ตรวจมอเตอร์', 'parts': 'มอเตอร์ซัก'}, {'code': 'UE / UB', 'desc': 'ผ้าไม่สมดุล (Unbalance)', 'cause': 'ผ้ากระจุกด้านเดียว', 'fix': 'หยุดเครื่อง, จัดผ้าใหม่', 'parts': '-'}, {'code': 'DC', 'desc': 'ฝาไม่ปิดสนิท', 'cause': 'บานพับเสีย / ประตูไม่ล็อก', 'fix': 'ตรวจล็อกประตู, เปลี่ยนล็อค', 'parts': 'Door lock switch'}, {'code': 'LC / LC1', 'desc': 'น้ำรั่วภายใน', 'cause': 'จุกยางรั่ว / ถาดน้ำยาผิดปกติ', 'fix': 'ตรวจท่อยางภายใน, ตรวจถาดน้ำ', 'parts': 'ท่อยางภายใน, จุกยาง'}, {'code': 'HE1', 'desc': 'เซ็นเซอร์ความร้อนผิดปกติ', 'cause': 'ฮีตเตอร์เสีย / เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนฮีตเตอร์หรือเซ็นเซอร์', 'parts': 'Heater, NTC Sensor'}, {'code': 'HE2', 'desc': 'Steam heater ผิดปกติ', 'cause': 'ขั้วต่อหลวม / ฮีตเตอร์เสีย', 'fix': 'ตรวจขั้วต่อ, เปลี่ยนฮีตเตอร์', 'parts': 'Steam heater'}, {'code': 'tE', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'NTC Temperature sensor'}, {'code': 'nF', 'desc': 'ระบบทำน้ำร้อนผิดปกติ', 'cause': 'ฮีตเตอร์เสีย', 'fix': 'เปลี่ยนฮีตเตอร์', 'parts': 'Heater'}, {'code': 'CE', 'desc': 'กระแสไฟมอเตอร์เกิน', 'cause': 'มอเตอร์เสีย / ผ้าหนักเกิน', 'fix': 'ลดน้ำหนักผ้า, ตรวจมอเตอร์', 'parts': 'มอเตอร์ซัก'}, {'code': 'OE', 'desc': 'น้ำล้น', 'cause': 'วาล์วน้ำค้าง / เซ็นเซอร์ระดับน้ำเสีย', 'fix': 'ตรวจวาล์ว, เปลี่ยนเซ็นเซอร์', 'parts': 'Pressure switch, วาล์วน้ำ'}, {'code': 'AE', 'desc': 'ประตูไม่ล็อก', 'cause': 'ล็อคประตูเสีย', 'fix': 'เปลี่ยน door lock', 'parts': 'Door lock assembly'}], 'LG (เครื่องซักผ้า)': [{'code': 'IE', 'desc': 'น้ำไม่เข้า', 'cause': 'ก๊อกปิด / วาล์วเสีย / แรงดันน้ำต่ำ', 'fix': 'เปิดก๊อก, ล้างตะแกรง, ตรวจวาล์ว', 'parts': 'วาล์วน้ำเข้า'}, {'code': 'OE', 'desc': 'น้ำไม่ออก', 'cause': 'ปั๊มน้ำเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, ตรวจท่อ, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'UE', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากองด้านเดียว', 'fix': 'จัดผ้าใหม่ให้สม่ำเสมอ', 'parts': '-'}, {'code': 'PE', 'desc': 'เซ็นเซอร์ระดับน้ำผิดปกติ', 'cause': 'Pressure switch เสีย / ท่อเซ็นเซอร์อุดตัน', 'fix': 'เปลี่ยน pressure switch, ล้างท่อเซ็นเซอร์', 'parts': 'Pressure switch (Water level sensor)'}, {'code': 'DE', 'desc': 'ฝาไม่ปิด (Door Error)', 'cause': 'ล็อคประตูเสีย / ประตูบิด', 'fix': 'ตรวจประตู, เปลี่ยน door lock', 'parts': 'Door lock'}, {'code': 'FE', 'desc': 'น้ำล้น', 'cause': 'วาล์วค้าง / เซ็นเซอร์เสีย', 'fix': 'ตรวจวาล์ว, เปลี่ยนเซ็นเซอร์', 'parts': 'วาล์วน้ำ, Pressure switch'}, {'code': 'LE', 'desc': 'มอเตอร์ล็อค / ร้อนเกิน', 'cause': 'มอเตอร์เสีย / ผ้าหนักเกิน', 'fix': 'ลดผ้า, รอเย็น, ตรวจมอเตอร์', 'parts': 'DD Motor / Belt motor'}, {'code': 'tE', 'desc': 'เซ็นเซอร์ความร้อนผิดปกติ', 'cause': 'NTC เสีย', 'fix': 'เปลี่ยน NTC sensor', 'parts': 'NTC Thermistor'}, {'code': 'CE', 'desc': 'กระแสไฟเกิน', 'cause': 'มอเตอร์/PCB เสีย', 'fix': 'ตรวจ IPM, เปลี่ยนมอเตอร์', 'parts': 'มอเตอร์, PCB'}, {'code': 'EE', 'desc': 'EEPROM ผิดปกติ', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}, {'code': 'dHE', 'desc': 'Door heater ผิดปกติ', 'cause': 'ฮีตเตอร์ประตูเสีย', 'fix': 'เปลี่ยนฮีตเตอร์ประตู', 'parts': 'Door heater'}], 'Panasonic (เครื่องซักผ้า)': [{'code': 'U11', 'desc': 'น้ำไม่เข้า', 'cause': 'ก๊อกปิด / แรงดันต่ำ / วาล์วเสีย', 'fix': 'เปิดก๊อก, ตรวจวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'U12', 'desc': 'น้ำไม่ออก', 'cause': 'ท่ออุดตัน / ปั๊มเสีย', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'U13', 'desc': 'ระดับน้ำผิดปกติ', 'cause': 'Pressure switch เสีย', 'fix': 'เปลี่ยน pressure switch', 'parts': 'Pressure switch'}, {'code': 'U14', 'desc': 'อุณหภูมิน้ำสูงเกิน', 'cause': 'Thermostat/เซ็นเซอร์เสีย', 'fix': 'ตรวจฮีตเตอร์, เปลี่ยนเซ็นเซอร์', 'parts': 'Thermostat, NTC'}, {'code': 'U21', 'desc': 'ฝาไม่ปิดสนิท', 'cause': 'ล็อคประตูเสีย', 'fix': 'เปลี่ยน door lock', 'parts': 'Door lock'}, {'code': 'U23', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากองด้านเดียว', 'fix': 'จัดผ้าใหม่', 'parts': '-'}, {'code': 'H01', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย / ร้อนเกิน', 'fix': 'ตรวจมอเตอร์, รอเย็น', 'parts': 'มอเตอร์'}, {'code': 'H07', 'desc': 'PCB ผิดปกติ', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Toshiba (เครื่องซักผ้า)': [{'code': 'E1', 'desc': 'น้ำเข้าช้า/ไม่เข้า', 'cause': 'แรงดันน้ำต่ำ / วาล์วเสีย', 'fix': 'ตรวจก๊อก, เปลี่ยนวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'E2', 'desc': 'น้ำระบายไม่ออก', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E3', 'desc': 'น้ำล้น', 'cause': 'วาล์วค้าง', 'fix': 'ตรวจวาล์วน้ำ', 'parts': 'วาล์วน้ำเข้า'}, {'code': 'E4', 'desc': 'ผ้าไม่สมดุล', 'cause': 'โหลดไม่สม่ำเสมอ', 'fix': 'จัดผ้าใหม่', 'parts': '-'}, {'code': 'E5', 'desc': 'ฝาไม่ปิด', 'cause': 'Door switch เสีย', 'fix': 'เปลี่ยน door switch', 'parts': 'Door switch'}, {'code': 'E6', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์/capacitor เสีย', 'fix': 'เปลี่ยนมอเตอร์หรือ capacitor', 'parts': 'Motor, Capacitor'}, {'code': 'E8', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'NTC เสีย', 'fix': 'เปลี่ยน NTC', 'parts': 'NTC Thermistor'}], 'Haier (เครื่องซักผ้า)': [{'code': 'E1', 'desc': 'น้ำไม่เข้า', 'cause': 'ก๊อกปิด / วาล์วเสีย', 'fix': 'เปิดก๊อก, ตรวจวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'E2', 'desc': 'น้ำไม่ออก', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E3', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากระจุก', 'fix': 'จัดผ้าใหม่', 'parts': '-'}, {'code': 'E4', 'desc': 'ฝาไม่ปิดสนิท', 'cause': 'Door lock เสีย', 'fix': 'เปลี่ยน door lock', 'parts': 'Door lock'}, {'code': 'E5', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Motor'}, {'code': 'E6', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'NTC เสีย', 'fix': 'เปลี่ยน NTC', 'parts': 'NTC'}, {'code': 'E7', 'desc': 'PCB ผิดปกติ', 'cause': 'Main board เสีย', 'fix': 'เปลี่ยน Main board', 'parts': 'Main PCB'}, {'code': 'E9', 'desc': 'น้ำล้น', 'cause': 'วาล์วค้าง / pressure switch เสีย', 'fix': 'ตรวจวาล์ว, เปลี่ยนเซ็นเซอร์', 'parts': 'วาล์วน้ำ, Pressure switch'}], 'Sharp (เครื่องซักผ้า)': [{'code': 'E1', 'desc': 'น้ำไม่เข้า', 'cause': 'วาล์วเสีย / ก๊อกปิด', 'fix': 'ตรวจก๊อก, เปลี่ยนวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'E2', 'desc': 'น้ำไม่ออก', 'cause': 'ปั๊มเสีย / ท่อตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E3', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย / โหลดหนัก', 'fix': 'ลดผ้า, ตรวจมอเตอร์', 'parts': 'Motor'}, {'code': 'E4', 'desc': 'ฝาไม่ล็อก', 'cause': 'Door switch เสีย', 'fix': 'เปลี่ยน door switch', 'parts': 'Door switch'}, {'code': 'E5', 'desc': 'เซ็นเซอร์ระดับน้ำผิดปกติ', 'cause': 'Pressure switch เสีย', 'fix': 'เปลี่ยน pressure switch', 'parts': 'Pressure switch'}, {'code': 'E7', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Thermistor'}, {'code': 'E9', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากระจุก', 'fix': 'จัดผ้าใหม่', 'parts': '-'}], 'Electrolux (เครื่องซักผ้า)': [{'code': 'E10', 'desc': 'น้ำไม่เข้าภายใน 5 นาที', 'cause': 'วาล์วเสีย / แรงดันต่ำ', 'fix': 'ตรวจวาล์ว, เพิ่มแรงดันน้ำ', 'parts': 'Water inlet valve'}, {'code': 'E20', 'desc': 'น้ำไม่ระบายใน 5 นาที', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์ปั๊ม, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E40', 'desc': 'ฝาไม่ปิด', 'cause': 'Door lock เสีย', 'fix': 'เปลี่ยน door interlock', 'parts': 'Door interlock'}, {'code': 'E50', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'ตรวจ/เปลี่ยนมอเตอร์', 'parts': 'Motor'}, {'code': 'E90', 'desc': 'PCB โปรแกรมผิดพลาด', 'cause': 'Firmware/PCB เสีย', 'fix': 'รีเซ็ต, เปลี่ยน PCB', 'parts': 'Main PCB'}, {'code': 'EH0', 'desc': 'แรงดันไฟผิดปกติ', 'cause': 'ไฟบ้านต่ำ/สูงเกิน', 'fix': 'ตรวจแรงดันไฟ', 'parts': '-'}], 'Whirlpool (เครื่องซักผ้า)': [{'code': 'F01', 'desc': 'แผง EEPROM ผิดปกติ', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}, {'code': 'F05', 'desc': 'น้ำไม่ระบาย', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'F06', 'desc': 'มอเตอร์/tacho ผิดปกติ', 'cause': 'มอเตอร์หรือตัวตรวจจับความเร็วเสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Motor, Tacho'}, {'code': 'F07', 'desc': 'Triac มอเตอร์เสีย', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน PCB', 'parts': 'PCB'}, {'code': 'F08', 'desc': 'ฮีตเตอร์ผิดปกติ', 'cause': 'ฮีตเตอร์ขาด / Thermostat ทริป', 'fix': 'เปลี่ยนฮีตเตอร์หรือ thermostat', 'parts': 'Heater, Thermostat'}, {'code': 'F09', 'desc': 'โปรแกรมผิดพลาด', 'cause': 'PCB เสีย', 'fix': 'รีเซ็ต, เปลี่ยน PCB', 'parts': 'Main PCB'}, {'code': 'F11', 'desc': 'มอเตอร์ขับ (Drive motor) ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Drive motor'}]}
+
+FRIDGE_DB = {'Samsung (ตู้เย็น)': [{'code': '1E', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'เซ็นเซอร์ขาด/ช็อต', 'fix': 'วัดค่าความต้านทานเซ็นเซอร์ เปลี่ยนถ้าผิดปกติ (ปกติ ~5kΩ ที่ 25°C)', 'parts': 'Freezer temperature sensor'}, {'code': '2E', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'ตรวจ/เปลี่ยนเซ็นเซอร์ช่องธรรมดา', 'parts': 'Fridge temperature sensor'}, {'code': '4E', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'เซ็นเซอร์ defrost เสีย', 'fix': 'ตรวจบริเวณ evaporator, เปลี่ยนเซ็นเซอร์', 'parts': 'Defrost sensor'}, {'code': '5E', 'desc': 'พัดลม Freezer ผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์พัดลม', 'parts': 'Freezer fan motor'}, {'code': '6E', 'desc': 'เซ็นเซอร์ ambient ผิดปกติ', 'cause': 'เซ็นเซอร์อุณหภูมิภายนอกเสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Ambient sensor'}, {'code': '8E', 'desc': 'เซ็นเซอร์ Ice Maker ผิดปกติ', 'cause': 'เซ็นเซอร์ ice maker เสีย', 'fix': 'ตรวจ/เปลี่ยนเซ็นเซอร์ ice maker', 'parts': 'Ice maker sensor'}, {'code': '14E', 'desc': 'พัดลม Fridge ผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย', 'fix': 'เปลี่ยนมอเตอร์พัดลม fridge', 'parts': 'Fridge fan motor'}, {'code': '22E', 'desc': 'Defrost sensor ช่องธรรมดาผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์ defrost fridge', 'parts': 'Fridge defrost sensor'}, {'code': '24E', 'desc': 'ระบบ Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์ละลายน้ำแข็งเสีย / thermostat ทริป', 'fix': 'ตรวจฮีตเตอร์ defrost ด้วยโอห์มมิเตอร์', 'parts': 'Defrost heater, Defrost thermostat'}, {'code': '39E', 'desc': 'Ice maker ผิดปกติ', 'cause': 'วาล์วน้ำ ice maker เสีย / เซ็นเซอร์เสีย', 'fix': 'ตรวจวาล์วน้ำ, เปลี่ยนชุด ice maker', 'parts': 'Ice maker assembly, Water valve'}, {'code': '40E', 'desc': 'Ice maker เซ็นเซอร์ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Ice maker thermistor'}, {'code': '88', 'desc': 'โหมดทดสอบ / ไฟดับกะทันหัน', 'cause': 'เครื่องเพิ่งเสียบปลั๊ก', 'fix': 'ปกติ — รอสักครู่ หรือกดปุ่มใด ๆ เพื่อออก', 'parts': '-'}, {'code': 'PC ER', 'desc': 'การสื่อสาร PCB ผิดปกติ', 'cause': 'ขั้วต่อ PCB หลวม / PCB เสีย', 'fix': 'ตรวจขั้วต่อทุกจุด, เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'LG (ตู้เย็น)': [{'code': 'Er FF', 'desc': 'พัดลม Freezer ผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์', 'parts': 'Freezer evaporator fan motor'}, {'code': 'Er CF', 'desc': 'พัดลม Condenser ผิดปกติ', 'cause': 'มอเตอร์พัดลม condenser เสีย', 'fix': 'เปลี่ยนมอเตอร์พัดลม', 'parts': 'Condenser fan motor'}, {'code': 'Er dH', 'desc': 'Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์ defrost เสีย', 'fix': 'ตรวจฮีตเตอร์ด้วยโอห์มมิเตอร์', 'parts': 'Defrost heater, Thermostat'}, {'code': 'Er rF', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'NTC sensor เสีย', 'fix': 'เปลี่ยน NTC fridge', 'parts': 'NTC Temperature sensor'}, {'code': 'Er rt', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'NTC sensor เสีย', 'fix': 'เปลี่ยน NTC freezer', 'parts': 'NTC Freezer sensor'}, {'code': 'Er It', 'desc': 'เซ็นเซอร์ ice maker ผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'ตรวจ/เปลี่ยนเซ็นเซอร์', 'parts': 'Ice maker sensor'}, {'code': 'Er FS', 'desc': 'เซ็นเซอร์ประตู Freezer ผิดปกติ', 'cause': 'Reed switch เสีย', 'fix': 'เปลี่ยน door sensor', 'parts': 'Door switch sensor'}, {'code': 'Er IS', 'desc': 'เซ็นเซอร์ประตู Fridge ผิดปกติ', 'cause': 'Reed switch เสีย', 'fix': 'เปลี่ยน door sensor', 'parts': 'Door switch sensor'}, {'code': 'Er CO', 'desc': 'การสื่อสารผิดปกติ', 'cause': 'PCB เสีย / สายขาด', 'fix': 'ตรวจสาย ribbon, เปลี่ยน PCB', 'parts': 'Main PCB, Ribbon cable'}, {'code': 'Er gF', 'desc': 'เซ็นเซอร์ประตู freezer 2 ผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Door sensor'}], 'Panasonic (ตู้เย็น)': [{'code': 'F11', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'ตรวจวัดค่า thermistor เปลี่ยนถ้าผิดปกติ', 'parts': 'Freezer thermistor'}, {'code': 'F12', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor ช่องธรรมดา', 'parts': 'Fridge thermistor'}, {'code': 'F13', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'Defrost sensor เสีย', 'fix': 'เปลี่ยน defrost sensor', 'parts': 'Defrost sensor'}, {'code': 'F21', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์', 'parts': 'Evaporator fan motor'}, {'code': 'F22', 'desc': 'พัดลม condenser ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Condenser fan motor'}, {'code': 'F31', 'desc': 'Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์ defrost เสีย', 'fix': 'ตรวจฮีตเตอร์, เปลี่ยน', 'parts': 'Defrost heater'}, {'code': 'F41', 'desc': 'Inverter ผิดปกติ', 'cause': 'Inverter board เสีย', 'fix': 'เปลี่ยน inverter PCB', 'parts': 'Inverter PCB'}, {'code': 'H99', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Mitsubishi Electric (ตู้เย็น)': [{'code': 'E1', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor freezer', 'parts': 'Freezer thermistor'}, {'code': 'E2', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor fridge', 'parts': 'Fridge thermistor'}, {'code': 'E3', 'desc': 'Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์/sensor defrost เสีย', 'fix': 'ตรวจฮีตเตอร์, เปลี่ยน', 'parts': 'Defrost heater, Defrost sensor'}, {'code': 'E4', 'desc': 'พัดลมผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย', 'fix': 'ตรวจ/เปลี่ยนมอเตอร์', 'parts': 'Fan motor'}, {'code': 'E6', 'desc': 'Compressor ผิดปกติ', 'cause': 'Compressor เสีย / แรงดันผิดปกติ', 'fix': 'ตรวจแรงดันน้ำยา, ตรวจ compressor', 'parts': 'Compressor'}, {'code': 'E7', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Toshiba (ตู้เย็น)': [{'code': 'E01', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor freezer', 'parts': 'Freezer sensor'}, {'code': 'E02', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor fridge', 'parts': 'Fridge sensor'}, {'code': 'E03', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'Defrost sensor เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Defrost sensor'}, {'code': 'E04', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Evaporator fan motor'}, {'code': 'E05', 'desc': 'ระบบ defrost ผิดปกติ', 'cause': 'ฮีตเตอร์เสีย', 'fix': 'เปลี่ยนฮีตเตอร์ defrost', 'parts': 'Defrost heater'}, {'code': 'E06', 'desc': 'Inverter ผิดปกติ', 'cause': 'Inverter PCB เสีย', 'fix': 'เปลี่ยน inverter PCB', 'parts': 'Inverter PCB'}, {'code': 'E07', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Haier (ตู้เย็น)': [{'code': 'E1', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Freezer thermistor'}, {'code': 'E2', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Fridge thermistor'}, {'code': 'E3', 'desc': 'เซ็นเซอร์ ambient ผิดปกติ', 'cause': 'Ambient sensor เสีย', 'fix': 'เปลี่ยน sensor', 'parts': 'Ambient sensor'}, {'code': 'E4', 'desc': 'Defrost heater ผิดปกติ', 'cause': 'ฮีตเตอร์ขาด', 'fix': 'ตรวจ/เปลี่ยนฮีตเตอร์', 'parts': 'Defrost heater'}, {'code': 'E5', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์', 'parts': 'Evaporator fan motor'}, {'code': 'E6', 'desc': 'Compressor ผิดปกติ', 'cause': 'Compressor เสีย', 'fix': 'ตรวจ/เปลี่ยน compressor', 'parts': 'Compressor'}, {'code': 'E7', 'desc': 'PCB ผิดปกติ', 'cause': 'Main board เสีย', 'fix': 'เปลี่ยน Main board', 'parts': 'Main PCB'}, {'code': 'F1', 'desc': 'เซ็นเซอร์ ice maker ผิดปกติ', 'cause': 'Ice maker sensor เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Ice maker sensor'}], 'Sharp (ตู้เย็น)': [{'code': 'E1', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Freezer thermistor'}, {'code': 'E2', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Fridge thermistor'}, {'code': 'E3', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'Defrost sensor เสีย', 'fix': 'เปลี่ยน defrost sensor', 'parts': 'Defrost sensor'}, {'code': 'E4', 'desc': 'Defrost heater ผิดปกติ', 'cause': 'ฮีตเตอร์ขาด', 'fix': 'เปลี่ยนฮีตเตอร์', 'parts': 'Defrost heater'}, {'code': 'E5', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Fan motor'}, {'code': 'E6', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}, {'code': 'E7', 'desc': 'Compressor ผิดปกติ', 'cause': 'Compressor เสีย', 'fix': 'ตรวจ/เปลี่ยน compressor', 'parts': 'Compressor'}]}
+
 # ══════════════════════════════════════════════
 # PAGE 5: ERROR CODE LIBRARY
 # ══════════════════════════════════════════════
 if page == "🔧 คลังเออเร่อแอร์":
-    st.title("🔧 คลังเออเร่อโค้ดแอร์")
+    st.title("🔧 คลังเออเร่อโค้ด")
     _back_home()
-    st.caption("รวม error code แอร์ทุกยี่ห้อ พร้อมสาเหตุ วิธีแก้ไข และอะไหล่ที่ต้องเปลี่ยน")
 
-    # ── search bar ──────────────────────────────
-    srch = st.text_input("🔍 พิมพ์ error code หรือคำค้นหา", placeholder="เช่น E1, compressor, น้ำยา, discharge").strip().lower()
+    tab_ac, tab_ws, tab_fr = st.tabs(["❄️ แอร์", "👕 เครื่องซักผ้า", "🧊 ตู้เย็น"])
 
-    # ── brand filter ────────────────────────────
-    brands = list(ERROR_DB.keys())
-    sel_brand = st.selectbox("เลือกยี่ห้อ", ["ทั้งหมด"] + brands)
+    def _show_error_tab(db, key_prefix, border_color="#1565c0"):
+        srch = st.text_input("🔍 พิมพ์ error code หรือคำค้นหา",
+            placeholder="เช่น E1, motor, compressor, defrost", key=f"{key_prefix}_srch").strip().lower()
+        brands = list(db.keys())
+        sel_brand = st.selectbox("เลือกยี่ห้อ", ["ทั้งหมด"] + brands, key=f"{key_prefix}_brand")
+        rows = []
+        for brand, errors in db.items():
+            if sel_brand != "ทั้งหมด" and brand != sel_brand:
+                continue
+            for e in errors:
+                rows.append({"ยี่ห้อ": brand, "Code": e["code"],
+                    "ความหมาย": e["desc"], "สาเหตุ": e["cause"],
+                    "วิธีแก้ไข": e["fix"], "อะไหล่ที่ต้องเปลี่ยน": e["parts"]})
+        df_err = pd.DataFrame(rows)
+        if srch:
+            mask = pd.Series(False, index=df_err.index)
+            for col in df_err.columns:
+                mask |= df_err[col].astype(str).str.lower().str.contains(srch, na=False)
+            df_err = df_err[mask]
+        st.markdown(f"**พบ {len(df_err)} รายการ**")
+        if df_err.empty:
+            st.warning("ไม่พบ error code ที่ค้นหา")
+        elif sel_brand != "ทั้งหมด" or srch:
+            for _, r in df_err.iterrows():
+                parts_color = "#c62828" if str(r["อะไหล่ที่ต้องเปลี่ยน"]) not in ["-",""] else "#388e3c"
+                st.markdown(f"""
+                <div style="background:#fff;border-radius:10px;padding:14px 18px;margin-bottom:10px;
+                            border-left:5px solid {border_color};box-shadow:0 1px 4px #0001;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:18px;font-weight:800;color:{border_color};">{r['Code']}</span>
+                    <span style="font-size:11px;color:#888;">{r['ยี่ห้อ']}</span>
+                  </div>
+                  <div style="font-size:14px;font-weight:600;margin:4px 0;">{r['ความหมาย']}</div>
+                  <div style="font-size:12px;color:#555;">⚠️ สาเหตุ: {r['สาเหตุ']}</div>
+                  <div style="font-size:12px;color:#1565c0;">🔧 วิธีแก้: {r['วิธีแก้ไข']}</div>
+                  <div style="font-size:12px;color:{parts_color};">🔩 อะไหล่: {r['อะไหล่ที่ต้องเปลี่ยน']}</div>
+                </div>""", unsafe_allow_html=True)
+        else:
+            st.dataframe(df_err, use_container_width=True, hide_index=True)
 
-    # ── build filtered table ────────────────────
-    rows = []
-    for brand, errors in ERROR_DB.items():
-        if sel_brand != "ทั้งหมด" and brand != sel_brand:
-            continue
-        for e in errors:
-            rows.append({
-                "ยี่ห้อ": brand,
-                "Code": e["code"],
-                "ความหมาย": e["desc"],
-                "สาเหตุ": e["cause"],
-                "วิธีแก้ไข": e["fix"],
-                "อะไหล่ที่ต้องเปลี่ยน": e["parts"],
-            })
-    df_err = pd.DataFrame(rows)
+    with tab_ac:
+        st.caption("รวม error code แอร์ทุกยี่ห้อ พร้อมสาเหตุ วิธีแก้ไข และอะไหล่")
+        _show_error_tab(ERROR_DB, "ac", "#1565c0")
+    with tab_ws:
+        st.caption("รวม error code เครื่องซักผ้าทุกยี่ห้อ พร้อมวิธีตรวจเช็คและอะไหล่")
+        _show_error_tab(WASHER_DB, "ws", "#6a1b9a")
+    with tab_fr:
+        st.caption("รวม error code ตู้เย็นทุกยี่ห้อ พร้อมวิธีตรวจเช็คและอะไหล่")
+        _show_error_tab(FRIDGE_DB, "fr", "#00695c")
 
-    if srch:
-        mask = pd.Series(False, index=df_err.index)
-        for col in df_err.columns:
-            mask |= df_err[col].astype(str).str.lower().str.contains(srch, na=False)
-        df_err = df_err[mask]
-
-    st.markdown(f"**พบ {len(df_err)} รายการ**")
-
-    if df_err.empty:
-        st.warning("ไม่พบ error code ที่ค้นหา")
-    else:
-        # แสดงแบบ card ถ้าเลือกยี่ห้อเดียวหรือค้นหา
+    if False:  # placeholder to keep indentation matching
         if sel_brand != "ทั้งหมด" or srch:
             for _, r in df_err.iterrows():
                 parts_color = "#c62828" if r["อะไหล่ที่ต้องเปลี่ยน"] not in ["-",""] else "#388e3c"
