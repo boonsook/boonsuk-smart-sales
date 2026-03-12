@@ -1331,30 +1331,68 @@ if page == "🏠 หน้าหลัก":
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","linear-gradient(135deg,#f7971e,#ffd200)"))
         n_cols = 3
 
-    # ── CSS: ปุ่มโปร่งใส ครอบทับไอคอน ──
-    st.markdown("""<style>
-    .home-icon-btn > button {
-        background: transparent !important;
+    # ── สร้าง CSS per-button gradient (ปุ่ม IS ไอคอน — ไม่มี overlay) ──
+    icon_css = ["<style>"]
+    icon_css.append("""
+    /* ─── override: บังคับ 3-col บน mobile สำหรับ icon grid ─── */
+    @media (max-width: 768px) {
+        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+            width: 33.33% !important;
+            flex: 0 0 33.33% !important;
+            min-width: 0 !important;
+        }
+        /* ปรับขนาดไอคอนให้พอดีบนมือถือ */
+        [class^="app-ic-"] > div > button,
+        [class*=" app-ic-"] > div > button {
+            height: 72px !important;
+            min-height: 72px !important;
+            font-size: 30px !important;
+        }
+        .app-icon-label-home { font-size: 11px !important; }
+    }
+    /* base style สำหรับทุก app icon button */
+    [class^="app-ic-"] > div > button,
+    [class*=" app-ic-"] > div > button {
+        height: 86px !important;
+        min-height: 86px !important;
+        border-radius: 22px !important;
         border: none !important;
-        box-shadow: none !important;
-        color: transparent !important;
+        color: white !important;
+        font-size: 38px !important;
+        line-height: 1 !important;
+        padding: 0 !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
+        transition: filter 0.15s, box-shadow 0.15s !important;
         width: 100% !important;
-        height: 100px !important;
-        margin-top: -100px !important;
-        position: relative !important;
-        z-index: 10 !important;
-        border-radius: 20px !important;
-        cursor: pointer !important;
     }
-    .home-icon-btn > button:hover {
-        background: rgba(255,255,255,0.18) !important;
+    [class^="app-ic-"] > div > button:hover,
+    [class*=" app-ic-"] > div > button:hover {
+        filter: brightness(1.1) !important;
+        box-shadow: 0 6px 22px rgba(0,0,0,0.26) !important;
     }
-    .home-icon-btn { margin: 0 !important; }
-    </style>""", unsafe_allow_html=True)
+    [class^="app-ic-"] > div > button:active,
+    [class*=" app-ic-"] > div > button:active {
+        filter: brightness(0.92) !important;
+        transform: scale(0.97) !important;
+    }
+    /* ซ่อน ripple / focus outline */
+    [class^="app-ic-"] > div > button:focus,
+    [class*=" app-ic-"] > div > button:focus {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
+        outline: none !important;
+    }
+    .app-icon-label-home {
+        text-align:center; font-size:12px; font-weight:600;
+        color:#1a237e; margin:-2px 0 10px 0; line-height:1.3;
+    }
+    """)
+    for gi, (icon, label, target, grad) in enumerate(menus_home):
+        icon_css.append(f'.app-ic-{gi} > div > button {{ background: {grad} !important; }}')
+    icon_css.append("</style>")
+    st.markdown("\n".join(icon_css), unsafe_allow_html=True)
 
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
     for row in rows:
-        # เติมช่องว่างถ้า row สุดท้ายไม่ครบ
         padded = row + [None] * (n_cols - len(row))
         cols = st.columns(n_cols)
         for col_i, item in enumerate(padded):
@@ -1362,31 +1400,22 @@ if page == "🏠 หน้าหลัก":
                 if item is None:
                     st.empty(); continue
                 icon, label, target, grad = item
-                # วาดไอคอน+label
-                st.markdown(f"""
-                <div style="text-align:center; padding:6px 4px 0 4px;">
-                  <div style="background:{grad}; border-radius:22px;
-                    width:82px; height:82px; margin:0 auto 8px auto;
-                    display:flex; align-items:center; justify-content:center;
-                    font-size:38px; box-shadow:0 4px 16px rgba(0,0,0,0.18);
-                    transition:transform 0.15s;">
-                    {icon}
-                  </div>
-                  <div style="font-size:12px;color:#1a237e;font-weight:600;
-                    line-height:1.3;word-break:break-word;">{label}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                # ปุ่มโปร่งใส
-                st.markdown('<div class="home-icon-btn">', unsafe_allow_html=True)
-                if st.button("　", key=f"hnav_{target}_{col_i}", use_container_width=True):
+                gi = menus_home.index(item)
+                # ── ปุ่ม = ไอคอนเลย กดได้ทันที ──
+                st.markdown(f'<div class="app-ic-{gi}">', unsafe_allow_html=True)
+                clicked = st.button(icon, key=f"hnav_{gi}_{col_i}", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                # ── label ข้างล่าง ──
+                st.markdown(
+                    f'<div class="app-icon-label-home">{label}</div>',
+                    unsafe_allow_html=True)
+                if clicked:
                     if target == "__LOGOUT__":
                         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                             st.session_state[k] = "" if k != "logged_in" else False
                         st.query_params.clear(); st.rerun()
                     else:
                         st.session_state["_current_page"] = target; st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
