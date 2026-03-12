@@ -1392,7 +1392,7 @@ if page == "🏠 หน้าหลัก":
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
-    # build cards
+    # build cards — ใช้ <form target="_parent"> ส่ง GET param ไปที่ parent Streamlit
     cards = ""
     for emoji, label, target in menus_home:
         nav_val = urlquote(target)
@@ -1401,16 +1401,19 @@ if page == "🏠 หน้าหลัก":
         ibg  = "#fee2e2" if is_out else "#eff6ff"
         lcol = "#dc2626" if is_out else "#1e3a5f"
         cards += (
-            f'<a onclick="nav(\'{nav_val}\')" style="background:{cbg};'
-            f'border-radius:16px;padding:14px 6px 12px;'
-            f'box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1.5px solid #edf2f7;'
-            f'text-decoration:none;cursor:pointer;display:flex;flex-direction:column;'
-            f'align-items:center;justify-content:center;min-height:86px;-webkit-tap-highlight-color:rgba(0,0,0,0.06);">'
+            f'<form method="GET" target="_parent" action="" style="margin:0;padding:0;">'
+            f'<input type="hidden" name="nav" value="{nav_val}">'
+            f'<button type="submit" style="background:{cbg};border-radius:16px;'
+            f'padding:14px 6px 12px;box-shadow:0 2px 10px rgba(0,0,0,0.07);'
+            f'border:1.5px solid #edf2f7;cursor:pointer;display:flex;flex-direction:column;'
+            f'align-items:center;justify-content:center;min-height:86px;width:100%;'
+            f'-webkit-tap-highlight-color:rgba(0,0,0,0.06);font-family:inherit;'
+            f'transition:transform 0.1s;-webkit-appearance:none;">'
             f'<div style="background:{ibg};border-radius:12px;width:46px;height:46px;'
             f'display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:7px;">{emoji}</div>'
             f'<div style="font-size:11.5px;font-weight:700;color:{lcol};'
             f'text-align:center;line-height:1.3;word-break:keep-all;">{label}</div>'
-            f'</a>'
+            f'</button></form>'
         )
 
     stats_rows = ""
@@ -1472,11 +1475,7 @@ a:active { transform:scale(0.93); opacity:0.85; }
   {cards}
 </div>
 
-<script>
-function nav(target) {{
-  window.parent.location.search = '?nav=' + target;
-}}
-</script>
+
 </body></html>
 """
 
