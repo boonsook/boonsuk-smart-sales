@@ -1386,12 +1386,14 @@ if page == "🏠 หน้าหลัก":
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
+    # ── CSS: ซ่อน st.button ทุกตัวในหน้า home (iframe ใช้ HTML button แยก) ──
     st.markdown("""<style>
     .main, .block-container { background:#f0f4f8 !important; }
-    #hid-btn-container, #hid-btn-container * { display:none !important; }
+    .stButton { position:fixed !important; left:-9999px !important;
+                top:-9999px !important; width:1px !important; height:1px !important;
+                overflow:hidden !important; pointer-events:none !important; }
     </style>""", unsafe_allow_html=True)
 
-    st.markdown('<div id="hid-btn-container">', unsafe_allow_html=True)
     for i, (_, _, target) in enumerate(menus_home):
         if st.button(target, key=f"hbtn_{i}"):
             if target == "__LOGOUT__":
@@ -1401,7 +1403,6 @@ if page == "🏠 หน้าหลัก":
             else:
                 st.session_state["_current_page"] = target
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Build iframe HTML ──
     cards_html = ""
