@@ -1349,53 +1349,55 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # ── พื้นหลัง + force 3col mobile ──
+    # ── Global CSS for home page ──
     st.markdown("""<style>
-    .main, .block-container { background: #f0f4f8 !important; }
+    .main, section.main > div { background:#f0f4f8 !important; }
+    .block-container { background:#f0f4f8 !important; padding-top:1rem !important; }
 
-    /* force 3 columns บน mobile สำหรับ home grid */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-        min-width: 0 !important;
-        flex: 1 1 0% !important;
-        width: auto !important;
-    }
-    @media (max-width:768px){
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{
-            width:33% !important; flex: 0 0 33% !important; min-width:0 !important;
-        }
-    }
-
-    /* White card button base */
-    .hcard > div > button {
+    /* ── Icon card buttons ── */
+    div[class*="icon-card-"] > div > button {
         background: white !important;
         border: none !important;
         border-radius: 18px !important;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05) !important;
-        height: 96px !important;
-        min-height: 96px !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.09) !important;
+        height: 90px !important;
+        min-height: 90px !important;
         width: 100% !important;
-        padding: 0 4px !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0 !important;
         transition: box-shadow .15s, transform .12s !important;
-        color: transparent !important;
-        font-size: 0px !important;
-        cursor: pointer !important;
+        white-space: pre-wrap !important;
+        line-height: 1.25 !important;
     }
-    .hcard > div > button:hover {
-        box-shadow: 0 6px 20px rgba(21,101,192,0.18), 0 2px 6px rgba(0,0,0,0.08) !important;
+    div[class*="icon-card-"] > div > button:hover {
+        box-shadow: 0 5px 18px rgba(21,101,192,0.17) !important;
         transform: translateY(-2px) !important;
     }
-    .hcard > div > button:active {
-        transform: scale(0.96) !important;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1) !important;
+    div[class*="icon-card-"] > div > button:active {
+        transform: scale(0.95) !important;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.10) !important;
     }
-    .hcard > div > button:focus {
+    div[class*="icon-card-"] > div > button:focus {
         outline: none !important;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.09) !important;
     }
-    /* logout card - red tint */
-    .hcard-logout > div > button {
+    div[class*="icon-card-logout"] > div > button {
         background: #fff5f5 !important;
-        box-shadow: 0 2px 12px rgba(229,57,53,0.1) !important;
+    }
+    div[class*="icon-card-"] > div > button p {
+        margin: 0 !important;
+        font-size: 30px !important;
+        line-height: 1.1 !important;
+    }
+    /* force 3 columns on mobile */
+    @media (max-width:768px){
+        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+            min-width:0 !important; flex:1 1 0% !important;
+        }
     }
     </style>""", unsafe_allow_html=True)
 
@@ -1403,88 +1405,87 @@ if page == "🏠 หน้าหลัก":
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#1a237e 0%,#1976d2 70%,#42a5f5 100%);
-        border-radius:20px;padding:20px 22px;margin-bottom:14px;color:white;
-        display:flex;align-items:center;gap:16px;
-        box-shadow:0 6px 24px rgba(13,71,161,0.3);">
+        border-radius:20px;padding:18px 20px;margin-bottom:12px;color:white;
+        display:flex;align-items:center;gap:14px;
+        box-shadow:0 6px 24px rgba(13,71,161,0.28);">
         <img src='data:image/png;base64,{LOGO_B64}'
-            style='width:66px;height:66px;border-radius:50%;object-fit:cover;
-            flex-shrink:0;border:3px solid rgba(255,255,255,0.45);'>
-        <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;opacity:0.8;">สวัสดี,</div>
-            <div style="font-size:22px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_name2}</div>
-            <div style="background:rgba(255,255,255,0.2);border-radius:20px;
-                display:inline-block;padding:2px 10px;font-size:11px;margin-top:4px;">{role_badge}</div>
+            style='width:60px;height:60px;border-radius:50%;object-fit:cover;
+            flex-shrink:0;border:3px solid rgba(255,255,255,0.4);'>
+        <div>
+            <div style="font-size:12px;opacity:0.82;">สวัสดี,</div>
+            <div style="font-size:21px;font-weight:800;">{_name2}</div>
+            <div style="background:rgba(255,255,255,0.22);border-radius:20px;
+                display:inline-block;padding:2px 10px;font-size:11px;margin-top:3px;">{role_badge}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Stats (admin/staff) ──
+    # ── Stats ──
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log()
-        _s1=len(df_stk); _s2=len(df_lg); _s3=len(df_stk[df_stk["stock_qty"]>2])
-        _s4=len(df_lg[df_lg.get("status","").astype(str).str.contains("รอ",na=False)]) if "status" in df_lg.columns else 0
+        _s1=len(df_stk); _s2=len(df_lg)
         st.markdown(f"""
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-          <div style="background:white;border-radius:14px;padding:12px 14px;
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div style="background:white;border-radius:14px;padding:11px 13px;
               box-shadow:0 1px 6px rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;">
-            <div style="background:#e3f2fd;border-radius:10px;width:38px;height:38px;
-                display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
-            <div><div style="font-size:11px;color:#666;">สต๊อกทั้งหมด</div>
-              <div style="font-size:20px;font-weight:800;color:#1565c0;">{_s1} <span style="font-size:11px;color:#888;">รุ่น</span></div></div>
+            <div style="background:#e3f2fd;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;">📦</div>
+            <div><div style="font-size:10px;color:#888;">สต๊อกทั้งหมด</div>
+              <div style="font-size:19px;font-weight:800;color:#1565c0;">{_s1} <span style="font-size:10px;color:#aaa;">รุ่น</span></div></div>
           </div>
-          <div style="background:white;border-radius:14px;padding:12px 14px;
+          <div style="background:white;border-radius:14px;padding:11px 13px;
               box-shadow:0 1px 6px rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;">
-            <div style="background:#e8f5e9;border-radius:10px;width:38px;height:38px;
-                display:flex;align-items:center;justify-content:center;font-size:20px;">📋</div>
-            <div><div style="font-size:11px;color:#666;">งานทั้งหมด</div>
-              <div style="font-size:20px;font-weight:800;color:#2e7d32;">{_s2} <span style="font-size:11px;color:#888;">รายการ</span></div></div>
+            <div style="background:#e8f5e9;border-radius:10px;width:36px;height:36px;
+                display:flex;align-items:center;justify-content:center;font-size:18px;">📋</div>
+            <div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>
+              <div style="font-size:19px;font-weight:800;color:#2e7d32;">{_s2} <span style="font-size:10px;color:#aaa;">รายการ</span></div></div>
           </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # ── Menu data ──
-    SVGS = {
-        "ใบเสนอราคา":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/><path d="M15 17l2 2 3.5-3.5" stroke="#1565c0" stroke-width="2.2"/></svg>', "#e3f2fd"),
-        "รับงานซ่อม":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#7b1fa2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>', "#f3e5f5"),
-        "จัดการงาน":   ('<svg viewBox="0 0 24 24" fill="none" stroke="#0277bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M8 13l2.5 2.5L16 10"/></svg>', "#e1f5fe"),
-        "สต๊อกแอร์":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#e65100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', "#fff3e0"),
-        "Dashboard":   ('<svg viewBox="0 0 24 24" fill="none" stroke="#00695c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>', "#e0f2f1"),
-        "คำนวณ BTU":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><circle cx="9" cy="11" r="1" fill="#1565c0"/><circle cx="12" cy="11" r="1" fill="#1565c0"/><circle cx="15" cy="11" r="1" fill="#1565c0"/><circle cx="9" cy="15" r="1" fill="#1565c0"/><circle cx="12" cy="15" r="1" fill="#1565c0"/><circle cx="15" cy="15" r="1" fill="#1565c0"/><circle cx="9" cy="19" r="1" fill="#1565c0"/><circle cx="12" cy="19" r="1" fill="#1565c0"/></svg>', "#e3f2fd"),
-        "Error Code":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="#c62828"/></svg>', "#ffebee"),
-        "นำเข้า/ส่งออก": ('<svg viewBox="0 0 24 24" fill="none" stroke="#37474f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="12"/></svg>', "#eceff1"),
-        "ออกจากระบบ": ('<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>', "#ffebee"),
-        "ขอใบเสนอราคา": ('<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>', "#e3f2fd"),
-        "แจ้งซ่อม":   ('<svg viewBox="0 0 24 24" fill="none" stroke="#7b1fa2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>', "#f3e5f5"),
-        "งานของฉัน":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#0277bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M8 13l2.5 2.5L16 10"/></svg>', "#e1f5fe"),
-    }
-
+    # ── Menu items: (icon_emoji, label_th, target, css_class_suffix) ──
     if _role2 == "customer":
         menus_home = [
-            ("ขอใบเสนอราคา", "🧾 ขอใบเสนอราคาแอร์"),
-            ("แจ้งซ่อม",     "🛠️ แจ้งซ่อม/บริการ"),
-            ("งานของฉัน",    "📋 งานของฉัน"),
-            ("คำนวณ BTU",    "🧮 คำนวณ BTU"),
-            ("ออกจากระบบ",   "__LOGOUT__"),
+            ("🧾", "ใบเสนอราคา",   "🧾 ขอใบเสนอราคาแอร์",      "blue"),
+            ("🛠️", "แจ้งซ่อม",     "🛠️ แจ้งซ่อม/บริการ",       "purple"),
+            ("📋", "งานของฉัน",    "📋 งานของฉัน",               "cyan"),
+            ("🧮", "BTU",          "🧮 คำนวณ BTU",               "green"),
+            ("🚪", "ออกจากระบบ",   "__LOGOUT__",                  "logout"),
         ]
     else:
         menus_home = [
-            ("ใบเสนอราคา",  "🧾 สร้างใบเสนอราคา"),
-            ("รับงานซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
-            ("จัดการงาน",   "📋 จัดการงาน / สถานะ"),
-            ("สต๊อกแอร์",   "📦 จัดการสต๊อก"),
-            ("Dashboard",    "📊 Dashboard"),
-            ("คำนวณ BTU",    "🧮 คำนวณ BTU"),
-            ("Error Code",   "🔧 คลังเออเร่อแอร์"),
+            ("🧾", "ใบเสนอราคา",   "🧾 สร้างใบเสนอราคา",        "blue"),
+            ("🛠️", "รับงานซ่อม",   "🛠️ รับงานซ่อม/บริการ",      "purple"),
+            ("📋", "จัดการงาน",    "📋 จัดการงาน / สถานะ",       "cyan"),
+            ("📦", "สต๊อกแอร์",    "📦 จัดการสต๊อก",              "orange"),
+            ("📊", "Dashboard",    "📊 Dashboard",                "teal"),
+            ("🧮", "คำนวณ BTU",    "🧮 คำนวณ BTU",               "blue2"),
+            ("⚠️", "Error Code",   "🔧 คลังเออเร่อแอร์",          "red"),
         ]
         if _role2 == "admin":
-            menus_home.append(("นำเข้า/ส่งออก", "⚙️ นำเข้า/ส่งออกข้อมูล"))
-        menus_home.append(("ออกจากระบบ", "__LOGOUT__"))
+            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล","gray"))
+        menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","logout"))
 
+    # ── Per-card color CSS ──
+    color_map = {
+        "blue":   "#1565c0", "purple": "#7b1fa2", "cyan":   "#0288d1",
+        "orange": "#e65100", "teal":   "#00695c",  "blue2":  "#1976d2",
+        "red":    "#c62828", "gray":   "#546e7a",  "green":  "#2e7d32",
+        "logout": "#c62828",
+    }
+    label_color_css = ""
+    for _, _, _, cls in menus_home:
+        c = color_map.get(cls, "#1565c0")
+        label_color_css += f"""
+        div[class*="icon-card-{cls}"] > div > button {{
+            color: {c} !important;
+        }}
+        """
+    st.markdown(f"<style>{label_color_css}</style>", unsafe_allow_html=True)
+
+    # ── Render 3-col grid ──
     n_cols = 3
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
-
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
     for row in rows:
         padded = row + [None]*(n_cols - len(row))
         cols = st.columns(n_cols, gap="small")
@@ -1492,40 +1493,12 @@ if page == "🏠 หน้าหลัก":
             with cols[ci]:
                 if item is None:
                     st.empty(); continue
-                label, target = item
-                svg_icon, bg_color = SVGS.get(label, ('<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#1565c0" fill="none" stroke-width="2"/></svg>', "#e3f2fd"))
-                is_logout = (target == "__LOGOUT__")
-                card_extra = "hcard-logout" if is_logout else ""
-                # ── HTML card visual ──
-                st.markdown(f"""
-                <div style="text-align:center;padding:4px 2px 0 2px;pointer-events:none;">
-                  <div style="background:{bg_color};border-radius:16px;width:52px;height:52px;
-                    margin:0 auto 7px auto;display:flex;align-items:center;justify-content:center;">
-                    <div style="width:30px;height:30px;">{svg_icon}</div>
-                  </div>
-                  <div style="font-size:11.5px;font-weight:700;color:{"#c62828" if is_logout else "#263238"};
-                    line-height:1.3;word-break:keep-all;">{label}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                # ── Transparent overlay button ──
-                st.markdown(f'''<style>
-                div[data-testid="stButton"]:has(button[key="hm_{ci}_{target}"]) > div > button,
-                .hcard-wrap-{ci}-{abs(hash(target))%9999} > div > button {{
-                    background: transparent !important;
-                    border: none !important; box-shadow: none !important;
-                    height: 88px !important; margin-top: -92px !important;
-                    position: relative !important; z-index: 5 !important;
-                    border-radius: 18px !important; width: 100% !important;
-                    color: transparent !important; font-size: 0 !important;
-                    opacity: 0.01 !important;
-                }}
-                .hcard-wrap-{ci}-{abs(hash(target))%9999} > div > button:hover {{
-                    opacity: 0.06 !important; background: rgba(21,101,192,0.08) !important;
-                }}
-                </style>''', unsafe_allow_html=True)
-                st.markdown(f'<div class="hcard-wrap-{ci}-{abs(hash(target))%9999}">', unsafe_allow_html=True)
-                if st.button("tap", key=f"hm_{ci}_{target}", use_container_width=True):
-                    if is_logout:
+                emoji, label, target, cls = item
+                # single button = entire card (emoji \n label)
+                btn_label = f"{emoji}\n{label}"
+                st.markdown(f'<div class="icon-card-{cls}">', unsafe_allow_html=True)
+                if st.button(btn_label, key=f"hm_{ci}_{cls}_{target[:8]}", use_container_width=True):
+                    if target == "__LOGOUT__":
                         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                             st.session_state[k] = "" if k!="logged_in" else False
                         st.query_params.clear(); st.rerun()
