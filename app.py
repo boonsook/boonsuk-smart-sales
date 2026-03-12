@@ -1408,7 +1408,7 @@ if page == "🏠 หน้าหลัก":
     .main, .block-container { background:#f0f4f8 !important; }
     .stButton { position:fixed !important; left:-9999px !important;
                 top:-9999px !important; width:1px !important; height:1px !important;
-                overflow:hidden !important; pointer-events:none !important; }
+                overflow:hidden !important; opacity:0 !important; }
     </style>""", unsafe_allow_html=True)
 
     for i, (_, _, target) in enumerate(menus_home):
