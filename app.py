@@ -2131,7 +2131,7 @@ if page == "🛠️ รับงานซ่อม/บริการ":
                     f"📍 ที่อยู่: {sv_addr.strip()}",
                     f"🔧 ประเภทงาน: {sv_type}",
                     f"⚡ อาการ/งาน: {_sym}",
-                    f"📅 วันที่: {today_str}",
+                    f"📅 วันที่: {date.today().strftime('%Y-%m-%d')}",
                     f"🗂️ บันทึกโดย: {st.session_state.get('username','-')}",
                     "────────────────────",
                 ])
