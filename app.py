@@ -1407,9 +1407,13 @@ if page == "🏠 หน้าหลัก":
     # ── CSS: ซ่อน st.button ทุกตัวในหน้า home (iframe ใช้ HTML button แยก) ──
     st.markdown("""<style>
     .main, .block-container { background:#f0f4f8 !important; }
-    .stButton > button { visibility:hidden !important; height:0 !important;
-                min-height:0 !important; padding:0 !important; margin:0 !important;
-                border:none !important; font-size:0 !important; line-height:0 !important; }
+    /* collapse wrapper divs */
+    .stButton { position:absolute !important; clip:rect(0 0 0 0) !important;
+                width:1px !important; height:1px !important; overflow:hidden !important;
+                top:0 !important; left:0 !important; }
+    .stButton > button { position:absolute !important; clip:rect(0 0 0 0) !important;
+                width:1px !important; height:1px !important; overflow:hidden !important;
+                min-height:0 !important; padding:0 !important; border:none !important; }
     </style>""", unsafe_allow_html=True)
 
     for i, (_, _, target) in enumerate(menus_home):
@@ -1510,11 +1514,12 @@ button:active{{transform:scale(0.93);transition:transform 0.1s;}}
 </div>
 <script>
 function clickBtn(target) {{
-  // ค้นหา hidden button จาก text content ที่ตรงกับ target
   var btns = window.parent.document.querySelectorAll("button");
   for (var b of btns) {{
-    if (b.innerText.trim() === target) {{
-      b.click();
+    // ใช้ textContent เพราะ innerText คืนค่าว่างเมื่อปุ่มถูกซ่อนด้วย CSS บางแบบ
+    var txt = (b.textContent || b.innerText || "").trim();
+    if (txt === target) {{
+      b.dispatchEvent(new MouseEvent("click", {{bubbles:true, cancelable:true}}));
       return;
     }}
   }}
