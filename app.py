@@ -6,6 +6,7 @@ import hashlib
 import zipfile
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as st_html
 from datetime import date, datetime
 from urllib.parse import quote as urlquote
 import urllib.parse
@@ -1355,7 +1356,7 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # handle LOGOUT via query param
+    # handle LOGOUT
     if st.query_params.get("nav","") == "__LOGOUT__":
         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
             st.session_state[k] = "" if k!="logged_in" else False
@@ -1383,95 +1384,103 @@ if page == "🏠 หน้าหลัก":
             menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
         menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
 
-    # stats
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log()
         _s1=len(df_stk); _s2=len(df_lg)
     else:
         _s1=_s2=0
 
-    role_badge = ("👑 ผู้ดูแลระบบ" if _role2=="admin" 
-                  else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า")
+    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
-    stats_html = ""
-    if _role2 != "customer":
-        stats_html = f"""
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-          <div style="background:white;border-radius:14px;padding:12px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
-            <div style="background:#dbeafe;border-radius:10px;width:40px;height:40px;
-                display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📦</div>
-            <div><div style="font-size:11px;color:#888;">สต๊อก</div>
-              <div style="font-size:20px;font-weight:800;color:#1d4ed8;line-height:1.1;">{_s1}<span style="font-size:11px;font-weight:500;color:#aaa;"> รุ่น</span></div></div>
-          </div>
-          <div style="background:white;border-radius:14px;padding:12px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">
-            <div style="background:#dcfce7;border-radius:10px;width:40px;height:40px;
-                display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📋</div>
-            <div><div style="font-size:11px;color:#888;">งานทั้งหมด</div>
-              <div style="font-size:20px;font-weight:800;color:#16a34a;line-height:1.1;">{_s2}<span style="font-size:11px;font-weight:500;color:#aaa;"> รายการ</span></div></div>
-          </div>
-        </div>"""
-
-    # build grid cards
-    cards_html = ""
+    # build cards
+    cards = ""
     for emoji, label, target in menus_home:
-        href = f"?nav={urlquote(target)}"
-        is_logout = target == "__LOGOUT__"
-        card_bg    = "#fff5f5" if is_logout else "white"
-        icon_bg    = "#fee2e2" if is_logout else "#eff6ff"
-        label_col  = "#dc2626" if is_logout else "#1e3a5f"
-        cards_html += f"""
-        <a href="{href}" style="
-            display:flex;flex-direction:column;align-items:center;justify-content:center;
-            background:{card_bg};border-radius:16px;padding:14px 6px 12px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1.5px solid #edf2f7;
-            text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.06);
-            transition:transform 0.12s,box-shadow 0.12s;min-height:88px;">
-          <div style="background:{icon_bg};border-radius:12px;width:48px;height:48px;
-              display:flex;align-items:center;justify-content:center;
-              font-size:26px;margin-bottom:8px;">{emoji}</div>
-          <div style="font-size:11.5px;font-weight:700;color:{label_col};
-              text-align:center;line-height:1.3;word-break:keep-all;">{label}</div>
-        </a>"""
+        nav_val = urlquote(target)
+        is_out  = target == "__LOGOUT__"
+        cbg  = "#fff5f5" if is_out else "#ffffff"
+        ibg  = "#fee2e2" if is_out else "#eff6ff"
+        lcol = "#dc2626" if is_out else "#1e3a5f"
+        cards += (
+            f'<a onclick="nav(\'{nav_val}\')" style="background:{cbg};'
+            f'border-radius:16px;padding:14px 6px 12px;'
+            f'box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1.5px solid #edf2f7;'
+            f'text-decoration:none;cursor:pointer;display:flex;flex-direction:column;'
+            f'align-items:center;justify-content:center;min-height:86px;-webkit-tap-highlight-color:rgba(0,0,0,0.06);">'
+            f'<div style="background:{ibg};border-radius:12px;width:46px;height:46px;'
+            f'display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:7px;">{emoji}</div>'
+            f'<div style="font-size:11.5px;font-weight:700;color:{lcol};'
+            f'text-align:center;line-height:1.3;word-break:keep-all;">{label}</div>'
+            f'</a>'
+        )
 
-    full_html = f"""
+    stats_rows = ""
+    if _role2 != "customer":
+        stats_rows = (
+            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+            f'<div style="background:white;border-radius:14px;padding:11px 12px;'
+            f'box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">'
+            f'<div style="background:#dbeafe;border-radius:10px;width:38px;height:38px;'
+            f'display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📦</div>'
+            f'<div><div style="font-size:10px;color:#888;">สต๊อก</div>'
+            f'<div style="font-size:20px;font-weight:800;color:#1d4ed8;">{_s1}'
+            f'<span style="font-size:10px;color:#aaa;"> รุ่น</span></div></div></div>'
+            f'<div style="background:white;border-radius:14px;padding:11px 12px;'
+            f'box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;align-items:center;gap:10px;">'
+            f'<div style="background:#dcfce7;border-radius:10px;width:38px;height:38px;'
+            f'display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📋</div>'
+            f'<div><div style="font-size:10px;color:#888;">งานทั้งหมด</div>'
+            f'<div style="font-size:20px;font-weight:800;color:#16a34a;">{_s2}'
+            f'<span style="font-size:10px;color:#aaa;"> รายการ</span></div></div></div>'
+            f'</div>'
+        )
+
+    n_items = len(menus_home)
+    grid_h  = ((n_items + 2) // 3) * 110 + 200
+    total_h = grid_h + (120 if _role2 != "customer" else 0) + 160
+
+    component_html = """<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  .main, .block-container {{ background:#f0f4f8 !important; }}
-  .block-container {{ padding-top:0.5rem !important; padding-left:0.8rem !important; padding-right:0.8rem !important; }}
-  a[href*="?nav="] {{ display:block; }}
-  a[href*="?nav="]:active {{ transform:scale(0.93) !important; opacity:0.9; }}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#f0f4f8; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding:0 2px 16px; }
+a { display:block; }
+a:active { transform:scale(0.93); opacity:0.85; }
 </style>
-
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-
-  <!-- Header -->
-  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
-      border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
-      display:flex;align-items:center;gap:14px;
-      box-shadow:0 6px 20px rgba(30,58,138,0.3);">
-    <img src="data:image/png;base64,{LOGO_B64}"
-        style="width:58px;height:58px;border-radius:50%;object-fit:cover;
-        flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
-    <div>
-      <div style="font-size:12px;opacity:0.85;margin-bottom:2px;">สวัสดี,</div>
-      <div style="font-size:24px;font-weight:800;letter-spacing:-0.3px;">{_name2}</div>
-      <div style="background:rgba(255,255,255,0.22);border-radius:20px;
-          display:inline-block;padding:3px 12px;font-size:12px;margin-top:5px;font-weight:600;">{role_badge}</div>
-    </div>
+</head>
+<body>
+""" + f"""
+<div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
+    border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
+    display:flex;align-items:center;gap:14px;
+    box-shadow:0 6px 20px rgba(30,58,138,0.3);">
+  <img src="data:image/png;base64,{LOGO_B64}"
+      style="width:56px;height:56px;border-radius:50%;object-fit:cover;
+      flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
+  <div>
+    <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
+    <div style="font-size:23px;font-weight:800;">{_name2}</div>
+    <div style="background:rgba(255,255,255,0.22);border-radius:20px;
+        display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:5px;">{role_badge}</div>
   </div>
-
-  <!-- Stats -->
-  {stats_html}
-
-  <!-- Grid 3 columns -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-    {cards_html}
-  </div>
-
 </div>
+
+{stats_rows}
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+  {cards}
+</div>
+
+<script>
+function nav(target) {{
+  window.parent.location.search = '?nav=' + target;
+}}
+</script>
+</body></html>
 """
-    st.markdown(full_html, unsafe_allow_html=True)
+
+    st_html.html(component_html, height=total_h, scrolling=False)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
