@@ -1404,37 +1404,7 @@ if page == "🏠 หน้าหลัก":
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
-    # ── CSS: ซ่อน st.button ทุกตัวในหน้า home (iframe ใช้ HTML button แยก) ──
-    # HOME GRID - pure Streamlit buttons
-    _home_css = '''
-<style>
-.main, .block-container { background:#f0f4f8 !important; }
-div[data-testid='stHorizontalBlock'] {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-}
-div[data-testid='column'] {
-    width: 100% !important; min-width: 0 !important;
-    flex: none !important; padding: 0 !important;
-}
-div[data-testid='column'] button[kind='secondary'] {
-    background: white !important;
-    border: 1.5px solid #e8eef6 !important;
-    border-radius: 16px !important;
-    width: 100% !important;
-    min-height: 82px !important;
-    padding: 10px 4px !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08) !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    color: #1e3a5f !important;
-    white-space: pre-wrap !important;
-    line-height: 1.4 !important;
-}
-</style>
-'''
-    st.markdown(_home_css, unsafe_allow_html=True)
+    st.markdown('<style>.main,.block-container{background:#f0f4f8!important;}</style>', unsafe_allow_html=True)
 
     # Header
     logo_src = f'data:image/png;base64,{LOGO_B64}'
@@ -1462,30 +1432,76 @@ div[data-testid='column'] button[kind='secondary'] {
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # Stat cards
-    if _role2 != 'customer':
-        ss1, ss2, ss3 = st.columns(3)
-        with ss1:
-            if st.button(f'📦\nสต๊อก\n{_s1} รุ่น', key='s_stk', use_container_width=True): _nav('📦 จัดการสต๊อก')
-        with ss2:
-            if st.button(f'⏳\nค้าง\n{_total_pend} งาน', key='s_pend', use_container_width=True): _nav('📋 จัดการงาน / สถานะ')
-        with ss3:
-            if st.button(f'✅\nปิดแล้ว\n{_total_closed} งาน', key='s_cls', use_container_width=True): _nav('📋 จัดการงาน / สถานะ')
+    # ── HTML iframe grid (3-col ทุก device) ──────────────────────────────
+    # Build query token for doNav
+    _qs_tok = st.query_params.get("s", "")
 
-    # Menu grid
-    padded = list(menus_home)
-    while len(padded) % 3 != 0: padded.append(None)
-    for row_start in range(0, len(padded), 3):
-        c0, c1, c2 = st.columns(3)
-        for ci, col in enumerate([c0, c1, c2]):
-            item = padded[row_start + ci]
-            with col:
-                if item is None:
-                    st.empty()
-                else:
-                    emoji, label, target = item
-                    if st.button(f'{emoji}\n{label}', key=f'm_{row_start+ci}', use_container_width=True):
-                        _nav(target)
+    def _build_grid_html():
+        # Stat row (staff/admin only)
+        stats_html = ""
+        if _role2 != "customer":
+            def _sc(icon, top, bot, nav_t):
+                nt = nav_t.replace("'", "APOS")
+                return (
+                    '<button onclick="doNav(\''+nt+'\')" '
+                    'style="flex:1;background:white;border:1.5px solid #e0e8f5;border-radius:14px;'
+                    'padding:10px 4px;box-shadow:0 2px 8px rgba(0,0,0,0.07);cursor:pointer;min-width:0;">'
+                    '<div style="font-size:22px;">'+icon+'</div>'
+                    '<div style="font-size:10px;color:#666;margin-top:2px;">'+top+'</div>'
+                    '<div style="font-size:15px;font-weight:800;color:#1e3a8a;">'+bot+'</div>'
+                    '</button>'
+                )
+            stats_html = (
+                '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+                + _sc("📦","สต๊อก",str(_s1)+" รุ่น","📦 จัดการสต๊อก")
+                + _sc("⏳","ค้าง",str(_total_pend)+" งาน","📋 จัดการงาน / สถานะ")
+                + _sc("✅","ปิดแล้ว",str(_total_closed)+" งาน","📋 จัดการงาน / สถานะ")
+                + '</div>'
+            )
+
+        # Menu cards
+        cards_html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'
+        for item in menus_home:
+            emoji, label, target = item
+            safe_t = target.replace("'", "APOS")
+            is_logout = target == "__LOGOUT__"
+            bg  = "#fff5f5" if is_logout else "white"
+            col = "#e53935" if is_logout else "#1e3a5f"
+            bdr = "#ffd0d0" if is_logout else "#e0e8f5"
+            cards_html += (
+                '<button onclick="doNav(\''+safe_t+'\')" '
+                'style="background:'+bg+';border:1.5px solid '+bdr+';border-radius:16px;'
+                'padding:14px 6px;display:flex;flex-direction:column;align-items:center;'
+                'justify-content:center;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,0.07);'
+                'cursor:pointer;min-width:0;min-height:82px;width:100%;">'
+                '<div style="font-size:28px;line-height:1;">'+emoji+'</div>'
+                '<div style="font-size:11.5px;font-weight:700;color:'+col+';line-height:1.2;text-align:center;">'+label+'</div>'
+                '</button>'
+            )
+        cards_html += '</div>'
+
+        js = """
+<script>
+function doNav(target) {
+  target = target.replace(/APOS/g, "'");
+  var topUrl = window.top.location.href;
+  var sMatch = topUrl.match(/[?&]s=([^&]*)/);
+  var sToken = sMatch ? sMatch[1] : """" + _qs_tok + """";
+  var basePath = window.top.location.pathname;
+  if (target === "__LOGOUT__") {
+    window.top.location.href = basePath;
+  } else {
+    window.top.location.href = basePath + "?s=" + sToken + "&nav=" + encodeURIComponent(target);
+  }
+}
+</script>"""
+        n_rows = (len(menus_home) + 2) // 3
+        stat_h = 80 if _role2 != "customer" else 0
+        iframe_h = stat_h + n_rows * 110 + 20
+        return '<div style="padding:2px 2px 8px 2px;">' + stats_html + cards_html + js + '</div>', iframe_h
+
+    _grid_html, _iframe_h = _build_grid_html()
+    st_html.html(_grid_html, height=_iframe_h)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
