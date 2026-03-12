@@ -1356,12 +1356,6 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # handle LOGOUT
-    if st.query_params.get("nav","") == "__LOGOUT__":
-        for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-            st.session_state[k] = "" if k!="logged_in" else False
-        st.query_params.clear(); st.rerun()
-
     if _role2 == "customer":
         menus_home = [
             ("🧾", "ใบเสนอราคา", "🧾 ขอใบเสนอราคาแอร์"),
@@ -1392,21 +1386,43 @@ if page == "🏠 หน้าหลัก":
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
-    # build cards HTML
+    # ── CSS: ซ่อน hidden buttons + background ──
+    st.markdown("""<style>
+    .main, .block-container { background:#f0f4f8 !important; }
+    .hid-btn { position:absolute !important; opacity:0 !important;
+               pointer-events:none !important; height:0 !important;
+               width:0 !important; overflow:hidden !important; }
+    </style>""", unsafe_allow_html=True)
+
+    # ── Hidden buttons — กดโดย JS ใน iframe ──
+    btn_keys = []
+    for i, (_, _, target) in enumerate(menus_home):
+        key = f"hbtn_{i}"
+        btn_keys.append(key)
+        st.markdown(f'<div class="hid-btn" id="hid-wrap-{i}">', unsafe_allow_html=True)
+        if st.button(target, key=key):
+            if target == "__LOGOUT__":
+                for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                    st.session_state[k] = "" if k!="logged_in" else False
+                st.query_params.clear()
+            else:
+                st.session_state["_current_page"] = target
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Build iframe HTML ──
     cards_html = ""
-    for emoji, label, target in menus_home:
-        nav_val = urlquote(target)
-        is_out  = target == "__LOGOUT__"
+    for i, (emoji, label, target) in enumerate(menus_home):
+        is_out = target == "__LOGOUT__"
         cbg  = "#fff5f5" if is_out else "#ffffff"
         ibg  = "#fee2e2" if is_out else "#eff6ff"
         lcol = "#dc2626" if is_out else "#1e3a5f"
-        cards_html += f"""<button onclick="goNav('{nav_val}')" style="
+        cards_html += f"""<button onclick="clickBtn({i})" style="
             background:{cbg};border-radius:16px;padding:12px 4px 10px;
             box-shadow:0 2px 10px rgba(0,0,0,0.08);border:1.5px solid #edf2f7;
             cursor:pointer;display:flex;flex-direction:column;
             align-items:center;justify-content:center;
-            min-height:84px;width:100%;font-family:inherit;
-            -webkit-appearance:none;-webkit-tap-highlight-color:rgba(0,0,0,0.05);">
+            min-height:84px;width:100%;font-family:inherit;-webkit-appearance:none;">
           <div style="background:{ibg};border-radius:12px;width:46px;height:46px;
               display:flex;align-items:center;justify-content:center;
               font-size:24px;margin-bottom:6px;">{emoji}</div>
@@ -1433,14 +1449,14 @@ if page == "🏠 หน้าหลัก":
           </div></div>"""
 
     n_rows = (len(menus_home) + 2) // 3
-    iframe_h = 160 + (110 if _role2 != "customer" else 0) + n_rows * 110 + 40
+    iframe_h = 200 + (130 if _role2 != "customer" else 0) + n_rows * 110
 
     html = f"""<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0;}}
-body{{background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 0 16px;}}
-button:active{{transform:scale(0.92);opacity:0.85;}}
+body{{background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 0 8px;}}
+button:active{{transform:scale(0.93);transition:transform 0.1s;}}
 </style></head><body>
 <div style="padding:0 2px;">
   <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
@@ -1462,17 +1478,16 @@ button:active{{transform:scale(0.92);opacity:0.85;}}
   </div>
 </div>
 <script>
-function goNav(target) {{
-  try {{
-    var base = window.top.location.pathname;
-    window.top.location.href = base + '?nav=' + target;
-  }} catch(e) {{
-    try {{
-      window.parent.location.href = window.parent.location.pathname + '?nav=' + target;
-    }} catch(e2) {{
-      window.location.href = '?nav=' + target;
-    }}
+function clickBtn(i) {{
+  // หา hidden button ใน parent document แล้วกด
+  var wrap = window.parent.document.getElementById("hid-wrap-" + i);
+  if (wrap) {{
+    var btn = wrap.querySelector("button");
+    if (btn) {{ btn.click(); return; }}
   }}
+  // fallback: หา button จาก key attribute
+  var btns = window.parent.document.querySelectorAll('button[data-testid="baseButton-secondary"]');
+  if (btns[i]) btns[i].click();
 }}
 </script>
 </body></html>"""
