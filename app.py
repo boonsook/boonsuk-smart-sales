@@ -692,14 +692,53 @@ def log_customer_job(quote: dict):
     )
 
 def delete_job(job_id):
-    """ลบงานจาก Supabase หรือ DataFrame"""
+    """ลบงานจาก Supabase (ถ้ามี) แล้ว clear cache เสมอ"""
     if _use_supabase():
         try:
             sb = _get_supabase()
             sb.table("jobs").delete().eq("id", int(job_id)).execute()
+            st.cache_data.clear()
             return True
         except Exception as e:
             st.warning(f"Supabase delete: {e}")
+            # fallthrough ไปลบ CSV ด้วย
+    # CSV fallback — ลบ row ที่มี id ตรงกัน
+    if os.path.exists(LOG_CSV):
+        try:
+            df = pd.read_csv(LOG_CSV, encoding="utf-8-sig")
+            if "id" in df.columns:
+                df = df[df["id"].astype(str) != str(job_id)].reset_index(drop=True)
+            else:
+                return False
+            df.to_csv(LOG_CSV, index=False, encoding="utf-8-sig")
+            return True
+        except Exception as e:
+            st.warning(f"CSV delete: {e}")
+            return False
+    return False
+
+def delete_service_job(job_id):
+    """ลบงานซ่อมจาก Supabase (ถ้ามี) และ CSV"""
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            sb.table("service_jobs").delete().eq("id", int(job_id)).execute()
+            st.cache_data.clear()
+            return True
+        except Exception as e:
+            st.warning(f"Supabase delete_service: {e}")
+    # CSV fallback
+    if os.path.exists(SERVICE_CSV):
+        try:
+            df = pd.read_csv(SERVICE_CSV, encoding="utf-8-sig")
+            if "id" in df.columns:
+                df = df[df["id"].astype(str) != str(job_id)].reset_index(drop=True)
+            else:
+                return False
+            df.to_csv(SERVICE_CSV, index=False, encoding="utf-8-sig")
+            return True
+        except Exception as e:
+            st.warning(f"CSV delete_service: {e}")
             return False
     return False
 
@@ -1310,159 +1349,190 @@ if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
-    # ── พื้นหลังไล่สีทั้งหน้า ──
+    # ── พื้นหลัง + force 3col mobile ──
     st.markdown("""<style>
-    .main { background: linear-gradient(160deg, #f0f4ff 0%, #e8f0fe 40%, #faf5ff 100%) !important; }
-    .block-container { background: transparent !important; }
+    .main, .block-container { background: #f0f4f8 !important; }
+
+    /* force 3 columns บน mobile สำหรับ home grid */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+        min-width: 0 !important;
+        flex: 1 1 0% !important;
+        width: auto !important;
+    }
+    @media (max-width:768px){
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]{
+            width:33% !important; flex: 0 0 33% !important; min-width:0 !important;
+        }
+    }
+
+    /* White card button base */
+    .hcard > div > button {
+        background: white !important;
+        border: none !important;
+        border-radius: 18px !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05) !important;
+        height: 96px !important;
+        min-height: 96px !important;
+        width: 100% !important;
+        padding: 0 4px !important;
+        transition: box-shadow .15s, transform .12s !important;
+        color: transparent !important;
+        font-size: 0px !important;
+        cursor: pointer !important;
+    }
+    .hcard > div > button:hover {
+        box-shadow: 0 6px 20px rgba(21,101,192,0.18), 0 2px 6px rgba(0,0,0,0.08) !important;
+        transform: translateY(-2px) !important;
+    }
+    .hcard > div > button:active {
+        transform: scale(0.96) !important;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.1) !important;
+    }
+    .hcard > div > button:focus {
+        outline: none !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
+    }
+    /* logout card - red tint */
+    .hcard-logout > div > button {
+        background: #fff5f5 !important;
+        box-shadow: 0 2px 12px rgba(229,57,53,0.1) !important;
+    }
     </style>""", unsafe_allow_html=True)
 
-    # ── Header card ──
+    # ── Header ──
+    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#1a237e 0%,#1565c0 60%,#0288d1 100%);
-        border-radius:20px;padding:20px 22px;margin-bottom:20px;color:white;
+    <div style="background:linear-gradient(135deg,#1a237e 0%,#1976d2 70%,#42a5f5 100%);
+        border-radius:20px;padding:20px 22px;margin-bottom:14px;color:white;
         display:flex;align-items:center;gap:16px;
-        box-shadow:0 6px 24px rgba(13,71,161,0.35);">
-        <img src='data:image/png;base64,{LOGO_B64}' style='width:70px;height:70px;border-radius:50%;
-            object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.5);
-            box-shadow:0 2px 10px rgba(0,0,0,0.2);'>
-        <div>
-            <div style="font-size:13px;opacity:0.85;letter-spacing:0.5px;">สวัสดี,</div>
-            <div style="font-size:24px;font-weight:800;letter-spacing:0.3px;">{_name2} {'👑' if _role2=='admin' else '👔' if _role2=='staff' else '👤'}</div>
-            <div style="font-size:12px;margin-top:3px;opacity:0.75;">{'ผู้ดูแลระบบ' if _role2=='admin' else 'พนักงาน' if _role2=='staff' else 'ลูกค้า'} • ร้านบุญสุขอิเล็กทรอนิกส์</div>
+        box-shadow:0 6px 24px rgba(13,71,161,0.3);">
+        <img src='data:image/png;base64,{LOGO_B64}'
+            style='width:66px;height:66px;border-radius:50%;object-fit:cover;
+            flex-shrink:0;border:3px solid rgba(255,255,255,0.45);'>
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;opacity:0.8;">สวัสดี,</div>
+            <div style="font-size:22px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_name2}</div>
+            <div style="background:rgba(255,255,255,0.2);border-radius:20px;
+                display:inline-block;padding:2px 10px;font-size:11px;margin-top:4px;">{role_badge}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── สถิติเร็ว (admin/staff) ──
+    # ── Stats (admin/staff) ──
     if _role2 != "customer":
-        df_stk = load_stock()
-        df_lg  = load_log()
-        _s1 = len(df_stk); _s2 = len(df_lg); _s3 = len(df_stk[df_stk['stock_qty']>2])
+        df_stk = load_stock(); df_lg = load_log()
+        _s1=len(df_stk); _s2=len(df_lg); _s3=len(df_stk[df_stk["stock_qty"]>2])
+        _s4=len(df_lg[df_lg.get("status","").astype(str).str.contains("รอ",na=False)]) if "status" in df_lg.columns else 0
         st.markdown(f"""
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 16px 0;">
-            <span style="background:white;border-radius:20px;padding:5px 14px;font-size:12px;
-                color:#1a237e;box-shadow:0 1px 6px rgba(0,0,0,0.08);font-weight:600;">
-                📦 สต๊อก <b>{_s1}</b> รุ่น</span>
-            <span style="background:white;border-radius:20px;padding:5px 14px;font-size:12px;
-                color:#1a237e;box-shadow:0 1px 6px rgba(0,0,0,0.08);font-weight:600;">
-                🧾 งาน <b>{_s2}</b> รายการ</span>
-            <span style="background:white;border-radius:20px;padding:5px 14px;font-size:12px;
-                color:#1a237e;box-shadow:0 1px 6px rgba(0,0,0,0.08);font-weight:600;">
-                ✅ มีสต๊อก <b>{_s3}</b> รุ่น</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:white;border-radius:14px;padding:12px 14px;
+              box-shadow:0 1px 6px rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;">
+            <div style="background:#e3f2fd;border-radius:10px;width:38px;height:38px;
+                display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
+            <div><div style="font-size:11px;color:#666;">สต๊อกทั้งหมด</div>
+              <div style="font-size:20px;font-weight:800;color:#1565c0;">{_s1} <span style="font-size:11px;color:#888;">รุ่น</span></div></div>
+          </div>
+          <div style="background:white;border-radius:14px;padding:12px 14px;
+              box-shadow:0 1px 6px rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;">
+            <div style="background:#e8f5e9;border-radius:10px;width:38px;height:38px;
+                display:flex;align-items:center;justify-content:center;font-size:20px;">📋</div>
+            <div><div style="font-size:11px;color:#666;">งานทั้งหมด</div>
+              <div style="font-size:20px;font-weight:800;color:#2e7d32;">{_s2} <span style="font-size:11px;color:#888;">รายการ</span></div></div>
+          </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # ── เมนูไอคอน ──
+    # ── Menu data ──
+    SVGS = {
+        "ใบเสนอราคา":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/><path d="M15 17l2 2 3.5-3.5" stroke="#1565c0" stroke-width="2.2"/></svg>', "#e3f2fd"),
+        "รับงานซ่อม":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#7b1fa2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>', "#f3e5f5"),
+        "จัดการงาน":   ('<svg viewBox="0 0 24 24" fill="none" stroke="#0277bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M8 13l2.5 2.5L16 10"/></svg>', "#e1f5fe"),
+        "สต๊อกแอร์":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#e65100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', "#fff3e0"),
+        "Dashboard":   ('<svg viewBox="0 0 24 24" fill="none" stroke="#00695c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>', "#e0f2f1"),
+        "คำนวณ BTU":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><circle cx="9" cy="11" r="1" fill="#1565c0"/><circle cx="12" cy="11" r="1" fill="#1565c0"/><circle cx="15" cy="11" r="1" fill="#1565c0"/><circle cx="9" cy="15" r="1" fill="#1565c0"/><circle cx="12" cy="15" r="1" fill="#1565c0"/><circle cx="15" cy="15" r="1" fill="#1565c0"/><circle cx="9" cy="19" r="1" fill="#1565c0"/><circle cx="12" cy="19" r="1" fill="#1565c0"/></svg>', "#e3f2fd"),
+        "Error Code":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="#c62828"/></svg>', "#ffebee"),
+        "นำเข้า/ส่งออก": ('<svg viewBox="0 0 24 24" fill="none" stroke="#37474f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="12"/></svg>', "#eceff1"),
+        "ออกจากระบบ": ('<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>', "#ffebee"),
+        "ขอใบเสนอราคา": ('<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>', "#e3f2fd"),
+        "แจ้งซ่อม":   ('<svg viewBox="0 0 24 24" fill="none" stroke="#7b1fa2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>', "#f3e5f5"),
+        "งานของฉัน":  ('<svg viewBox="0 0 24 24" fill="none" stroke="#0277bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M8 13l2.5 2.5L16 10"/></svg>', "#e1f5fe"),
+    }
+
     if _role2 == "customer":
-        # ลูกค้า: 3 เมนูหลัก + logout  — layout 3 คอลัมน์
         menus_home = [
-            ("🧾", "ขอใบเสนอราคา",  "🧾 ขอใบเสนอราคาแอร์",   "linear-gradient(135deg,#667eea,#764ba2)"),
-            ("🛠️", "แจ้งซ่อม",      "🛠️ แจ้งซ่อม/บริการ",   "linear-gradient(135deg,#f093fb,#f5576c)"),
-            ("📋", "งานของฉัน",     "📋 งานของฉัน",           "linear-gradient(135deg,#4facfe,#00f2fe)"),
-            ("🧮", "คำนวณ BTU",     "🧮 คำนวณ BTU",           "linear-gradient(135deg,#43e97b,#38f9d7)"),
-            ("🚪", "ออกจากระบบ",    "__LOGOUT__",              "linear-gradient(135deg,#f7971e,#ffd200)"),
+            ("ขอใบเสนอราคา", "🧾 ขอใบเสนอราคาแอร์"),
+            ("แจ้งซ่อม",     "🛠️ แจ้งซ่อม/บริการ"),
+            ("งานของฉัน",    "📋 งานของฉัน"),
+            ("คำนวณ BTU",    "🧮 คำนวณ BTU"),
+            ("ออกจากระบบ",   "__LOGOUT__"),
         ]
-        n_cols = 3
     else:
         menus_home = [
-            ("🧾", "ใบเสนอราคา",   "🧾 สร้างใบเสนอราคา",     "linear-gradient(135deg,#667eea,#764ba2)"),
-            ("🛠️", "รับงานซ่อม",   "🛠️ รับงานซ่อม/บริการ",  "linear-gradient(135deg,#f093fb,#f5576c)"),
-            ("📋", "จัดการงาน",    "📋 จัดการงาน / สถานะ",   "linear-gradient(135deg,#4facfe,#00f2fe)"),
-            ("📦", "สต๊อกแอร์",    "📦 จัดการสต๊อก",          "linear-gradient(135deg,#fa709a,#fee140)"),
-            ("📊", "Dashboard",    "📊 Dashboard",             "linear-gradient(135deg,#a18cd1,#fbc2eb)"),
-            ("🧮", "คำนวณ BTU",    "🧮 คำนวณ BTU",            "linear-gradient(135deg,#43e97b,#38f9d7)"),
-            ("🔧", "Error Code",   "🔧 คลังเออเร่อแอร์",      "linear-gradient(135deg,#fd7043,#ff8a65)"),
+            ("ใบเสนอราคา",  "🧾 สร้างใบเสนอราคา"),
+            ("รับงานซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
+            ("จัดการงาน",   "📋 จัดการงาน / สถานะ"),
+            ("สต๊อกแอร์",   "📦 จัดการสต๊อก"),
+            ("Dashboard",    "📊 Dashboard"),
+            ("คำนวณ BTU",    "🧮 คำนวณ BTU"),
+            ("Error Code",   "🔧 คลังเออเร่อแอร์"),
         ]
         if _role2 == "admin":
-            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล","linear-gradient(135deg,#78909c,#b0bec5)"))
-        menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__","linear-gradient(135deg,#f7971e,#ffd200)"))
-        n_cols = 3
+            menus_home.append(("นำเข้า/ส่งออก", "⚙️ นำเข้า/ส่งออกข้อมูล"))
+        menus_home.append(("ออกจากระบบ", "__LOGOUT__"))
 
-    # ── สร้าง CSS per-button gradient (ปุ่ม IS ไอคอน — ไม่มี overlay) ──
-    icon_css = ["<style>"]
-    icon_css.append("""
-    /* ─── override: บังคับ 3-col บน mobile สำหรับ icon grid ─── */
-    @media (max-width: 768px) {
-        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-            width: 33.33% !important;
-            flex: 0 0 33.33% !important;
-            min-width: 0 !important;
-        }
-        /* ปรับขนาดไอคอนให้พอดีบนมือถือ */
-        [class^="app-ic-"] > div > button,
-        [class*=" app-ic-"] > div > button {
-            height: 72px !important;
-            min-height: 72px !important;
-            font-size: 30px !important;
-        }
-        .app-icon-label-home { font-size: 11px !important; }
-    }
-    /* base style สำหรับทุก app icon button */
-    [class^="app-ic-"] > div > button,
-    [class*=" app-ic-"] > div > button {
-        height: 86px !important;
-        min-height: 86px !important;
-        border-radius: 22px !important;
-        border: none !important;
-        color: white !important;
-        font-size: 38px !important;
-        line-height: 1 !important;
-        padding: 0 !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
-        transition: filter 0.15s, box-shadow 0.15s !important;
-        width: 100% !important;
-    }
-    [class^="app-ic-"] > div > button:hover,
-    [class*=" app-ic-"] > div > button:hover {
-        filter: brightness(1.1) !important;
-        box-shadow: 0 6px 22px rgba(0,0,0,0.26) !important;
-    }
-    [class^="app-ic-"] > div > button:active,
-    [class*=" app-ic-"] > div > button:active {
-        filter: brightness(0.92) !important;
-        transform: scale(0.97) !important;
-    }
-    /* ซ่อน ripple / focus outline */
-    [class^="app-ic-"] > div > button:focus,
-    [class*=" app-ic-"] > div > button:focus {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
-        outline: none !important;
-    }
-    .app-icon-label-home {
-        text-align:center; font-size:12px; font-weight:600;
-        color:#1a237e; margin:-2px 0 10px 0; line-height:1.3;
-    }
-    """)
-    for gi, (icon, label, target, grad) in enumerate(menus_home):
-        icon_css.append(f'.app-ic-{gi} > div > button {{ background: {grad} !important; }}')
-    icon_css.append("</style>")
-    st.markdown("\n".join(icon_css), unsafe_allow_html=True)
-
+    n_cols = 3
     rows = [menus_home[i:i+n_cols] for i in range(0, len(menus_home), n_cols)]
+
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
     for row in rows:
-        padded = row + [None] * (n_cols - len(row))
-        cols = st.columns(n_cols)
-        for col_i, item in enumerate(padded):
-            with cols[col_i]:
+        padded = row + [None]*(n_cols - len(row))
+        cols = st.columns(n_cols, gap="small")
+        for ci, item in enumerate(padded):
+            with cols[ci]:
                 if item is None:
                     st.empty(); continue
-                icon, label, target, grad = item
-                gi = menus_home.index(item)
-                # ── ปุ่ม = ไอคอนเลย กดได้ทันที ──
-                st.markdown(f'<div class="app-ic-{gi}">', unsafe_allow_html=True)
-                clicked = st.button(icon, key=f"hnav_{gi}_{col_i}", use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-                # ── label ข้างล่าง ──
-                st.markdown(
-                    f'<div class="app-icon-label-home">{label}</div>',
-                    unsafe_allow_html=True)
-                if clicked:
-                    if target == "__LOGOUT__":
+                label, target = item
+                svg_icon, bg_color = SVGS.get(label, ('<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#1565c0" fill="none" stroke-width="2"/></svg>', "#e3f2fd"))
+                is_logout = (target == "__LOGOUT__")
+                card_extra = "hcard-logout" if is_logout else ""
+                # ── HTML card visual ──
+                st.markdown(f"""
+                <div style="text-align:center;padding:4px 2px 0 2px;pointer-events:none;">
+                  <div style="background:{bg_color};border-radius:16px;width:52px;height:52px;
+                    margin:0 auto 7px auto;display:flex;align-items:center;justify-content:center;">
+                    <div style="width:30px;height:30px;">{svg_icon}</div>
+                  </div>
+                  <div style="font-size:11.5px;font-weight:700;color:{"#c62828" if is_logout else "#263238"};
+                    line-height:1.3;word-break:keep-all;">{label}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                # ── Transparent overlay button ──
+                st.markdown(f'''<style>
+                div[data-testid="stButton"]:has(button[key="hm_{ci}_{target}"]) > div > button,
+                .hcard-wrap-{ci}-{abs(hash(target))%9999} > div > button {{
+                    background: transparent !important;
+                    border: none !important; box-shadow: none !important;
+                    height: 88px !important; margin-top: -92px !important;
+                    position: relative !important; z-index: 5 !important;
+                    border-radius: 18px !important; width: 100% !important;
+                    color: transparent !important; font-size: 0 !important;
+                    opacity: 0.01 !important;
+                }}
+                .hcard-wrap-{ci}-{abs(hash(target))%9999} > div > button:hover {{
+                    opacity: 0.06 !important; background: rgba(21,101,192,0.08) !important;
+                }}
+                </style>''', unsafe_allow_html=True)
+                st.markdown(f'<div class="hcard-wrap-{ci}-{abs(hash(target))%9999}">', unsafe_allow_html=True)
+                if st.button("tap", key=f"hm_{ci}_{target}", use_container_width=True):
+                    if is_logout:
                         for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-                            st.session_state[k] = "" if k != "logged_in" else False
+                            st.session_state[k] = "" if k!="logged_in" else False
                         st.query_params.clear(); st.rerun()
                     else:
                         st.session_state["_current_page"] = target; st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
@@ -1768,14 +1838,16 @@ elif page == "📋 จัดการงาน / สถานะ":
                     if st.session_state.get("role") == "admin":
                         if u5.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
                             _job_id = job.get("id") if isinstance(job, dict) else job.to_dict().get("id")
-                            if _job_id and delete_job(int(_job_id)):
-                                st.cache_data.clear()
-                                st.warning("🗑️ ลบงานแล้ว"); st.rerun()
+                            if _job_id:
+                                delete_job(int(_job_id))
                             else:
+                                # ไม่มี id — ลบจาก index ใน DataFrame
                                 df_log = df_log.drop(index=idx).reset_index(drop=True)
-                                save_log(df_log); st.warning("ลบแล้ว"); st.rerun()
+                                save_log(df_log)
+                            st.cache_data.clear()
+                            st.warning("🗑️ ลบงานแล้ว"); st.rerun()
                     else:
-                        u5.markdown("<div style='font-size:11px;color:#aaa;text-align:center;padding-top:8px;'>🔒 admin เท่านั้น</div>", unsafe_allow_html=True)
+                        u5.markdown("<div style='font-size:11px;color:#aaa;text-align:center;padding-top:8px;'>🔒 admin</div>", unsafe_allow_html=True)
 
             st.divider()
             if st.button("📊 Export Excel รายงานแอร์", use_container_width=True, type="primary"):
@@ -1860,8 +1932,14 @@ elif page == "📋 จัดการงาน / สถานะ":
 
                     if st.session_state.get("role") == "admin":
                         if st.button("🗑️ ลบงานนี้", key=f"sv2_del_{idx2}", use_container_width=True):
-                            df_sv2 = df_sv2.drop(index=idx2).reset_index(drop=True)
-                            save_service(df_sv2); st.warning("ลบแล้ว"); st.rerun()
+                            _sv_id = r2.get("id")
+                            if _sv_id:
+                                delete_service_job(int(_sv_id))
+                            else:
+                                df_sv2 = df_sv2.drop(index=idx2).reset_index(drop=True)
+                                save_service(df_sv2)
+                            st.cache_data.clear()
+                            st.warning("🗑️ ลบงานแล้ว"); st.rerun()
                     else:
                         st.markdown("<div style='font-size:11px;color:#aaa;text-align:center;padding:4px 0 8px 0;'>🔒 เฉพาะ admin ลบได้</div>", unsafe_allow_html=True)
 
