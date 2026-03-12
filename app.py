@@ -1386,46 +1386,55 @@ if page == "🏠 หน้าหลัก":
     # ── inject CSS into parent document via iframe (bypass Streamlit column CSS) ──
     st_html.html("""
     <script>
-    (function() {
+    (function apply() {
       var css = `
+        /* force 3-col no-overflow */
         [data-testid="stHorizontalBlock"] {
           flex-wrap: nowrap !important;
-          gap: 8px !important;
+          overflow: hidden !important;
+          gap: 6px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
         }
         [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-          flex: 1 1 0% !important;
+          flex: 0 0 calc(33.33vw - 16px) !important;
+          width: calc(33.33vw - 16px) !important;
           min-width: 0 !important;
-          padding: 0 !important;
+          max-width: calc(33.33vw - 16px) !important;
           overflow: hidden !important;
+          padding: 0 !important;
+          box-sizing: border-box !important;
         }
-        .home-btn > div > button {
+        /* home card buttons */
+        .home-btn > div > button,
+        .home-btn-logout > div > button {
           background: white !important;
           border: 1.5px solid #e8edf5 !important;
           border-radius: 16px !important;
           box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
-          height: 88px !important;
-          min-height: 88px !important;
+          height: 86px !important;
+          min-height: 86px !important;
+          max-height: 86px !important;
           width: 100% !important;
-          font-size: 30px !important;
+          font-size: 28px !important;
           padding: 0 !important;
           color: #000 !important;
-          transition: transform 0.12s !important;
         }
-        .home-btn > div > button:active { transform: scale(0.91) !important; }
-        .home-btn > div > button:focus { outline: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important; }
-        .home-btn > div > button p { font-size: 30px !important; margin: 0 !important; }
+        .home-btn > div > button p,
+        .home-btn-logout > div > button p { font-size: 28px !important; margin: 0 !important; }
+        .home-btn > div > button:focus,
+        .home-btn-logout > div > button:focus { outline:none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important; }
         .home-btn-logout > div > button { background: #fff5f5 !important; }
-        .home-lbl { text-align:center; font-size:11px; font-weight:700; color:#1e3a5f; margin:-2px 0 6px; line-height:1.3; }
+        .home-lbl { text-align:center; font-size:11px; font-weight:700; color:#1e3a5f; margin:-2px 0 6px; line-height:1.3; word-break:keep-all; }
         .home-lbl-red { color:#dc2626 !important; }
-        .stButton:not(.home-btn):not(.home-btn-logout) > button {
-          height: 3rem !important; font-size: 16px !important;
-        }
       `;
-      var el = window.parent.document.getElementById('boonsuk-home-css');
+      var doc = window.parent.document;
+      var el = doc.getElementById('boonsuk-home-css');
       if (!el) {
-        el = window.parent.document.createElement('style');
+        el = doc.createElement('style');
         el.id = 'boonsuk-home-css';
-        window.parent.document.head.appendChild(el);
+        doc.head.appendChild(el);
       }
       el.innerHTML = css;
     })();
