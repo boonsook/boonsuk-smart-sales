@@ -1345,16 +1345,14 @@ if "_forced_page" in st.session_state:
 _qnav = st.query_params.get("nav", "")
 if _qnav and _qnav in _menus:
     st.session_state["_current_page"] = _qnav
-    st.query_params.pop("nav")
+    # no pop - avoid double rerun
 
 if "_current_page" not in st.session_state or st.session_state["_current_page"] not in _menus:
     st.session_state["_current_page"] = "🏠 หน้าหลัก"
 
 page = st.session_state["_current_page"]
 
-df_all = load_stock()
-
-# (ย้ายแจ้งเตือนสต๊อกใกล้หมดไปแสดงเฉพาะหน้าจัดการสต๊อกแล้ว)
+# df_all loaded per-page only when needed
 
 # ══════════════════════════════════════════════
 # PAGE 0: HOME GRID
@@ -1559,6 +1557,7 @@ elif page == "🧮 คำนวณ BTU":
 if page == "🧾 สร้างใบเสนอราคา":
     st.title("🧾 สร้างใบเสนอราคา")
     _back_home()
+    df_all = load_stock()
 
     with st.expander("👤 ขั้นตอน 1 — ข้อมูลลูกค้า", expanded=True):
         c1, c2 = st.columns(2)
@@ -2092,6 +2091,7 @@ elif page == "📋 จัดการงาน / สถานะ":
 elif page == "📦 จัดการสต๊อก":
     st.title("📦 จัดการสต๊อกแอร์")
     _back_home()
+    df_all = load_stock()
     # แจ้งเตือนสต๊อกใกล้หมด (เฉพาะหน้านี้)
     low_s = df_all[df_all["stock_qty"] <= LOW_STOCK_THRESHOLD]
     if not low_s.empty:
