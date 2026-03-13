@@ -1435,11 +1435,13 @@ if page == "🏠 หน้าหลัก":
     # ── st.button (navigation 100%) + CSS inject via st_html ──
     _qs_tok = st.query_params.get("s", "")
 
-    # inject CSS เข้า parent document โดยตรง — ชนะ Streamlit inline style ได้
+    # inject CSS + JS แยก emoji/label ใน parent document
     st_html.html("""<script>
 (function(){
   try {
     var d = window.parent.document;
+
+    // CSS
     var id = '_hg3col';
     if(d.getElementById(id)) d.getElementById(id).remove();
     var s = d.createElement('style');
@@ -1452,32 +1454,58 @@ if page == "🏠 หน้าหลัก":
         width: 100% !important;
       }
       [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: none !important;
-        flex: none !important;
-        padding: 0 !important;
+        width: 100% !important; min-width: 0 !important;
+        max-width: none !important; flex: none !important; padding: 0 !important;
       }
-      [data-testid="stHorizontalBlock"] > [data-testid="column"] > div {
-        width: 100% !important;
-      }
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] > div { width: 100% !important; }
       [data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] {
-        width: 100% !important;
-        min-height: 80px !important;
-        border-radius: 14px !important;
-        border: 1.5px solid #dbeafe !important;
-        background: white !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #1e3a5f !important;
-        white-space: pre-wrap !important;
-        line-height: 1.4 !important;
-        padding: 8px 2px !important;
+        width: 100% !important; min-height: 86px !important; height: 86px !important;
+        border-radius: 14px !important; border: 1.5px solid #dbeafe !important;
+        background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
+        padding: 4px 2px !important; display: flex !important;
+        align-items: center !important; justify-content: center !important;
       }
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] p {
+        margin: 0 !important; text-align: center !important;
+        display: flex !important; flex-direction: column !important;
+        align-items: center !important; gap: 2px !important;
+        white-space: pre-wrap !important;
+      }
+      .hg-emoji { font-size: 26px !important; line-height: 1 !important; display: block !important; }
+      .hg-label { font-size: 11px !important; font-weight: 700 !important;
+                  color: #1e3a5f !important; line-height: 1.25 !important;
+                  display: block !important; word-break: keep-all !important; }
+      .hg-label-logout { color: #dc2626 !important; }
     `;
     d.head.appendChild(s);
-  } catch(e) { console.log('css inject err', e); }
+
+    // JS: แยก emoji/label — รอให้ Streamlit render เสร็จก่อน
+    function fixButtons() {
+      var btns = d.querySelectorAll('[data-testid="stHorizontalBlock"] button[kind="secondary"] p');
+      btns.forEach(function(p) {
+        if (p.querySelector('.hg-emoji')) return; // already done
+        var txt = p.innerText || p.textContent;
+        var lines = txt.split('\\n').filter(function(l){ return l.trim() !== ''; });
+        if (lines.length < 2) return;
+        var emoji = lines[0];
+        var label = lines.slice(1).join(' ');
+        var isLogout = label.includes('ออกจากระบบ');
+        p.innerHTML =
+          '<span class="hg-emoji">' + emoji + '</span>' +
+          '<span class="hg-label' + (isLogout ? ' hg-label-logout' : '') + '">' + label + '</span>';
+      });
+    }
+
+    // รัน 3 ครั้งเผื่อ Streamlit render ช้า
+    setTimeout(fixButtons, 300);
+    setTimeout(fixButtons, 800);
+    setTimeout(fixButtons, 1500);
+
+    // observe DOM changes
+    var obs = new MutationObserver(function(){ setTimeout(fixButtons, 100); });
+    obs.observe(d.body, { childList: true, subtree: true });
+
+  } catch(e) { console.log('hg err', e); }
 })();
 </script>""", height=0)
 
