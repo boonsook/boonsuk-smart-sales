@@ -1328,6 +1328,7 @@ if _role == "customer":
         "🛠️ แจ้งซ่อม/บริการ",
         "📋 งานของฉัน",
         "🧮 คำนวณ BTU",
+        "🔧 คลังเออเร่อแอร์",
     ]
 else:
     _menus = [
@@ -1440,98 +1441,116 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: st.button navigation + CSS 3-col grid ──
+    # ── Home Grid: HTML card visual + invisible st.button overlay ──
+    # การ์ดสวย (st.markdown) + st.button โปร่งใส position:absolute ซ้อนทับ
+    # ผู้ใช้กดการ์ด = กด button จริง → navigation ทำงาน 100%
+
     st.markdown("""<style>
-/* force 3-col grid — override Streamlit inline width styles */
+/* column เป็น relative container */
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 8px !important;
     width: 100% !important;
-    flex-wrap: unset !important;
 }
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    flex: none !important;
-    padding: 0 !important;
+    width: auto !important; min-width: 0 !important;
+    max-width: none !important; flex: none !important;
+    padding: 0 !important; position: relative !important;
 }
-/* button style */
-section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {
-    width: 100% !important;
-    min-height: 84px !important;
-    height: 84px !important;
-    border-radius: 16px !important;
-    border: 1.5px solid #dbeafe !important;
-    background: white !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-    font-size: 30px !important;
-    padding: 8px 4px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+/* invisible button overlay — ครอบทับการ์ดทั้งหมด */
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] [data-testid="stButton"] {
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
+    right: 0 !important; bottom: 0 !important;
+    z-index: 10 !important;
+    margin: 0 !important; padding: 0 !important;
 }
-/* label */
-.hg-lbl { text-align:center; font-size:11px; font-weight:700;
-           color:#1e3a5f; margin:-4px 0 4px; line-height:1.2; }
-.hg-lbl.lo { color:#dc2626; }
-.hg-sub  { text-align:center; font-size:9px; color:#64748b; margin:-8px 0 0; }
-.hg-num  { text-align:center; font-size:13px; font-weight:800;
-           color:#1e3a8a; margin:-2px 0 4px; }
-/* stat button smaller */
-.hg-stat-row button[kind="secondary"] {
-    min-height: 62px !important; height: 62px !important;
-    font-size: 22px !important;
-    border-color: #dbeafe !important;
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+    width: 100% !important; height: 100% !important;
+    opacity: 0 !important; cursor: pointer !important;
+    border: none !important; background: transparent !important;
+    min-height: unset !important;
 }
+/* visual cards */
+.hg-card {
+    background: white; border: 1.5px solid #dbeafe;
+    border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 6px;
+    min-height: 90px; padding: 10px 4px;
+    text-align: center; user-select: none;
+    transition: opacity 0.1s;
+}
+.hg-card:active { opacity: 0.7; }
+.hg-logout { background: #fff5f5 !important; border-color: #fecaca !important; }
+.hg-em { font-size: 30px; line-height: 1; display: block; }
+.hg-lb { font-size: 11px; font-weight: 700; color: #1e3a5f;
+          line-height: 1.2; display: block; }
+.hg-logout .hg-lb { color: #dc2626; }
+/* stat cards */
+.hg-stat {
+    background: white; border: 1.5px solid #dbeafe;
+    border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 68px; padding: 8px 4px; text-align: center;
+    user-select: none; gap: 1px;
+}
+.hg-stat .hg-em { font-size: 20px; }
+.hg-st { font-size: 9px; color: #64748b; display: block; }
+.hg-num { font-size: 13px; font-weight: 800; color: #1e3a8a; display: block; }
 </style>""", unsafe_allow_html=True)
 
-    # Stat row
+    # ── Stat row ──
     if _role2 != "customer":
-        st.markdown('<div class="hg-stat-row">', unsafe_allow_html=True)
         sc1, sc2, sc3 = st.columns(3)
-        with sc1:
-            if st.button("📦", key="hs_stk", use_container_width=True):
-                st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-            st.markdown('<p class="hg-sub">สต๊อก</p>', unsafe_allow_html=True)
-            st.markdown('<p class="hg-num">%d รุ่น</p>' % _s1, unsafe_allow_html=True)
-        with sc2:
-            if st.button("⏳", key="hs_pend", use_container_width=True):
-                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('<p class="hg-sub">ค้างงาน</p>', unsafe_allow_html=True)
-            st.markdown('<p class="hg-num">%d งาน</p>' % _total_pend, unsafe_allow_html=True)
-        with sc3:
-            if st.button("✅", key="hs_cls", use_container_width=True):
-                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('<p class="hg-sub">ปิดแล้ว</p>', unsafe_allow_html=True)
-            st.markdown('<p class="hg-num">%d งาน</p>' % _total_closed, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        _stat_items = [
+            (sc1, "📦", "สต๊อก", "%d รุ่น" % _s1, "hs_stk", "📦 จัดการสต๊อก"),
+            (sc2, "⏳", "ค้าง",  "%d งาน" % _total_pend, "hs_pend", "📋 จัดการงาน / สถานะ"),
+            (sc3, "✅", "ปิดแล้ว","%d งาน" % _total_closed,"hs_cls","📋 จัดการงาน / สถานะ"),
+        ]
+        for _col, _em, _st, _num, _key, _tgt in _stat_items:
+            with _col:
+                st.markdown(
+                    '<div class="hg-stat">'
+                    '<span class="hg-em">'+_em+'</span>'
+                    '<span class="hg-st">'+_st+'</span>'
+                    '<span class="hg-num">'+_num+'</span>'
+                    '</div>', unsafe_allow_html=True)
+                if st.button("​", key=_key, use_container_width=True):
+                    st.session_state["_current_page"] = _tgt; st.rerun()
 
-    # Menu grid
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ── Menu grid ──
     _padded = list(menus_home)
     while len(_padded) % 3 != 0:
         _padded.append(None)
+
     for _rs in range(0, len(_padded), 3):
-        c1, c2, c3 = st.columns(3)
-        for _ci, _col in zip(range(3), [c1, c2, c3]):
+        _cols = st.columns(3)
+        for _ci, _col in zip(range(3), _cols):
             _itm = _padded[_rs + _ci]
             with _col:
                 if _itm is None:
                     st.empty()
                 else:
                     _em, _lb, _tgt = _itm
-                    is_lo = _tgt == "__LOGOUT__"
-                    if st.button(_em, key="hm_%d" % (_rs+_ci), use_container_width=True):
-                        if is_lo:
+                    _lo = _tgt == "__LOGOUT__"
+                    _cls = "hg-card hg-logout" if _lo else "hg-card"
+                    st.markdown(
+                        '<div class="'+_cls+'">'
+                        '<span class="hg-em">'+_em+'</span>'
+                        '<span class="hg-lb">'+_lb+'</span>'
+                        '</div>', unsafe_allow_html=True)
+                    if st.button("​", key="hm_%d"%(_rs+_ci), use_container_width=True):
+                        if _lo:
                             for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                                 st.session_state[k] = "" if k != "logged_in" else False
                             st.query_params.clear()
                         else:
                             st.session_state["_current_page"] = _tgt
                         st.rerun()
-                    lc = "hg-lbl lo" if is_lo else "hg-lbl"
-                    st.markdown('<p class="%s">%s</p>' % (lc, _lb), unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
