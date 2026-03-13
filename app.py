@@ -1432,50 +1432,105 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: HTML grid + window.top.location ──
-    import urllib.parse as _up
-    _qs_tok = st.query_params.get("s", "")
+    # ── Home Grid: st.button จริง (ซ่อน) + HTML cards สวย click ปุ่มจริง ──
 
-    def _nav_js(target):
-        if target == "__LOGOUT__":
-            return "window.top.location.href='https://boonsuk-sales.onrender.com/'"
-        import urllib.parse as up
-        return "window.top.location.href='https://boonsuk-sales.onrender.com/?s=" + _qs_tok + "&nav=" + up.quote(target) + "'"
-
-    stat_html = ""
+    # --- Step 1: build menu list + assign numeric keys ---
+    _stat_items = []
     if _role2 != "customer":
-        def _scard(em, lb, val, tgt):
-            return (f'<div class="hg-stat" onclick="{_nav_js(tgt)}">' +
-                    f'<span class="hg-em">{em}</span>' +
-                    f'<span class="hg-st">{lb}</span>' +
-                    f'<strong>{val}</strong></div>')
-        stat_html = ('<div class="hg-stats">' +
-            _scard("📦","สต๊อก",f"{_s1} รุ่น","📦 จัดการสต๊อก") +
-            _scard("⏳","ค้าง",f"{_total_pend} งาน","📋 จัดการงาน / สถานะ") +
-            _scard("✅","ปิดแล้ว",f"{_total_closed} งาน","📋 จัดการงาน / สถานะ") +
-            '</div>')
+        _stat_items = [
+            ("n0", "📦", "สต๊อก", f"{_s1} รุ่น", "📦 จัดการสต๊อก"),
+            ("n1", "⏳", "ค้าง",  f"{_total_pend} งาน", "📋 จัดการงาน / สถานะ"),
+            ("n2", "✅", "ปิดแล้ว", f"{_total_closed} งาน", "📋 จัดการงาน / สถานะ"),
+        ]
 
-    grid_html = '<div class="hg-grid">'
-    for emoji, label, target in menus_home:
+    _menu_items = []
+    for _mi, (emoji, label, target) in enumerate(menus_home):
+        _menu_items.append((f"m{_mi}", emoji, label, target))
+
+    # --- Step 2: CSS inject ซ่อนปุ่มจริง แต่ยังคลิกได้ ---
+    st_html.html("""<script>
+(function(){
+  try {
+    var d = window.parent.document;
+    var sid = '_hnav_hide';
+    if(d.getElementById(sid)) d.getElementById(sid).remove();
+    var s = d.createElement('style');
+    s.id = sid;
+    s.textContent = `
+      .hnav-hidden-row [data-testid="stHorizontalBlock"],
+      .hnav-hidden-row [data-testid="stHorizontalBlock"] * {
+        position:fixed!important; top:-9999px!important; left:-9999px!important;
+        width:1px!important; height:1px!important; overflow:hidden!important;
+        pointer-events:none!important; opacity:0!important;
+      }
+    `;
+    d.head.appendChild(s);
+  } catch(e){}
+})();
+</script>""", height=0)
+
+    # --- Step 3: render ปุ่มจริง (ซ่อน) ---
+    st.markdown('<div class="hnav-hidden-row">', unsafe_allow_html=True)
+
+    for key, em, lb, val, tgt in _stat_items:
+        if st.button(key, key=f"hn_{key}", use_container_width=True):
+            st.session_state["_current_page"] = tgt; st.rerun()
+
+    _padded = list(_menu_items)
+    while len(_padded) % 3 != 0:
+        _padded.append(None)
+    for _rs in range(0, len(_padded), 3):
+        _cols = st.columns(3)
+        for _ci, _col in enumerate(_cols):
+            _itm = _padded[_rs + _ci]
+            with _col:
+                if _itm is None:
+                    st.empty()
+                else:
+                    key, emoji, label, target = _itm
+                    if st.button(key, key=f"hn_{key}", use_container_width=True):
+                        if target == "__LOGOUT__":
+                            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                                st.session_state[k] = "" if k != "logged_in" else False
+                            st.query_params.clear()
+                        else:
+                            st.session_state["_current_page"] = target
+                        st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Step 4: HTML cards สวย + JS click ปุ่มจริงใน parent ---
+    _shtml = ""
+    if _stat_items:
+        _shtml = '<div class="hg-stats">'
+        for key, em, lb, val, tgt in _stat_items:
+            _shtml += (f'<div class="hg-stat" onclick="clickNav(\'{key}\')">' +
+                       f'<span class="hg-em">{em}</span>' +
+                       f'<span class="hg-st">{lb}</span>' +
+                       f'<strong>{val}</strong></div>')
+        _shtml += '</div>'
+
+    _ghtml = '<div class="hg-grid">'
+    for key, emoji, label, target in _menu_items:
         is_lo = target == "__LOGOUT__"
         cls = "hg-card hg-logout" if is_lo else "hg-card"
-        grid_html += (f'<div class="{cls}" onclick="{_nav_js(target)}">' +
-                      f'<span class="hg-em">{emoji}</span>' +
-                      f'<span class="hg-lb">{label}</span></div>')
-    grid_html += '</div>'
+        _ghtml += (f'<div class="{cls}" onclick="clickNav(\'{key}\')">' +
+                   f'<span class="hg-em">{emoji}</span>' +
+                   f'<span class="hg-lb">{label}</span></div>')
+    _ghtml += '</div>'
 
-    n_rows = (len(menus_home) + 2) // 3
-    stat_h = 82 if _role2 != "customer" else 0
-    total_h = stat_h + n_rows * 96 + 10
+    _nr = (len(_menu_items) + 2) // 3
+    _sh = 82 if _stat_items else 0
+    _th = _sh + _nr * 96 + 10
 
-    _css = """
-<style>
+    _css = """<style>
 body{margin:0;padding:0;}
 .hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
 .hg-stat{background:#fff;border:1.5px solid #dbeafe;border-radius:14px;
   padding:8px 4px;text-align:center;cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.07);
-  display:flex;flex-direction:column;align-items:center;gap:1px;}
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  -webkit-tap-highlight-color:transparent;}
 .hg-stat:active{background:#eff6ff;}
 .hg-stat .hg-em{font-size:20px;line-height:1;}
 .hg-stat .hg-st{font-size:9px;color:#64748b;}
@@ -1485,15 +1540,39 @@ body{margin:0;padding:0;}
   padding:10px 4px;text-align:center;cursor:pointer;
   box-shadow:0 2px 8px rgba(0,0,0,0.08);
   display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:6px;min-height:82px;}
-.hg-card:active{background:#eff6ff;}
+  justify-content:center;gap:6px;min-height:82px;
+  -webkit-tap-highlight-color:transparent;}
+.hg-card:active{opacity:0.7;}
 .hg-logout{background:#fff5f5!important;border-color:#fecaca!important;}
 .hg-em{font-size:28px;line-height:1;display:block;}
 .hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
 .hg-logout .hg-lb{color:#dc2626;}
 </style>"""
 
-    st_html.html(_css + stat_html + grid_html, height=total_h)
+    _js = """<script>
+function clickNav(key) {
+  try {
+    var d = window.parent.document;
+    var btns = d.querySelectorAll('button[kind="secondary"] p, button p');
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].textContent.trim() === key) {
+        btns[i].closest('button').dispatchEvent(new MouseEvent('click', {bubbles:true}));
+        return;
+      }
+    }
+    // fallback: search all buttons
+    var allbtns = d.querySelectorAll('button');
+    for (var j = 0; j < allbtns.length; j++) {
+      if (allbtns[j].textContent.trim() === key) {
+        allbtns[j].dispatchEvent(new MouseEvent('click', {bubbles:true}));
+        return;
+      }
+    }
+  } catch(e) { console.log('nav err', e); }
+}
+</script>"""
+
+    st_html.html(_css + _shtml + _ghtml + _js, height=_th)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
