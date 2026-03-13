@@ -2004,7 +2004,7 @@ elif page == "📋 จัดการงาน / สถานะ":
                         font-weight:700;font-size:13px;">💬 LINE</a>''',
                         unsafe_allow_html=True)
                     with st.expander("📝 ดูข้อความ LINE", expanded=False):
-                        st.text_area("", value=_jlt, height=200, key=f"jlt_{idx}")
+                        st.text_area("📝 หมายเหตุ", value=_jlt, height=200, key=f"jlt_{idx}", label_visibility="collapsed")
 
                     if st.session_state.get("role") == "admin":
                         if u5.button("🗑️ ลบ", key=f"del_{idx}", use_container_width=True):
@@ -2099,7 +2099,7 @@ elif page == "📋 จัดการงาน / สถานะ":
                         font-weight:700;font-size:12px;">💬 LINE</a>''',
                         unsafe_allow_html=True)
                     with st.expander("📝 ดูข้อความ LINE", expanded=False):
-                        st.text_area("", value=_slt, height=200, key=f"slt_{idx2}")
+                        st.text_area("📝 หมายเหตุ", value=_slt, height=200, key=f"slt_{idx2}", label_visibility="collapsed")
 
                     if st.session_state.get("role") == "admin":
                         if st.button("🗑️ ลบงานนี้", key=f"sv2_del_{idx2}", use_container_width=True):
