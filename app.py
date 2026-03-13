@@ -1432,75 +1432,123 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── iframe grid ด้วย window.top (ยืนยันแล้วว่าใช้งานได้บน Android) ──
-    import urllib.parse as _up
+    # ── ใช้ st.button จริง (ทำงานได้แน่นอน) + JS บังคับ 3-column ──
+    # JS inject เข้า parent document ผ่าน allow-same-origin
     _qs_tok = st.query_params.get("s", "")
 
-    def _build_grid():
-        def _card(emoji, label, target):
-            is_lo = target == "__LOGOUT__"
-            bg  = "#fff5f5" if is_lo else "#ffffff"
-            bdr = "#fecaca" if is_lo else "#dbeafe"
-            lc  = "#dc2626" if is_lo else "#1e3a5f"
-            nt  = target.replace("'", "APOS")
-            return (
-                f'<button onclick="doNav(\'{nt}\')" style="'
-                f'background:{bg};border:1.5px solid {bdr};border-radius:16px;'
-                f'padding:12px 4px;display:flex;flex-direction:column;'
-                f'align-items:center;justify-content:center;gap:5px;'
-                f'box-shadow:0 2px 8px rgba(0,0,0,0.08);cursor:pointer;'
-                f'width:100%;min-height:80px;">'
-                f'<span style="font-size:26px;line-height:1">{emoji}</span>'
-                f'<span style="font-size:11px;font-weight:700;color:{lc};'
-                f'text-align:center;line-height:1.25">{label}</span>'
-                f'</button>'
-            )
+    # Inject JS ผ่าน iframe เพื่อ force 3-col CSS บน parent document
+    _fix_css_js = f"""
+<script>
+(function(){{
+  // inject style เข้า parent page โดยตรง (allow-same-origin ทำให้ทำได้)
+  try {{
+    var d = window.parent.document;
+    if(d.getElementById('_hg_style')) return;
+    var s = d.createElement('style');
+    s.id = '_hg_style';
+    s.textContent = `
+      #home-grid-wrap [data-testid="stHorizontalBlock"] {{
+        display: grid !important;
+        grid-template-columns: repeat(3,1fr) !important;
+        gap: 8px !important;
+      }}
+      #home-grid-wrap [data-testid="column"] {{
+        width: 100% !important; min-width: 0 !important;
+        flex: unset !important; padding: 0 !important;
+      }}
+      #home-grid-wrap button[kind="secondary"] {{
+        background: white !important;
+        border: 1.5px solid #dbeafe !important;
+        border-radius: 16px !important;
+        width: 100% !important;
+        min-height: 80px !important;
+        padding: 8px 4px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        color: #1e3a5f !important;
+        white-space: pre-wrap !important;
+        line-height: 1.4 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+      }}
+      #home-grid-wrap [data-testid="stHorizontalBlock"]:last-child button[kind="secondary"]:last-child {{
+        background: #fff5f5 !important;
+        border-color: #fecaca !important;
+        color: #dc2626 !important;
+      }}
+      #home-stat-wrap [data-testid="stHorizontalBlock"] {{
+        display: grid !important;
+        grid-template-columns: repeat(3,1fr) !important;
+        gap: 8px !important;
+      }}
+      #home-stat-wrap [data-testid="column"] {{
+        width: 100% !important; min-width: 0 !important;
+        flex: unset !important; padding: 0 !important;
+      }}
+      #home-stat-wrap button[kind="secondary"] {{
+        background: white !important;
+        border: 1.5px solid #dbeafe !important;
+        border-radius: 14px !important;
+        width: 100% !important;
+        min-height: 64px !important;
+        padding: 8px 4px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #1e3a8a !important;
+        white-space: pre-wrap !important;
+        line-height: 1.5 !important;
+      }}
+    `;
+    d.head.appendChild(s);
+  }} catch(e) {{}}
+}})();
+</script>
+"""
+    st_html.html(_fix_css_js, height=0)
 
-        def _stat(icon, top, bot, target):
-            nt = target.replace("'", "APOS")
-            return (
-                f'<button onclick="doNav(\'{nt}\')" style="'
-                f'flex:1;background:#fff;border:1.5px solid #dbeafe;border-radius:14px;'
-                f'padding:8px 4px;display:flex;flex-direction:column;align-items:center;'
-                f'box-shadow:0 2px 6px rgba(0,0,0,0.07);cursor:pointer;min-width:0;">'
-                f'<span style="font-size:20px">{icon}</span>'
-                f'<span style="font-size:9px;color:#64748b;margin-top:1px">{top}</span>'
-                f'<span style="font-size:14px;font-weight:800;color:#1e3a8a">{bot}</span>'
-                f'</button>'
-            )
+    # Stat row
+    if _role2 != "customer":
+        st.markdown('<div id="home-stat-wrap">', unsafe_allow_html=True)
+        ss1, ss2, ss3 = st.columns(3)
+        with ss1:
+            if st.button(f"📦\nสต๊อก\n{_s1} รุ่น", key="hs_stk", use_container_width=True):
+                st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
+        with ss2:
+            if st.button(f"⏳\nค้าง\n{_total_pend} งาน", key="hs_pend", use_container_width=True):
+                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+        with ss3:
+            if st.button(f"✅\nปิดแล้ว\n{_total_closed} งาน", key="hs_cls", use_container_width=True):
+                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        stat_html = ""
-        if _role2 != "customer":
-            stat_html = (
-                '<div style="display:flex;gap:8px;margin-bottom:10px">'
-                + _stat("📦", "สต๊อก", f"{_s1} รุ่น", "📦 จัดการสต๊อก")
-                + _stat("⏳", "ค้าง", f"{_total_pend} งาน", "📋 จัดการงาน / สถานะ")
-                + _stat("✅", "ปิดแล้ว", f"{_total_closed} งาน", "📋 จัดการงาน / สถานะ")
-                + '</div>'
-            )
-
-        grid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
-        for emoji, label, target in menus_home:
-            grid += _card(emoji, label, target)
-        grid += '</div>'
-
-        js = f"""<script>
-function doNav(t){{
-  t = t.replace(/APOS/g,"'");
-  var u = window.top.location;
-  var s = (u.search.match(/[?&]s=([^&]*)/) || [])[1] || '{_qs_tok}';
-  if(t==='__LOGOUT__'){{ window.top.location.href = u.pathname; }}
-  else {{ window.top.location.href = u.pathname+'?s='+s+'&nav='+encodeURIComponent(t); }}
-}}
-</script>"""
-
-        n_rows = (len(menus_home) + 2) // 3
-        sh = 90 if _role2 != "customer" else 0
-        h = sh + n_rows * 100 + 20
-        return f'<div style="padding:2px">{stat_html}{grid}{js}</div>', h
-
-    _gh, _ghi = _build_grid()
-    st_html.html(_gh, height=_ghi)
+    # Menu grid
+    st.markdown('<div id="home-grid-wrap">', unsafe_allow_html=True)
+    padded = list(menus_home)
+    while len(padded) % 3 != 0:
+        padded.append(None)
+    for row_start in range(0, len(padded), 3):
+        cols = st.columns(3)
+        for ci, col in enumerate(cols):
+            item = padded[row_start + ci]
+            with col:
+                if item is None:
+                    st.empty()
+                else:
+                    emoji, label, target = item
+                    if st.button(f"{emoji}\n{label}", key=f"hm_{row_start+ci}", use_container_width=True):
+                        if target == "__LOGOUT__":
+                            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                                st.session_state[k] = "" if k != "logged_in" else False
+                            st.query_params.clear()
+                        else:
+                            st.session_state["_current_page"] = target
+                        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════
