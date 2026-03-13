@@ -1404,26 +1404,7 @@ if page == "🏠 หน้าหลัก":
 
     role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
-    st.markdown('''<style>.main,.block-container{background:#f0f4f8!important;}</style>
-<script>
-(function(){
-  if(window.__navListenerAdded) return;
-  window.__navListenerAdded = true;
-  window.addEventListener("message", function(e){
-    var d = e.data;
-    if(!d || d.type !== "boonsuk_nav") return;
-    var target = d.target;
-    var cur = window.location.href;
-    var sMatch = cur.match(/[?&]s=([^&]*)/);
-    var sToken = sMatch ? sMatch[1] : "";
-    if(target === "__LOGOUT__"){
-      window.location.href = window.location.pathname;
-    } else {
-      window.location.href = window.location.pathname + "?s=" + sToken + "&nav=" + encodeURIComponent(target);
-    }
-  });
-})();
-</script>''', unsafe_allow_html=True)
+    st.markdown('<style>.main,.block-container{background:#f0f4f8!important;}</style>', unsafe_allow_html=True)
 
     # Header
     logo_src = f'data:image/png;base64,{LOGO_B64}'
@@ -1503,7 +1484,20 @@ if page == "🏠 หน้าหลัก":
 <script>
 function doNav(target) {
   target = target.replace(/APOS/g, "'");
-  window.parent.postMessage({type:"boonsuk_nav", target:target}, "*");
+  function nav(w) {
+    var url = w.location.href;
+    var sMatch = url.match(/[?&]s=([^&]*)/);
+    var sToken = sMatch ? sMatch[1] : "";
+    var base = w.location.pathname;
+    if (target === "__LOGOUT__") {
+      w.location.href = base;
+    } else {
+      w.location.href = base + "?s=" + sToken + "&nav=" + encodeURIComponent(target);
+    }
+  }
+  try { nav(window.top); } catch(e) {
+    try { nav(window.parent); } catch(e2) { nav(window); }
+  }
 }
 </script>"""
         n_rows = (len(menus_home) + 2) // 3
