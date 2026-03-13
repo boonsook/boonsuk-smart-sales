@@ -1437,12 +1437,11 @@ if page == "🏠 หน้าหลัก":
     _qs_tok = st.query_params.get("s", "")
 
     def _nav_url(target):
-        """สร้าง URL สำหรับ navigation — ใช้ APP_URL เป็น base เพื่อให้ target=_top ทำงานได้"""
-        base = APP_URL.rstrip("/")
-        if target == "__LOGOUT__":
-            return base + "/"
+        """สร้าง URL แบบ relative เพื่อไม่ต้องพึ่ง APP_URL"""
         import urllib.parse
-        return base + "/?s=" + _qs_tok + "&nav=" + urllib.parse.quote(target)
+        if target == "__LOGOUT__":
+            return "/"
+        return "/?s=" + _qs_tok + "&nav=" + urllib.parse.quote(target)
 
     def _build_grid_html():
         # ── helper: สร้าง <a> card ที่ใช้ target=_top แทน JS ──
