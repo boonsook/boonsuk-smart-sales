@@ -1440,63 +1440,46 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid ──
-    # 1) st.markdown CSS ซ่อนปุ่ม nav ในหน้าหลัก (อยู่ใน main DOM ไม่ใช่ iframe)
-    st.markdown("""<style>
-.nav-hidden-btns button[kind="secondary"] {
-    position:fixed !important; top:-9999px !important; left:-9999px !important;
-    width:1px !important; height:1px !important; opacity:0 !important;
-    pointer-events:none !important; overflow:hidden !important;
-}
-</style>""", unsafe_allow_html=True)
+    # ── Home Grid: st_html + window.parent.location.href (same-origin) ──
+    import urllib.parse as _up
+    _qs_tok = st.query_params.get("s", "")
 
-    st.markdown('<div class="nav-hidden-btns">', unsafe_allow_html=True)
+    def _navurl(target):
+        if target == "__LOGOUT__":
+            return "/?logout=1"
+        p = _up.quote(target)
+        return "/?s=" + _qs_tok + "&nav=" + p
 
-    # 2) real st.button จริง (ซ่อนอยู่)
-    _stat_offset = 0
-    if _role2 != "customer":
-        _stat_offset = 3
-        if st.button("__nav_stk__", key="hs_stk"):
-            st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-        if st.button("__nav_pend__", key="hs_pend"):
-            st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-        if st.button("__nav_cls__", key="hs_cls"):
-            st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+    def _card(cls, onclick, em, lb):
+        return '<div class="' + cls + '" onclick="go(\'' + onclick + '\')">' + \
+               '<span class="hg-em">' + em + '</span>' + \
+               '<span class="hg-lb">' + lb + '</span></div>'
 
-    for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
-        if st.button("__nav_%d__" % _mi, key="hm_%d" % _mi):
-            if _tgt == "__LOGOUT__":
-                for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-                    st.session_state[k] = "" if k != "logged_in" else False
-                st.query_params.clear()
-            else:
-                st.session_state["_current_page"] = _tgt
-            st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 3) HTML grid สวย + JS click ปุ่มจริงโดย index
     _stat_html = ""
     if _role2 != "customer":
-        _stat_html = (
-            '<div class="hg-stats">'
-            + '<div class="hg-stat" onclick="nb(0)"><span class="hg-em">📦</span><span class="hg-st">สต๊อก</span><strong>%d รุ่น</strong></div>' % _s1
-            + '<div class="hg-stat" onclick="nb(1)"><span class="hg-em">⏳</span><span class="hg-st">ค้าง</span><strong>%d งาน</strong></div>' % _total_pend
-            + '<div class="hg-stat" onclick="nb(2)"><span class="hg-em">✅</span><span class="hg-st">ปิดแล้ว</span><strong>%d งาน</strong></div>' % _total_closed
-            + '</div>'
-        )
+        def _scard(em, st_lb, val, tgt):
+            u = _navurl(tgt)
+            return ('<div class="hg-stat" onclick="go(\'' + u + '\')">' +
+                    '<span class="hg-em">' + em + '</span>' +
+                    '<span class="hg-st">' + st_lb + '</span>' +
+                    '<strong>' + str(val) + '</strong></div>')
+        _stat_html = ('<div class="hg-stats">' +
+            _scard("📦", "สต๊อก", str(_s1) + " รุ่น", "📦 จัดการสต๊อก") +
+            _scard("⏳", "ค้าง", str(_total_pend) + " งาน", "📋 จัดการงาน / สถานะ") +
+            _scard("✅", "ปิดแล้ว", str(_total_closed) + " งาน", "📋 จัดการงาน / สถานะ") +
+            '</div>')
 
     _grid_html = '<div class="hg-grid">'
-    for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
+    for _em, _lb, _tgt in menus_home:
         _cls = "hg-card hg-logout" if _tgt == "__LOGOUT__" else "hg-card"
-        _grid_html += '<div class="%s" onclick="nb(%d)"><span class="hg-em">%s</span><span class="hg-lb">%s</span></div>' % (_cls, _mi + _stat_offset, _em, _lb)
+        _grid_html += _card(_cls, _navurl(_tgt), _em, _lb)
     _grid_html += '</div>'
 
     _nr = (len(menus_home) + 2) // 3
     _sh = 90 if _role2 != "customer" else 0
     _th = _sh + _nr * 100 + 10
 
-    _html = """<style>
+    _css = """<style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;}
 .hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
@@ -1519,26 +1502,17 @@ body{margin:0;padding:0;}
 .hg-em{font-size:28px;line-height:1;display:block;}
 .hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
 .hg-logout .hg-lb{color:#dc2626;}
-</style>""" + _stat_html + _grid_html + """
-<script>
-function nb(idx) {
-  try {
-    var pd = window.parent.document;
-    var btns = [];
-    pd.querySelectorAll('button').forEach(function(b) {
-      if (b.textContent.trim().indexOf('__nav_') === 0) btns.push(b);
-    });
-    if (btns[idx]) {
-      var btn = btns[idx];
-      btn.style.cssText = 'position:static!important;width:auto!important;height:auto!important;opacity:1!important;pointer-events:auto!important;overflow:visible!important;top:auto!important;left:auto!important;';
-      btn.click();
-      setTimeout(function(){ btn.style.cssText = ''; }, 100);
-    }
-  } catch(e) { console.log('nb err', e); }
+</style>"""
+
+    _js = """<script>
+function go(url) {
+  try { window.parent.location.href = url; } catch(e) {
+    try { window.top.location.href = 'https://boonsuk-sales.onrender.com' + url; } catch(e2) {}
+  }
 }
-</script>
-"""
-    st_html.html(_html, height=_th)
+</script>"""
+
+    st_html.html(_css + _stat_html + _grid_html + _js, height=_th)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
@@ -3373,4 +3347,77 @@ elif page == "⚙️ นำเข้า/ส่งออกข้อมูล":
                             os.remove(LOG_CSV)
                             st.success("ลบไฟล์ CSV แล้ว ✅")
                 else:
-                    st.warning("พิมพ์ 'ลบทั้งหมด' ให้ถูกต้องก่อนครับ")
+                    st.warning("พิมพ์ 'ลบทั้งหมด' ให้ถูกต้องก่อนครับ")    # ── Home Grid: st_html + window.parent.location.href ──
+    import urllib.parse as _up
+    _qs_tok = st.query_params.get("s", "")
+
+    def _navurl(target):
+        if target == "__LOGOUT__":
+            return "/?logout=1"
+        p = _up.quote(target)
+        return "/?s=" + _qs_tok + "&nav=" + p
+
+    def _card(cls, onclick, em, lb):
+        return '<div class="' + cls + '" onclick="go(\'' + onclick + '\')">' + \
+               '<span class="hg-em">' + em + '</span>' + \
+               '<span class="hg-lb">' + lb + '</span></div>'
+
+    _stat_html = ""
+    if _role2 != "customer":
+        def _scard(em, st_lb, val, tgt):
+            u = _navurl(tgt)
+            return ('<div class="hg-stat" onclick="go(\'' + u + '\')">' +
+                    '<span class="hg-em">' + em + '</span>' +
+                    '<span class="hg-st">' + st_lb + '</span>' +
+                    '<strong>' + str(val) + '</strong></div>')
+        _stat_html = ('<div class="hg-stats">' +
+            _scard("📦", "สต๊อก", str(_s1) + " รุ่น", "📦 จัดการสต๊อก") +
+            _scard("⏳", "ค้าง", str(_total_pend) + " งาน", "📋 จัดการงาน / สถานะ") +
+            _scard("✅", "ปิดแล้ว", str(_total_closed) + " งาน", "📋 จัดการงาน / สถานะ") +
+            '</div>')
+
+    _grid_html = '<div class="hg-grid">'
+    for _em, _lb, _tgt in menus_home:
+        _cls = "hg-card hg-logout" if _tgt == "__LOGOUT__" else "hg-card"
+        _grid_html += _card(_cls, _navurl(_tgt), _em, _lb)
+    _grid_html += '</div>'
+
+    _nr = (len(menus_home) + 2) // 3
+    _sh = 90 if _role2 != "customer" else 0
+    _th = _sh + _nr * 100 + 10
+
+    _css = """<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;padding:0;}
+.hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.hg-stat{background:#fff;border:1.5px solid #dbeafe;border-radius:14px;
+  padding:8px 4px;text-align:center;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,0.07);
+  display:flex;flex-direction:column;align-items:center;gap:1px;user-select:none;}
+.hg-stat:active{background:#eff6ff;}
+.hg-stat .hg-em{font-size:20px;line-height:1;}
+.hg-stat .hg-st{font-size:9px;color:#64748b;}
+.hg-stat strong{font-size:13px;color:#1e3a8a;font-weight:800;}
+.hg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.hg-card{background:#fff;border:1.5px solid #dbeafe;border-radius:16px;
+  padding:10px 4px;text-align:center;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;min-height:86px;user-select:none;}
+.hg-card:active{opacity:0.7;transform:scale(0.97);}
+.hg-logout{background:#fff5f5!important;border-color:#fecaca!important;}
+.hg-em{font-size:28px;line-height:1;display:block;}
+.hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
+.hg-logout .hg-lb{color:#dc2626;}
+</style>"""
+
+    _js = """<script>
+function go(url) {
+  try { window.parent.location.href = url; } catch(e) {
+    try { window.top.location.href = 'https://boonsuk-sales.onrender.com' + url; } catch(e2) {}
+  }
+}
+</script>"""
+
+    st_html.html(_css + _stat_html + _grid_html + _js, height=_th)
+
