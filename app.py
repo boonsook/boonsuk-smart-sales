@@ -1436,74 +1436,68 @@ if page == "🏠 หน้าหลัก":
     # Build query token for doNav
     _qs_tok = st.query_params.get("s", "")
 
-    def _build_grid_html():
-        # Stat row (staff/admin only)
-        stats_html = ""
-        if _role2 != "customer":
-            def _sc(icon, top, bot, nav_t):
-                nt = nav_t.replace("'", "APOS")
-                return (
-                    '<button onclick="doNav(\''+nt+'\')" '
-                    'style="flex:1;background:white;border:1.5px solid #e0e8f5;border-radius:14px;'
-                    'padding:10px 4px;box-shadow:0 2px 8px rgba(0,0,0,0.07);cursor:pointer;min-width:0;">'
-                    '<div style="font-size:22px;">'+icon+'</div>'
-                    '<div style="font-size:10px;color:#666;margin-top:2px;">'+top+'</div>'
-                    '<div style="font-size:15px;font-weight:800;color:#1e3a8a;">'+bot+'</div>'
-                    '</button>'
-                )
-            stats_html = (
-                '<div style="display:flex;gap:8px;margin-bottom:10px;">'
-                + _sc("📦","สต๊อก",str(_s1)+" รุ่น","📦 จัดการสต๊อก")
-                + _sc("⏳","ค้าง",str(_total_pend)+" งาน","📋 จัดการงาน / สถานะ")
-                + _sc("✅","ปิดแล้ว",str(_total_closed)+" งาน","📋 จัดการงาน / สถานะ")
-                + '</div>'
-            )
+    def _nav_url(target):
+        """สร้าง URL สำหรับ navigation — ใช้ APP_URL เป็น base เพื่อให้ target=_top ทำงานได้"""
+        base = APP_URL.rstrip("/")
+        if target == "__LOGOUT__":
+            return base + "/"
+        import urllib.parse
+        return base + "/?s=" + _qs_tok + "&nav=" + urllib.parse.quote(target)
 
-        # Menu cards
-        cards_html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'
-        for item in menus_home:
-            emoji, label, target = item
-            safe_t = target.replace("'", "APOS")
-            is_logout = target == "__LOGOUT__"
+    def _build_grid_html():
+        # ── helper: สร้าง <a> card ที่ใช้ target=_top แทน JS ──
+        def _card(href, emoji, label, is_logout=False):
             bg  = "#fff5f5" if is_logout else "white"
             col = "#e53935" if is_logout else "#1e3a5f"
             bdr = "#ffd0d0" if is_logout else "#e0e8f5"
-            cards_html += (
-                '<button onclick="doNav(\''+safe_t+'\')" '
-                'style="background:'+bg+';border:1.5px solid '+bdr+';border-radius:16px;'
+            return (
+                '<a href="' + href + '" target="_top" '
+                'style="background:' + bg + ';border:1.5px solid ' + bdr + ';border-radius:16px;'
                 'padding:14px 6px;display:flex;flex-direction:column;align-items:center;'
                 'justify-content:center;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,0.07);'
-                'cursor:pointer;min-width:0;min-height:82px;width:100%;">'
-                '<div style="font-size:28px;line-height:1;">'+emoji+'</div>'
-                '<div style="font-size:11.5px;font-weight:700;color:'+col+';line-height:1.2;text-align:center;">'+label+'</div>'
-                '</button>'
+                'text-decoration:none;min-height:82px;">'
+                '<div style="font-size:28px;line-height:1;">' + emoji + '</div>'
+                '<div style="font-size:11.5px;font-weight:700;color:' + col + ';'
+                'line-height:1.2;text-align:center;">' + label + '</div>'
+                '</a>'
             )
+
+        def _stat_card(href, icon, top_txt, bot_txt):
+            return (
+                '<a href="' + href + '" target="_top" '
+                'style="flex:1;background:white;border:1.5px solid #e0e8f5;border-radius:14px;'
+                'padding:10px 4px;box-shadow:0 2px 8px rgba(0,0,0,0.07);'
+                'text-decoration:none;display:flex;flex-direction:column;align-items:center;min-width:0;">'
+                '<div style="font-size:22px;">' + icon + '</div>'
+                '<div style="font-size:10px;color:#666;margin-top:2px;">' + top_txt + '</div>'
+                '<div style="font-size:15px;font-weight:800;color:#1e3a8a;">' + bot_txt + '</div>'
+                '</a>'
+            )
+
+        # Stat row (staff/admin only)
+        stats_html = ""
+        if _role2 != "customer":
+            stats_html = (
+                '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+                + _stat_card(_nav_url("📦 จัดการสต๊อก"), "📦", "สต๊อก", str(_s1) + " รุ่น")
+                + _stat_card(_nav_url("📋 จัดการงาน / สถานะ"), "⏳", "ค้าง", str(_total_pend) + " งาน")
+                + _stat_card(_nav_url("📋 จัดการงาน / สถานะ"), "✅", "ปิดแล้ว", str(_total_closed) + " งาน")
+                + '</div>'
+            )
+
+        # Menu cards grid
+        cards_html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'
+        for item in menus_home:
+            emoji, label, target = item
+            href = _nav_url(target)
+            cards_html += _card(href, emoji, label, is_logout=(target == "__LOGOUT__"))
         cards_html += '</div>'
 
-        js = """
-<script>
-function doNav(target) {
-  target = target.replace(/APOS/g, "'");
-  function nav(w) {
-    var url = w.location.href;
-    var sMatch = url.match(/[?&]s=([^&]*)/);
-    var sToken = sMatch ? sMatch[1] : "";
-    var base = w.location.pathname;
-    if (target === "__LOGOUT__") {
-      w.location.href = base;
-    } else {
-      w.location.href = base + "?s=" + sToken + "&nav=" + encodeURIComponent(target);
-    }
-  }
-  try { nav(window.top); } catch(e) {
-    try { nav(window.parent); } catch(e2) { nav(window); }
-  }
-}
-</script>"""
         n_rows = (len(menus_home) + 2) // 3
-        stat_h = 80 if _role2 != "customer" else 0
+        stat_h = 90 if _role2 != "customer" else 0
         iframe_h = stat_h + n_rows * 110 + 20
-        return '<div style="padding:2px 2px 8px 2px;">' + stats_html + cards_html + js + '</div>', iframe_h
+        html = '<div style="padding:2px 2px 8px 2px;">' + stats_html + cards_html + '</div>'
+        return html, iframe_h
 
     _grid_html, _iframe_h = _build_grid_html()
     st_html.html(_grid_html, height=_iframe_h)
