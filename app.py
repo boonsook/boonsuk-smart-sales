@@ -1432,74 +1432,70 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── HTML iframe grid (3-col ทุก device) ──────────────────────────────
-    # Build query token for doNav
+    # ── ใช้ st.markdown แทน iframe — link navigate ใน Streamlit page จริง ──
+    import urllib.parse as _up
     _qs_tok = st.query_params.get("s", "")
 
     def _nav_url(target):
-        """สร้าง URL แบบ relative เพื่อไม่ต้องพึ่ง APP_URL"""
-        import urllib.parse
         if target == "__LOGOUT__":
-            return "/"
-        return "/?s=" + _qs_tok + "&nav=" + urllib.parse.quote(target)
+            return APP_URL + "/"
+        return APP_URL + "/?s=" + _qs_tok + "&nav=" + _up.quote(target)
 
-    def _build_grid_html():
-        # ── helper: สร้าง <a> card ที่ใช้ target=_top แทน JS ──
-        def _card(href, emoji, label, is_logout=False):
-            bg  = "#fff5f5" if is_logout else "white"
-            col = "#e53935" if is_logout else "#1e3a5f"
-            bdr = "#ffd0d0" if is_logout else "#e0e8f5"
-            return (
-                '<a href="' + href + '" target="_top" '
-                'style="background:' + bg + ';border:1.5px solid ' + bdr + ';border-radius:16px;'
-                'padding:14px 6px;display:flex;flex-direction:column;align-items:center;'
-                'justify-content:center;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,0.07);'
-                'text-decoration:none;min-height:82px;">'
-                '<div style="font-size:28px;line-height:1;">' + emoji + '</div>'
-                '<div style="font-size:11.5px;font-weight:700;color:' + col + ';'
-                'line-height:1.2;text-align:center;">' + label + '</div>'
-                '</a>'
-            )
+    # CSS: จัด grid ใน markdown container
+    st.markdown("""
+<style>
+.hg-stats { display:flex; gap:8px; margin-bottom:12px; }
+.hg-stat  { flex:1; background:white; border:1.5px solid #dbeafe;
+            border-radius:14px; padding:10px 4px; text-align:center;
+            box-shadow:0 2px 8px rgba(0,0,0,0.07); text-decoration:none; display:block; }
+.hg-stat-icon { font-size:20px; }
+.hg-stat-top  { font-size:10px; color:#64748b; margin-top:1px; }
+.hg-stat-num  { font-size:15px; font-weight:800; color:#1e3a8a; }
+.hg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.hg-card { background:white; border:1.5px solid #dbeafe; border-radius:16px;
+           padding:14px 6px; display:flex; flex-direction:column;
+           align-items:center; justify-content:center; gap:6px;
+           box-shadow:0 2px 10px rgba(0,0,0,0.07); text-decoration:none !important;
+           min-height:82px; }
+.hg-card-logout { background:#fff5f5 !important; border-color:#fecaca !important; }
+.hg-emoji { font-size:26px; line-height:1; }
+.hg-label { font-size:11.5px; font-weight:700; color:#1e3a5f;
+            line-height:1.3; text-align:center; }
+.hg-label-logout { color:#dc2626 !important; }
+</style>
+""", unsafe_allow_html=True)
 
-        def _stat_card(href, icon, top_txt, bot_txt):
-            return (
-                '<a href="' + href + '" target="_top" '
-                'style="flex:1;background:white;border:1.5px solid #e0e8f5;border-radius:14px;'
-                'padding:10px 4px;box-shadow:0 2px 8px rgba(0,0,0,0.07);'
-                'text-decoration:none;display:flex;flex-direction:column;align-items:center;min-width:0;">'
-                '<div style="font-size:22px;">' + icon + '</div>'
-                '<div style="font-size:10px;color:#666;margin-top:2px;">' + top_txt + '</div>'
-                '<div style="font-size:15px;font-weight:800;color:#1e3a8a;">' + bot_txt + '</div>'
-                '</a>'
-            )
+    # Stat row
+    if _role2 != "customer":
+        st.markdown(
+            '<div class="hg-stats">'
+            + f'<a class="hg-stat" href="{_nav_url("📦 จัดการสต๊อก")}">'
+              f'<div class="hg-stat-icon">📦</div><div class="hg-stat-top">สต๊อก</div>'
+              f'<div class="hg-stat-num">{_s1} รุ่น</div></a>'
+            + f'<a class="hg-stat" href="{_nav_url("📋 จัดการงาน / สถานะ")}">'
+              f'<div class="hg-stat-icon">⏳</div><div class="hg-stat-top">ค้าง</div>'
+              f'<div class="hg-stat-num">{_total_pend} งาน</div></a>'
+            + f'<a class="hg-stat" href="{_nav_url("📋 จัดการงาน / สถานะ")}">'
+              f'<div class="hg-stat-icon">✅</div><div class="hg-stat-top">ปิดแล้ว</div>'
+              f'<div class="hg-stat-num">{_total_closed} งาน</div></a>'
+            + '</div>',
+            unsafe_allow_html=True
+        )
 
-        # Stat row (staff/admin only)
-        stats_html = ""
-        if _role2 != "customer":
-            stats_html = (
-                '<div style="display:flex;gap:8px;margin-bottom:10px;">'
-                + _stat_card(_nav_url("📦 จัดการสต๊อก"), "📦", "สต๊อก", str(_s1) + " รุ่น")
-                + _stat_card(_nav_url("📋 จัดการงาน / สถานะ"), "⏳", "ค้าง", str(_total_pend) + " งาน")
-                + _stat_card(_nav_url("📋 จัดการงาน / สถานะ"), "✅", "ปิดแล้ว", str(_total_closed) + " งาน")
-                + '</div>'
-            )
+    # Menu grid
+    grid = '<div class="hg-grid">'
+    for emoji, label, target in menus_home:
+        is_lo = target == "__LOGOUT__"
+        card_cls = "hg-card hg-card-logout" if is_lo else "hg-card"
+        lbl_cls  = "hg-label hg-label-logout" if is_lo else "hg-label"
+        grid += (
+            f'<a class="{card_cls}" href="{_nav_url(target)}">'
+            f'<span class="hg-emoji">{emoji}</span>'
+            f'<span class="{lbl_cls}">{label}</span></a>'
+        )
+    grid += '</div>'
+    st.markdown(grid, unsafe_allow_html=True)
 
-        # Menu cards grid
-        cards_html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'
-        for item in menus_home:
-            emoji, label, target = item
-            href = _nav_url(target)
-            cards_html += _card(href, emoji, label, is_logout=(target == "__LOGOUT__"))
-        cards_html += '</div>'
-
-        n_rows = (len(menus_home) + 2) // 3
-        stat_h = 90 if _role2 != "customer" else 0
-        iframe_h = stat_h + n_rows * 110 + 20
-        html = '<div style="padding:2px 2px 8px 2px;">' + stats_html + cards_html + '</div>'
-        return html, iframe_h
-
-    _grid_html, _iframe_h = _build_grid_html()
-    st_html.html(_grid_html, height=_iframe_h)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
