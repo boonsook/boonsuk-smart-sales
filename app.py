@@ -1432,69 +1432,75 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── ใช้ st.markdown แทน iframe — link navigate ใน Streamlit page จริง ──
+    # ── iframe grid ด้วย window.top (ยืนยันแล้วว่าใช้งานได้บน Android) ──
     import urllib.parse as _up
     _qs_tok = st.query_params.get("s", "")
 
-    def _nav_url(target):
-        if target == "__LOGOUT__":
-            return APP_URL + "/"
-        return APP_URL + "/?s=" + _qs_tok + "&nav=" + _up.quote(target)
+    def _build_grid():
+        def _card(emoji, label, target):
+            is_lo = target == "__LOGOUT__"
+            bg  = "#fff5f5" if is_lo else "#ffffff"
+            bdr = "#fecaca" if is_lo else "#dbeafe"
+            lc  = "#dc2626" if is_lo else "#1e3a5f"
+            nt  = target.replace("'", "APOS")
+            return (
+                f'<button onclick="doNav(\'{nt}\')" style="'
+                f'background:{bg};border:1.5px solid {bdr};border-radius:16px;'
+                f'padding:12px 4px;display:flex;flex-direction:column;'
+                f'align-items:center;justify-content:center;gap:5px;'
+                f'box-shadow:0 2px 8px rgba(0,0,0,0.08);cursor:pointer;'
+                f'width:100%;min-height:80px;">'
+                f'<span style="font-size:26px;line-height:1">{emoji}</span>'
+                f'<span style="font-size:11px;font-weight:700;color:{lc};'
+                f'text-align:center;line-height:1.25">{label}</span>'
+                f'</button>'
+            )
 
-    # CSS: จัด grid ใน markdown container
-    st.markdown("""
-<style>
-.hg-stats { display:flex; gap:8px; margin-bottom:12px; }
-.hg-stat  { flex:1; background:white; border:1.5px solid #dbeafe;
-            border-radius:14px; padding:10px 4px; text-align:center;
-            box-shadow:0 2px 8px rgba(0,0,0,0.07); text-decoration:none; display:block; }
-.hg-stat-icon { font-size:20px; }
-.hg-stat-top  { font-size:10px; color:#64748b; margin-top:1px; }
-.hg-stat-num  { font-size:15px; font-weight:800; color:#1e3a8a; }
-.hg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.hg-card { background:white; border:1.5px solid #dbeafe; border-radius:16px;
-           padding:14px 6px; display:flex; flex-direction:column;
-           align-items:center; justify-content:center; gap:6px;
-           box-shadow:0 2px 10px rgba(0,0,0,0.07); text-decoration:none !important;
-           min-height:82px; }
-.hg-card-logout { background:#fff5f5 !important; border-color:#fecaca !important; }
-.hg-emoji { font-size:26px; line-height:1; }
-.hg-label { font-size:11.5px; font-weight:700; color:#1e3a5f;
-            line-height:1.3; text-align:center; }
-.hg-label-logout { color:#dc2626 !important; }
-</style>
-""", unsafe_allow_html=True)
+        def _stat(icon, top, bot, target):
+            nt = target.replace("'", "APOS")
+            return (
+                f'<button onclick="doNav(\'{nt}\')" style="'
+                f'flex:1;background:#fff;border:1.5px solid #dbeafe;border-radius:14px;'
+                f'padding:8px 4px;display:flex;flex-direction:column;align-items:center;'
+                f'box-shadow:0 2px 6px rgba(0,0,0,0.07);cursor:pointer;min-width:0;">'
+                f'<span style="font-size:20px">{icon}</span>'
+                f'<span style="font-size:9px;color:#64748b;margin-top:1px">{top}</span>'
+                f'<span style="font-size:14px;font-weight:800;color:#1e3a8a">{bot}</span>'
+                f'</button>'
+            )
 
-    # Stat row
-    if _role2 != "customer":
-        st.markdown(
-            '<div class="hg-stats">'
-            + f'<a class="hg-stat" href="{_nav_url("📦 จัดการสต๊อก")}">'
-              f'<div class="hg-stat-icon">📦</div><div class="hg-stat-top">สต๊อก</div>'
-              f'<div class="hg-stat-num">{_s1} รุ่น</div></a>'
-            + f'<a class="hg-stat" href="{_nav_url("📋 จัดการงาน / สถานะ")}">'
-              f'<div class="hg-stat-icon">⏳</div><div class="hg-stat-top">ค้าง</div>'
-              f'<div class="hg-stat-num">{_total_pend} งาน</div></a>'
-            + f'<a class="hg-stat" href="{_nav_url("📋 จัดการงาน / สถานะ")}">'
-              f'<div class="hg-stat-icon">✅</div><div class="hg-stat-top">ปิดแล้ว</div>'
-              f'<div class="hg-stat-num">{_total_closed} งาน</div></a>'
-            + '</div>',
-            unsafe_allow_html=True
-        )
+        stat_html = ""
+        if _role2 != "customer":
+            stat_html = (
+                '<div style="display:flex;gap:8px;margin-bottom:10px">'
+                + _stat("📦", "สต๊อก", f"{_s1} รุ่น", "📦 จัดการสต๊อก")
+                + _stat("⏳", "ค้าง", f"{_total_pend} งาน", "📋 จัดการงาน / สถานะ")
+                + _stat("✅", "ปิดแล้ว", f"{_total_closed} งาน", "📋 จัดการงาน / สถานะ")
+                + '</div>'
+            )
 
-    # Menu grid
-    grid = '<div class="hg-grid">'
-    for emoji, label, target in menus_home:
-        is_lo = target == "__LOGOUT__"
-        card_cls = "hg-card hg-card-logout" if is_lo else "hg-card"
-        lbl_cls  = "hg-label hg-label-logout" if is_lo else "hg-label"
-        grid += (
-            f'<a class="{card_cls}" href="{_nav_url(target)}">'
-            f'<span class="hg-emoji">{emoji}</span>'
-            f'<span class="{lbl_cls}">{label}</span></a>'
-        )
-    grid += '</div>'
-    st.markdown(grid, unsafe_allow_html=True)
+        grid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+        for emoji, label, target in menus_home:
+            grid += _card(emoji, label, target)
+        grid += '</div>'
+
+        js = f"""<script>
+function doNav(t){{
+  t = t.replace(/APOS/g,"'");
+  var u = window.top.location;
+  var s = (u.search.match(/[?&]s=([^&]*)/) || [])[1] || '{_qs_tok}';
+  if(t==='__LOGOUT__'){{ window.top.location.href = u.pathname; }}
+  else {{ window.top.location.href = u.pathname+'?s='+s+'&nav='+encodeURIComponent(t); }}
+}}
+</script>"""
+
+        n_rows = (len(menus_home) + 2) // 3
+        sh = 90 if _role2 != "customer" else 0
+        h = sh + n_rows * 100 + 20
+        return f'<div style="padding:2px">{stat_html}{grid}{js}</div>', h
+
+    _gh, _ghi = _build_grid()
+    st_html.html(_gh, height=_ghi)
 
 
 # ══════════════════════════════════════════════
