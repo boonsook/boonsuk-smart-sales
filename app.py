@@ -1441,8 +1441,18 @@ if page == "🏠 หน้าหลัก":
         st.rerun()
 
     # ── Home Grid ──
-    # real st.buttons (ซ่อนด้วย CSS) + HTML grid สวย (คลิก buttons จริงผ่าน JS)
+    # 1) st.markdown CSS ซ่อนปุ่ม nav ในหน้าหลัก (อยู่ใน main DOM ไม่ใช่ iframe)
+    st.markdown("""<style>
+.nav-hidden-btns button[kind="secondary"] {
+    position:fixed !important; top:-9999px !important; left:-9999px !important;
+    width:1px !important; height:1px !important; opacity:0 !important;
+    pointer-events:none !important; overflow:hidden !important;
+}
+</style>""", unsafe_allow_html=True)
 
+    st.markdown('<div class="nav-hidden-btns">', unsafe_allow_html=True)
+
+    # 2) real st.button จริง (ซ่อนอยู่)
     _stat_offset = 0
     if _role2 != "customer":
         _stat_offset = 3
@@ -1463,7 +1473,9 @@ if page == "🏠 หน้าหลัก":
                 st.session_state["_current_page"] = _tgt
             st.rerun()
 
-    # HTML grid
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 3) HTML grid สวย + JS click ปุ่มจริงโดย index
     _stat_html = ""
     if _role2 != "customer":
         _stat_html = (
@@ -1476,18 +1488,15 @@ if page == "🏠 หน้าหลัก":
 
     _grid_html = '<div class="hg-grid">'
     for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
-        _is_lo = "hg-card hg-logout" if _tgt == "__LOGOUT__" else "hg-card"
-        _idx = _mi + _stat_offset
-        _grid_html += '<div class="%s" onclick="nb(%d)"><span class="hg-em">%s</span><span class="hg-lb">%s</span></div>' % (_is_lo, _idx, _em, _lb)
+        _cls = "hg-card hg-logout" if _tgt == "__LOGOUT__" else "hg-card"
+        _grid_html += '<div class="%s" onclick="nb(%d)"><span class="hg-em">%s</span><span class="hg-lb">%s</span></div>' % (_cls, _mi + _stat_offset, _em, _lb)
     _grid_html += '</div>'
 
     _nr = (len(menus_home) + 2) // 3
     _sh = 90 if _role2 != "customer" else 0
     _th = _sh + _nr * 100 + 10
-    _total_nav = _stat_offset + len(menus_home)
 
-    _html = """
-<style>
+    _html = """<style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;}
 .hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
@@ -1510,38 +1519,25 @@ body{margin:0;padding:0;}
 .hg-em{font-size:28px;line-height:1;display:block;}
 .hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
 .hg-logout .hg-lb{color:#dc2626;}
-</style>
-""" + _stat_html + _grid_html + """
+</style>""" + _stat_html + _grid_html + """
 <script>
-(function(){
-  try {
-    var pd = window.parent.document;
-    if (!pd.getElementById('_nbh')) {
-      var s = pd.createElement('style');
-      s.id = '_nbh';
-      s.textContent = 'button:has(> div > p[data-testid="stMarkdownContainer"] > p:first-child) { display:none!important; }';
-      pd.head.appendChild(s);
-    }
-  } catch(e) {}
-})();
-
 function nb(idx) {
   try {
     var pd = window.parent.document;
     var btns = [];
-    pd.querySelectorAll('button').forEach(function(b){
+    pd.querySelectorAll('button').forEach(function(b) {
       if (b.textContent.trim().indexOf('__nav_') === 0) btns.push(b);
     });
     if (btns[idx]) {
-      btns[idx].style.display = 'block';
-      btns[idx].click();
-      btns[idx].style.display = 'none';
+      var btn = btns[idx];
+      btn.style.cssText = 'position:static!important;width:auto!important;height:auto!important;opacity:1!important;pointer-events:auto!important;overflow:visible!important;top:auto!important;left:auto!important;';
+      btn.click();
+      setTimeout(function(){ btn.style.cssText = ''; }, 100);
     }
   } catch(e) { console.log('nb err', e); }
 }
 </script>
 """
-
     st_html.html(_html, height=_th)
 
 # ══════════════════════════════════════════════
