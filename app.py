@@ -1432,88 +1432,40 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── ใช้ st.button จริง (ทำงานได้แน่นอน) + JS บังคับ 3-column ──
-    # JS inject เข้า parent document ผ่าน allow-same-origin
+    # ── st.button (navigation 100%) + CSS บังคับ 3-col ──
     _qs_tok = st.query_params.get("s", "")
 
-    # Inject JS ผ่าน iframe เพื่อ force 3-col CSS บน parent document
-    _fix_css_js = f"""
-<script>
-(function(){{
-  // inject style เข้า parent page โดยตรง (allow-same-origin ทำให้ทำได้)
-  try {{
-    var d = window.parent.document;
-    if(d.getElementById('_hg_style')) return;
-    var s = d.createElement('style');
-    s.id = '_hg_style';
-    s.textContent = `
-      #home-grid-wrap [data-testid="stHorizontalBlock"] {{
-        display: grid !important;
-        grid-template-columns: repeat(3,1fr) !important;
-        gap: 8px !important;
-      }}
-      #home-grid-wrap [data-testid="column"] {{
-        width: 100% !important; min-width: 0 !important;
-        flex: unset !important; padding: 0 !important;
-      }}
-      #home-grid-wrap button[kind="secondary"] {{
-        background: white !important;
-        border: 1.5px solid #dbeafe !important;
-        border-radius: 16px !important;
-        width: 100% !important;
-        min-height: 80px !important;
-        padding: 8px 4px !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        color: #1e3a5f !important;
-        white-space: pre-wrap !important;
-        line-height: 1.4 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 4px !important;
-      }}
-      #home-grid-wrap [data-testid="stHorizontalBlock"]:last-child button[kind="secondary"]:last-child {{
-        background: #fff5f5 !important;
-        border-color: #fecaca !important;
-        color: #dc2626 !important;
-      }}
-      #home-stat-wrap [data-testid="stHorizontalBlock"] {{
-        display: grid !important;
-        grid-template-columns: repeat(3,1fr) !important;
-        gap: 8px !important;
-      }}
-      #home-stat-wrap [data-testid="column"] {{
-        width: 100% !important; min-width: 0 !important;
-        flex: unset !important; padding: 0 !important;
-      }}
-      #home-stat-wrap button[kind="secondary"] {{
-        background: white !important;
-        border: 1.5px solid #dbeafe !important;
-        border-radius: 14px !important;
-        width: 100% !important;
-        min-height: 64px !important;
-        padding: 8px 4px !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
-        color: #1e3a8a !important;
-        white-space: pre-wrap !important;
-        line-height: 1.5 !important;
-      }}
-    `;
-    d.head.appendChild(s);
-  }} catch(e) {{}}
-}})();
-</script>
-"""
-    st_html.html(_fix_css_js, height=0)
+    st.markdown("""<style>
+/* force 3-col grid บน mobile */
+[data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    flex: 1 1 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] {
+    width: 100% !important;
+    min-height: 78px !important;
+    border-radius: 14px !important;
+    border: 1.5px solid #dbeafe !important;
+    background: white !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #1e3a5f !important;
+    white-space: pre-wrap !important;
+    line-height: 1.4 !important;
+    padding: 8px 2px !important;
+}
+</style>""", unsafe_allow_html=True)
 
     # Stat row
     if _role2 != "customer":
-        st.markdown('<div id="home-stat-wrap">', unsafe_allow_html=True)
         ss1, ss2, ss3 = st.columns(3)
         with ss1:
             if st.button(f"📦\nสต๊อก\n{_s1} รุ่น", key="hs_stk", use_container_width=True):
@@ -1524,10 +1476,8 @@ if page == "🏠 หน้าหลัก":
         with ss3:
             if st.button(f"✅\nปิดแล้ว\n{_total_closed} งาน", key="hs_cls", use_container_width=True):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # Menu grid
-    st.markdown('<div id="home-grid-wrap">', unsafe_allow_html=True)
     padded = list(menus_home)
     while len(padded) % 3 != 0:
         padded.append(None)
@@ -1548,8 +1498,6 @@ if page == "🏠 หน้าหลัก":
                         else:
                             st.session_state["_current_page"] = target
                         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
