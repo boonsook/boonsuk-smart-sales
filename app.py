@@ -1365,28 +1365,28 @@ if page == "🏠 หน้าหลัก":
 
     if _role2 == "customer":
         menus_home = [
-            ("🧾", "ใบเสนอราคา", "🧾 ขอใบเสนอราคาแอร์"),
-            ("🛠️", "แจ้งซ่อม",   "🛠️ แจ้งซ่อม/บริการ"),
-            ("📋", "งานของฉัน",  "📋 งานของฉัน"),
-            ("🧮", "BTU",        "🧮 คำนวณ BTU"),
-            ("⚠️", "Error Code", "🔧 คลังเออเร่อแอร์"),
-            ("🚪", "ออกจากระบบ", "__LOGOUT__"),
+            ("🧾", "ใบเสนอ",   "🧾 ขอใบเสนอราคาแอร์"),
+            ("🛠️", "แจ้งซ่อม", "🛠️ แจ้งซ่อม/บริการ"),
+            ("📋", "งานของฉัน","📋 งานของฉัน"),
+            ("🧮", "BTU",      "🧮 คำนวณ BTU"),
+            ("⚠️", "Error",   "🔧 คลังเออเร่อแอร์"),
+            ("🚪", "ออกจาก",  "__LOGOUT__"),
         ]
     else:
         menus_home = [
-            ("🧾", "ใบเสนอราคา",  "🧾 สร้างใบเสนอราคา"),
-            ("🏗️", "ติดตั้งแอร์",  "🏗️ ติดตั้งแอร์"),
-            ("☀️", "โซล่าเซลล์",  "☀️ งานโซล่าเซลล์"),
-            ("🛠️", "รับงานซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
-            ("📋", "จัดการงาน",   "📋 จัดการงาน / สถานะ"),
-            ("📦", "สต๊อกแอร์",   "📦 จัดการสต๊อก"),
-            ("📊", "Dashboard",   "📊 Dashboard"),
-            ("🧮", "คำนวณ BTU",   "🧮 คำนวณ BTU"),
-            ("⚠️", "Error Code",  "🔧 คลังเออเร่อแอร์"),
+            ("🧾", "ใบเสนอ",   "🧾 สร้างใบเสนอราคา"),
+            ("🏗️", "ติดตั้ง",  "🏗️ ติดตั้งแอร์"),
+            ("☀️", "โซล่า",    "☀️ งานโซล่าเซลล์"),
+            ("🛠️", "รับซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
+            ("📋", "จัดการงาน","📋 จัดการงาน / สถานะ"),
+            ("📦", "สต๊อก",    "📦 จัดการสต๊อก"),
+            ("📊", "Dashboard","📊 Dashboard"),
+            ("🧮", "BTU",      "🧮 คำนวณ BTU"),
+            ("⚠️", "Error",   "🔧 คลังเออเร่อแอร์"),
         ]
         if _role2 == "admin":
-            menus_home.append(("⚙️","นำเข้า/ส่งออก","⚙️ นำเข้า/ส่งออกข้อมูล"))
-        menus_home.append(("🚪","ออกจากระบบ","__LOGOUT__"))
+            menus_home.append(("⚙️", "นำเข้า/ออก", "⚙️ นำเข้า/ส่งออกข้อมูล"))
+        menus_home.append(("🚪", "ออกจาก", "__LOGOUT__"))
 
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log(); df_sv = load_service()
@@ -1435,13 +1435,11 @@ if page == "🏠 หน้าหลัก":
     # ── st.button (navigation 100%) + CSS inject via st_html ──
     _qs_tok = st.query_params.get("s", "")
 
-    # inject CSS + JS แยก emoji/label ใน parent document
+    # inject CSS เข้า parent document — grid 3 col + button style
     st_html.html("""<script>
 (function(){
   try {
     var d = window.parent.document;
-
-    // CSS
     var id = '_hg3col';
     if(d.getElementById(id)) d.getElementById(id).remove();
     var s = d.createElement('style');
@@ -1459,53 +1457,26 @@ if page == "🏠 หน้าหลัก":
       }
       [data-testid="stHorizontalBlock"] > [data-testid="column"] > div { width: 100% !important; }
       [data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] {
-        width: 100% !important; min-height: 86px !important; height: 86px !important;
+        width: 100% !important; min-height: 82px !important; height: 82px !important;
         border-radius: 14px !important; border: 1.5px solid #dbeafe !important;
         background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
-        padding: 4px 2px !important; display: flex !important;
-        align-items: center !important; justify-content: center !important;
+        padding: 4px 2px !important;
       }
       [data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] p {
         margin: 0 !important; text-align: center !important;
-        display: flex !important; flex-direction: column !important;
-        align-items: center !important; gap: 2px !important;
         white-space: pre-wrap !important;
+        font-size: 24px !important;
+        line-height: 1.1 !important;
+        font-weight: 600 !important;
+        color: #1e3a5f !important;
       }
-      .hg-emoji { font-size: 26px !important; line-height: 1 !important; display: block !important; }
-      .hg-label { font-size: 11px !important; font-weight: 700 !important;
-                  color: #1e3a5f !important; line-height: 1.25 !important;
-                  display: block !important; word-break: keep-all !important; }
-      .hg-label-logout { color: #dc2626 !important; }
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] p::first-line {
+        font-size: 28px !important;
+        line-height: 1.2 !important;
+      }
     `;
     d.head.appendChild(s);
-
-    // JS: แยก emoji/label — รอให้ Streamlit render เสร็จก่อน
-    function fixButtons() {
-      var btns = d.querySelectorAll('[data-testid="stHorizontalBlock"] button[kind="secondary"] p');
-      btns.forEach(function(p) {
-        if (p.querySelector('.hg-emoji')) return; // already done
-        var txt = p.innerText || p.textContent;
-        var lines = txt.split('\\n').filter(function(l){ return l.trim() !== ''; });
-        if (lines.length < 2) return;
-        var emoji = lines[0];
-        var label = lines.slice(1).join(' ');
-        var isLogout = label.includes('ออกจากระบบ');
-        p.innerHTML =
-          '<span class="hg-emoji">' + emoji + '</span>' +
-          '<span class="hg-label' + (isLogout ? ' hg-label-logout' : '') + '">' + label + '</span>';
-      });
-    }
-
-    // รัน 3 ครั้งเผื่อ Streamlit render ช้า
-    setTimeout(fixButtons, 300);
-    setTimeout(fixButtons, 800);
-    setTimeout(fixButtons, 1500);
-
-    // observe DOM changes
-    var obs = new MutationObserver(function(){ setTimeout(fixButtons, 100); });
-    obs.observe(d.body, { childList: true, subtree: true });
-
-  } catch(e) { console.log('hg err', e); }
+  } catch(e) {}
 })();
 </script>""", height=0)
 
@@ -1535,7 +1506,9 @@ if page == "🏠 หน้าหลัก":
                     st.empty()
                 else:
                     emoji, label, target = item
-                    if st.button(f"{emoji}\n{label}", key=f"hm_{row_start+ci}", use_container_width=True):
+                    # emoji ขนาดใหญ่บรรทัด 1, label บรรทัด 2
+                    btn_txt = f"{emoji}\n{label}"
+                    if st.button(btn_txt, key=f"hm_{row_start+ci}", use_container_width=True):
                         if target == "__LOGOUT__":
                             for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                                 st.session_state[k] = "" if k != "logged_in" else False
