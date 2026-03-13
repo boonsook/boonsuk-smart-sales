@@ -1440,75 +1440,145 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: pure st_html.html() + window.top.location.href ──
-    # วิธีนี้พิสูจน์แล้วว่า layout 100% + navigation ทำงานบน Android
+    # ── Home Grid: CSS inject (layout) + st.button (navigation) ──
+    # Step 1: inject CSS grid เข้า parent document ผ่าน st_html allow-same-origin
+    st_html.html("""<script>
+(function(){
+  try {
+    var d = window.parent.document;
+    var old = d.getElementById('_hg_css');
+    if (old) old.remove();
+    var s = d.createElement('style');
+    s.id = '_hg_css';
+    s.textContent = `
+      /* force 3-col grid บน stat row + menu rows */
+      .hg-row-3col[data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        width: 100% !important;
+      }
+      .hg-row-3col[data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        flex: none !important;
+        padding: 0 2px !important;
+      }
+      /* stat buttons */
+      .hg-stat-row button[kind="secondary"] {
+        border-radius: 14px !important;
+        border: 1.5px solid #dbeafe !important;
+        background: white !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
+        min-height: 60px !important;
+        font-size: 22px !important;
+        width: 100% !important;
+      }
+      /* menu buttons */
+      .hg-menu-row button[kind="secondary"] {
+        border-radius: 16px !important;
+        border: 1.5px solid #dbeafe !important;
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        min-height: 82px !important;
+        font-size: 30px !important;
+        width: 100% !important;
+      }
+      .hg-menu-row button[kind="secondary"]:active {
+        opacity: 0.7 !important;
+      }
+      /* label under button */
+      .hg-lbl p {
+        text-align: center !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #1e3a5f !important;
+        margin-top: -6px !important;
+        margin-bottom: 2px !important;
+        line-height: 1.2 !important;
+      }
+      .hg-lbl-red p { color: #dc2626 !important; }
+      .hg-stat-sub p {
+        text-align: center !important;
+        font-size: 9px !important;
+        color: #64748b !important;
+        margin-top: -10px !important;
+      }
+      .hg-stat-num p {
+        text-align: center !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
+        color: #1e3a8a !important;
+        margin-top: -6px !important;
+        margin-bottom: 4px !important;
+      }
+    `;
+    d.head.appendChild(s);
 
-    import urllib.parse as _up
-    _qs_tok = st.query_params.get("s", "")
+    /* tag rows with class so CSS above targets them */
+    function tagRows() {
+      var rows = d.querySelectorAll('[data-testid="stHorizontalBlock"]');
+      rows.forEach(function(row) {
+        if (!row.classList.contains('hg-row-3col')) {
+          row.classList.add('hg-row-3col');
+        }
+      });
+    }
+    setTimeout(tagRows, 50);
+    setTimeout(tagRows, 300);
+    new MutationObserver(tagRows).observe(d.body, {childList:true, subtree:true});
+  } catch(e) { console.log(e); }
+})();
+</script>""", height=0)
 
-    def _url(target):
-        if target == "__LOGOUT__":
-            return "https://boonsuk-sales.onrender.com/"
-        return ("https://boonsuk-sales.onrender.com/?s=" + _qs_tok
-                + "&nav=" + _up.quote(target))
-
-    # Build stat row HTML
-    _stat_html = ""
+    # Step 2: Stat row (staff/admin) — st.button emoji only
     if _role2 != "customer":
-        def _scard(em, top, val, tgt):
-            return (f'<a href="{_url(tgt)}" class="hg-stat">'
-                    f'<span class="hg-em">{em}</span>'
-                    f'<span class="hg-st">{top}</span>'
-                    f'<strong>{val}</strong></a>')
-        _stat_html = ('<div class="hg-stats">'
-            + _scard("📦", "สต๊อก", f"{_s1} รุ่น", "📦 จัดการสต๊อก")
-            + _scard("⏳", "ค้าง",  f"{_total_pend} งาน", "📋 จัดการงาน / สถานะ")
-            + _scard("✅", "ปิดแล้ว", f"{_total_closed} งาน", "📋 จัดการงาน / สถานะ")
-            + '</div>')
+        st.markdown('<div class="hg-stat-row">', unsafe_allow_html=True)
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            if st.button("📦", key="hs_stk", use_container_width=True):
+                st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
+            st.markdown('<div class="hg-stat-sub">สต๊อก</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="hg-stat-num">{_s1} รุ่น</div>', unsafe_allow_html=True)
+        with sc2:
+            if st.button("⏳", key="hs_pend", use_container_width=True):
+                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+            st.markdown('<div class="hg-stat-sub">ค้างงาน</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="hg-stat-num">{_total_pend} งาน</div>', unsafe_allow_html=True)
+        with sc3:
+            if st.button("✅", key="hs_cls", use_container_width=True):
+                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+            st.markdown('<div class="hg-stat-sub">ปิดแล้ว</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="hg-stat-num">{_total_closed} งาน</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Build menu grid HTML
-    _grid_html = '<div class="hg-grid">'
-    for emoji, label, target in menus_home:
-        is_lo = target == "__LOGOUT__"
-        cls = "hg-card hg-logout" if is_lo else "hg-card"
-        _grid_html += (f'<a href="{_url(target)}" class="{cls}">'
-                       f'<span class="hg-em">{emoji}</span>'
-                       f'<span class="hg-lb">{label}</span></a>')
-    _grid_html += '</div>'
-
-    _nr = (len(menus_home) + 2) // 3
-    _sh = 90 if _role2 != "customer" else 0
-    _th = _sh + _nr * 98 + 10
-
-    _html = """<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{margin:0;padding:0;background:transparent;}
-a{text-decoration:none;}
-.hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
-.hg-stat{background:#fff;border:1.5px solid #dbeafe;border-radius:14px;
-  padding:8px 4px;text-align:center;cursor:pointer;
-  box-shadow:0 2px 6px rgba(0,0,0,0.07);
-  display:flex;flex-direction:column;align-items:center;gap:1px;}
-.hg-stat:active{background:#eff6ff;}
-.hg-stat .hg-em{font-size:20px;line-height:1;}
-.hg-stat .hg-st{font-size:9px;color:#64748b;}
-.hg-stat strong{font-size:13px;color:#1e3a8a;font-weight:800;}
-.hg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.hg-card{background:#fff;border:1.5px solid #dbeafe;border-radius:16px;
-  padding:10px 4px;text-align:center;cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,0.08);
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:6px;min-height:86px;}
-.hg-card:active{opacity:0.7;transform:scale(0.97);}
-.hg-logout{background:#fff5f5!important;border-color:#fecaca!important;}
-.hg-em{font-size:28px;line-height:1;display:block;}
-.hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
-.hg-logout .hg-lb{color:#dc2626;}
-</style></head><body>""" + _stat_html + _grid_html + "</body></html>"
-
-    st_html.html(_html, height=_th)
+    # Step 3: Menu grid — rows of 3 buttons
+    st.markdown('<div class="hg-menu-row">', unsafe_allow_html=True)
+    _padded = list(menus_home)
+    while len(_padded) % 3 != 0:
+        _padded.append(None)
+    for _rs in range(0, len(_padded), 3):
+        _c1, _c2, _c3 = st.columns(3)
+        for _ci, _col in zip(range(3), [_c1, _c2, _c3]):
+            _itm = _padded[_rs + _ci]
+            with _col:
+                if _itm is None:
+                    st.empty()
+                else:
+                    emoji, label, target = _itm
+                    is_lo = target == "__LOGOUT__"
+                    if st.button(emoji, key=f"hm_{_rs+_ci}", use_container_width=True):
+                        if is_lo:
+                            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                                st.session_state[k] = "" if k != "logged_in" else False
+                            st.query_params.clear()
+                        else:
+                            st.session_state["_current_page"] = target
+                        st.rerun()
+                    lbl_cls = "hg-lbl hg-lbl-red" if is_lo else "hg-lbl"
+                    st.markdown(f'<div class="{lbl_cls}">{label}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
