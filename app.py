@@ -1440,9 +1440,7 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: inject <a> into parent.document + click ──
-    # allow-same-origin ให้เข้า parent.document ได้
-    # สร้าง <a href> ใน parent DOM แล้ว click = navigate parent (ไม่ใช่ iframe)
+    # ── Home Grid: <a href target="_parent"> ──
     import urllib.parse as _up
     _qs_tok = st.query_params.get("s", "")
 
@@ -1453,17 +1451,17 @@ if page == "🏠 หน้าหลัก":
 
     def _scard(em, lb, val, tgt):
         u = _navurl(tgt)
-        return ('<div class="hg-stat" onclick="go('' + u + '')">'
+        return ('<a class="hg-stat" href="' + u + '" target="_parent">'
                 + '<span class="hg-em">' + em + '</span>'
                 + '<span class="hg-st">' + lb + '</span>'
-                + '<strong>' + str(val) + '</strong></div>')
+                + '<strong>' + str(val) + '</strong></a>')
 
     def _mcard(em, lb, tgt):
         u = _navurl(tgt)
         cls = "hg-card hg-logout" if tgt == "__LOGOUT__" else "hg-card"
-        return ('<div class="' + cls + '" onclick="go('' + u + '')">'
+        return ('<a class="' + cls + '" href="' + u + '" target="_parent">'
                 + '<span class="hg-em">' + em + '</span>'
-                + '<span class="hg-lb">' + lb + '</span></div>')
+                + '<span class="hg-lb">' + lb + '</span></a>')
 
     _stat_html = ""
     if _role2 != "customer":
@@ -1482,9 +1480,10 @@ if page == "🏠 หน้าหลัก":
     _sh = 90 if _role2 != "customer" else 0
     _th = _sh + _nr * 100 + 10
 
-    _css = """<style>
+    _html = """<style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;}
+a{text-decoration:none;}
 .hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
 .hg-stat{background:#fff;border:1.5px solid #dbeafe;border-radius:14px;
   padding:8px 4px;text-align:center;cursor:pointer;
@@ -1505,26 +1504,9 @@ body{margin:0;padding:0;}
 .hg-em{font-size:28px;line-height:1;display:block;}
 .hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
 .hg-logout .hg-lb{color:#dc2626;}
-</style>"""
+</style>""" + _stat_html + _grid_html
 
-    _js = """<script>
-function go(url) {
-  try {
-    // สร้าง <a> ใน parent document แล้ว click = navigate parent frame
-    var pd = window.parent.document;
-    var a = pd.createElement('a');
-    a.href = url;
-    pd.body.appendChild(a);
-    a.click();
-    pd.body.removeChild(a);
-  } catch(e) {
-    // fallback
-    location.href = url;
-  }
-}
-</script>"""
-
-    st_html.html(_css + _stat_html + _grid_html + _js, height=_th)
+    st_html.html(_html, height=_th)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
