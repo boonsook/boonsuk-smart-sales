@@ -1440,127 +1440,82 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: CSS inject (layout) + st.button (navigation) ──
-    # Step 1: inject CSS grid เข้า parent document ผ่าน st_html allow-same-origin
-    st_html.html("""<script>
-(function(){
-  try {
-    var d = window.parent.document;
-    var old = d.getElementById('_hg_css');
-    if (old) old.remove();
-    var s = d.createElement('style');
-    s.id = '_hg_css';
-    s.textContent = `
-      /* force 3-col grid บน stat row + menu rows */
-      .hg-row-3col[data-testid="stHorizontalBlock"] {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 8px !important;
-        width: 100% !important;
-      }
-      .hg-row-3col[data-testid="stHorizontalBlock"] > [data-testid="column"] {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: none !important;
-        flex: none !important;
-        padding: 0 2px !important;
-      }
-      /* stat buttons */
-      .hg-stat-row button[kind="secondary"] {
-        border-radius: 14px !important;
-        border: 1.5px solid #dbeafe !important;
-        background: white !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
-        min-height: 60px !important;
-        font-size: 22px !important;
-        width: 100% !important;
-      }
-      /* menu buttons */
-      .hg-menu-row button[kind="secondary"] {
-        border-radius: 16px !important;
-        border: 1.5px solid #dbeafe !important;
-        background: white !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-        min-height: 82px !important;
-        font-size: 30px !important;
-        width: 100% !important;
-      }
-      .hg-menu-row button[kind="secondary"]:active {
-        opacity: 0.7 !important;
-      }
-      /* label under button */
-      .hg-lbl p {
-        text-align: center !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #1e3a5f !important;
-        margin-top: -6px !important;
-        margin-bottom: 2px !important;
-        line-height: 1.2 !important;
-      }
-      .hg-lbl-red p { color: #dc2626 !important; }
-      .hg-stat-sub p {
-        text-align: center !important;
-        font-size: 9px !important;
-        color: #64748b !important;
-        margin-top: -10px !important;
-      }
-      .hg-stat-num p {
-        text-align: center !important;
-        font-size: 13px !important;
-        font-weight: 800 !important;
-        color: #1e3a8a !important;
-        margin-top: -6px !important;
-        margin-bottom: 4px !important;
-      }
-    `;
-    d.head.appendChild(s);
+    # ── Home Grid: st.markdown CSS + st.button (ไม่มี iframe เลย) ──
+    st.markdown("""<style>
+/* บังคับ 3 column โดยไม่ขึ้นกับ screen width */
+div[data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    width: 100% !important;
+}
+div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+    flex: 1 1 0% !important;
+    width: 0% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+}
+div[data-testid="stHorizontalBlock"] > div[data-testid="column"] > div {
+    width: 100% !important;
+}
+/* stat buttons */
+.hg-stat button[kind="secondary"] {
+    border-radius: 14px !important;
+    border: 1.5px solid #dbeafe !important;
+    background: white !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
+    min-height: 58px !important;
+    font-size: 22px !important;
+    width: 100% !important;
+    padding: 4px !important;
+}
+/* menu buttons */
+.hg-menu button[kind="secondary"] {
+    border-radius: 16px !important;
+    border: 1.5px solid #dbeafe !important;
+    background: white !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    min-height: 80px !important;
+    font-size: 30px !important;
+    width: 100% !important;
+    padding: 4px !important;
+}
+/* labels */
+.hg-lbl { text-align:center; font-size:11px; font-weight:700;
+           color:#1e3a5f; margin:-6px 0 2px; line-height:1.2; }
+.hg-lbl.red { color:#dc2626; }
+.hg-sub  { text-align:center; font-size:9px; color:#64748b; margin:-10px 0 0; }
+.hg-num  { text-align:center; font-size:13px; font-weight:800;
+           color:#1e3a8a; margin:-4px 0 4px; }
+</style>""", unsafe_allow_html=True)
 
-    /* tag rows with class so CSS above targets them */
-    function tagRows() {
-      var rows = d.querySelectorAll('[data-testid="stHorizontalBlock"]');
-      rows.forEach(function(row) {
-        if (!row.classList.contains('hg-row-3col')) {
-          row.classList.add('hg-row-3col');
-        }
-      });
-    }
-    setTimeout(tagRows, 50);
-    setTimeout(tagRows, 300);
-    new MutationObserver(tagRows).observe(d.body, {childList:true, subtree:true});
-  } catch(e) { console.log(e); }
-})();
-</script>""", height=0)
-
-    # Step 2: Stat row (staff/admin) — st.button emoji only
+    # Stat row
     if _role2 != "customer":
-        st.markdown('<div class="hg-stat-row">', unsafe_allow_html=True)
+        st.markdown('<div class="hg-stat">', unsafe_allow_html=True)
         sc1, sc2, sc3 = st.columns(3)
         with sc1:
             if st.button("📦", key="hs_stk", use_container_width=True):
                 st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-            st.markdown('<div class="hg-stat-sub">สต๊อก</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="hg-stat-num">{_s1} รุ่น</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="hg-sub">สต๊อก</div><div class="hg-num">{_s1} รุ่น</div>', unsafe_allow_html=True)
         with sc2:
             if st.button("⏳", key="hs_pend", use_container_width=True):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('<div class="hg-stat-sub">ค้างงาน</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="hg-stat-num">{_total_pend} งาน</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="hg-sub">ค้างงาน</div><div class="hg-num">{_total_pend} งาน</div>', unsafe_allow_html=True)
         with sc3:
             if st.button("✅", key="hs_cls", use_container_width=True):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('<div class="hg-stat-sub">ปิดแล้ว</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="hg-stat-num">{_total_closed} งาน</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="hg-sub">ปิดแล้ว</div><div class="hg-num">{_total_closed} งาน</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Step 3: Menu grid — rows of 3 buttons
-    st.markdown('<div class="hg-menu-row">', unsafe_allow_html=True)
+    # Menu grid
+    st.markdown('<div class="hg-menu">', unsafe_allow_html=True)
     _padded = list(menus_home)
     while len(_padded) % 3 != 0:
         _padded.append(None)
     for _rs in range(0, len(_padded), 3):
-        _c1, _c2, _c3 = st.columns(3)
-        for _ci, _col in zip(range(3), [_c1, _c2, _c3]):
+        c1, c2, c3 = st.columns(3)
+        for _ci, _col in zip(range(3), [c1, c2, c3]):
             _itm = _padded[_rs + _ci]
             with _col:
                 if _itm is None:
@@ -1576,7 +1531,7 @@ if page == "🏠 หน้าหลัก":
                         else:
                             st.session_state["_current_page"] = target
                         st.rerun()
-                    lbl_cls = "hg-lbl hg-lbl-red" if is_lo else "hg-lbl"
+                    lbl_cls = "hg-lbl red" if is_lo else "hg-lbl"
                     st.markdown(f'<div class="{lbl_cls}">{label}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
