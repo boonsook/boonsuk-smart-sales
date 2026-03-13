@@ -1440,39 +1440,58 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: st_html + window.parent.location.href (same-origin) ──
+    # ── Home Grid: postMessage architecture ──
+    # Iframe 1 (height=0): inject postMessage listener เข้า parent window
+    # Iframe 2 (grid): ส่ง postMessage เมื่อกด → listener navigate parent
+
     import urllib.parse as _up
     _qs_tok = st.query_params.get("s", "")
 
     def _navurl(target):
         if target == "__LOGOUT__":
             return "/?logout=1"
-        p = _up.quote(target)
-        return "/?s=" + _qs_tok + "&nav=" + p
+        return "/?s=" + _qs_tok + "&nav=" + _up.quote(target)
 
-    def _card(cls, onclick, em, lb):
-        return '<div class="' + cls + '" onclick="go(\'' + onclick + '\')">' + \
-               '<span class="hg-em">' + em + '</span>' + \
-               '<span class="hg-lb">' + lb + '</span></div>'
+    # Iframe 1: listener
+    st_html.html("""<script>
+(function(){
+  var p = window.parent;
+  if (p.__boonsukNav) return;
+  p.__boonsukNav = true;
+  p.addEventListener('message', function(e){
+    if (e.data && e.data.type === 'boonsuk_nav') {
+      p.location.href = e.data.url;
+    }
+  });
+})();
+</script>""", height=0)
+
+    # Iframe 2: HTML grid
+    def _scard(em, lb, val, tgt):
+        u = _navurl(tgt)
+        return ('<div class="hg-stat" onclick="go('' + u + '')">' +
+                '<span class="hg-em">' + em + '</span>' +
+                '<span class="hg-st">' + lb + '</span>' +
+                '<strong>' + str(val) + '</strong></div>')
+
+    def _mcard(em, lb, tgt):
+        u = _navurl(tgt)
+        cls = "hg-card hg-logout" if tgt == "__LOGOUT__" else "hg-card"
+        return ('<div class="' + cls + '" onclick="go('' + u + '')">' +
+                '<span class="hg-em">' + em + '</span>' +
+                '<span class="hg-lb">' + lb + '</span></div>')
 
     _stat_html = ""
     if _role2 != "customer":
-        def _scard(em, st_lb, val, tgt):
-            u = _navurl(tgt)
-            return ('<div class="hg-stat" onclick="go(\'' + u + '\')">' +
-                    '<span class="hg-em">' + em + '</span>' +
-                    '<span class="hg-st">' + st_lb + '</span>' +
-                    '<strong>' + str(val) + '</strong></div>')
         _stat_html = ('<div class="hg-stats">' +
-            _scard("📦", "สต๊อก", str(_s1) + " รุ่น", "📦 จัดการสต๊อก") +
-            _scard("⏳", "ค้าง", str(_total_pend) + " งาน", "📋 จัดการงาน / สถานะ") +
-            _scard("✅", "ปิดแล้ว", str(_total_closed) + " งาน", "📋 จัดการงาน / สถานะ") +
+            _scard("📦","สต๊อก", str(_s1)+" รุ่น","📦 จัดการสต๊อก") +
+            _scard("⏳","ค้าง", str(_total_pend)+" งาน","📋 จัดการงาน / สถานะ") +
+            _scard("✅","ปิดแล้ว", str(_total_closed)+" งาน","📋 จัดการงาน / สถานะ") +
             '</div>')
 
     _grid_html = '<div class="hg-grid">'
     for _em, _lb, _tgt in menus_home:
-        _cls = "hg-card hg-logout" if _tgt == "__LOGOUT__" else "hg-card"
-        _grid_html += _card(_cls, _navurl(_tgt), _em, _lb)
+        _grid_html += _mcard(_em, _lb, _tgt)
     _grid_html += '</div>'
 
     _nr = (len(menus_home) + 2) // 3
@@ -1506,9 +1525,7 @@ body{margin:0;padding:0;}
 
     _js = """<script>
 function go(url) {
-  try { window.parent.location.href = url; } catch(e) {
-    try { window.top.location.href = 'https://boonsuk-sales.onrender.com' + url; } catch(e2) {}
-  }
+  window.parent.postMessage({type:'boonsuk_nav', url:url}, '*');
 }
 </script>"""
 
