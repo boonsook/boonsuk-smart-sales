@@ -1440,53 +1440,61 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: st_html HTML grid + window.top.location.href (ไม่ใช่ <a href>) ──
-    import urllib.parse as _up
-    _qs_tok = st.query_params.get("s", "")
-    _base = "https://boonsuk-sales.onrender.com"
+    # ── Home Grid ──
+    # real st.buttons (ซ่อนด้วย CSS) + HTML grid สวย (คลิก buttons จริงผ่าน JS)
 
-    def _navjs(target):
-        if target == "__LOGOUT__":
-            return f"window.top.location.href='{_base}/?logout=1'"
-        return f"window.top.location.href='{_base}/?s={_qs_tok}&nav={_up.quote(target)}'"
+    _stat_offset = 0
+    if _role2 != "customer":
+        _stat_offset = 3
+        if st.button("__nav_stk__", key="hs_stk"):
+            st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
+        if st.button("__nav_pend__", key="hs_pend"):
+            st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+        if st.button("__nav_cls__", key="hs_cls"):
+            st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
 
-    # Stat row HTML
+    for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
+        if st.button("__nav_%d__" % _mi, key="hm_%d" % _mi):
+            if _tgt == "__LOGOUT__":
+                for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                    st.session_state[k] = "" if k != "logged_in" else False
+                st.query_params.clear()
+            else:
+                st.session_state["_current_page"] = _tgt
+            st.rerun()
+
+    # HTML grid
     _stat_html = ""
     if _role2 != "customer":
-        def _sc(em, lb, val, tgt):
-            return (f'<div class="hg-stat" onclick="{_navjs(tgt)}">'
-                    f'<span class="hg-em">{em}</span>'
-                    f'<span class="hg-st">{lb}</span>'
-                    f'<strong>{val}</strong></div>')
-        _stat_html = ('<div class="hg-stats">'
-            + _sc("📦","สต๊อก",f"{_s1} รุ่น","📦 จัดการสต๊อก")
-            + _sc("⏳","ค้าง",f"{_total_pend} งาน","📋 จัดการงาน / สถานะ")
-            + _sc("✅","ปิดแล้ว",f"{_total_closed} งาน","📋 จัดการงาน / สถานะ")
-            + '</div>')
+        _stat_html = (
+            '<div class="hg-stats">'
+            + '<div class="hg-stat" onclick="nb(0)"><span class="hg-em">📦</span><span class="hg-st">สต๊อก</span><strong>%d รุ่น</strong></div>' % _s1
+            + '<div class="hg-stat" onclick="nb(1)"><span class="hg-em">⏳</span><span class="hg-st">ค้าง</span><strong>%d งาน</strong></div>' % _total_pend
+            + '<div class="hg-stat" onclick="nb(2)"><span class="hg-em">✅</span><span class="hg-st">ปิดแล้ว</span><strong>%d งาน</strong></div>' % _total_closed
+            + '</div>'
+        )
 
-    # Menu grid HTML
     _grid_html = '<div class="hg-grid">'
-    for emoji, label, target in menus_home:
-        is_lo = target == "__LOGOUT__"
-        cls = "hg-card hg-logout" if is_lo else "hg-card"
-        _grid_html += (f'<div class="{cls}" onclick="{_navjs(target)}">'
-                       f'<span class="hg-em">{emoji}</span>'
-                       f'<span class="hg-lb">{label}</span></div>')
+    for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
+        _is_lo = "hg-card hg-logout" if _tgt == "__LOGOUT__" else "hg-card"
+        _idx = _mi + _stat_offset
+        _grid_html += '<div class="%s" onclick="nb(%d)"><span class="hg-em">%s</span><span class="hg-lb">%s</span></div>' % (_is_lo, _idx, _em, _lb)
     _grid_html += '</div>'
 
     _nr = (len(menus_home) + 2) // 3
     _sh = 90 if _role2 != "customer" else 0
     _th = _sh + _nr * 100 + 10
+    _total_nav = _stat_offset + len(menus_home)
 
-    _css = """<style>
+    _html = """
+<style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;}
 .hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
 .hg-stat{background:#fff;border:1.5px solid #dbeafe;border-radius:14px;
   padding:8px 4px;text-align:center;cursor:pointer;
   box-shadow:0 2px 6px rgba(0,0,0,0.07);
-  display:flex;flex-direction:column;align-items:center;gap:1px;
-  user-select:none;}
+  display:flex;flex-direction:column;align-items:center;gap:1px;user-select:none;}
 .hg-stat:active{background:#eff6ff;}
 .hg-stat .hg-em{font-size:20px;line-height:1;}
 .hg-stat .hg-st{font-size:9px;color:#64748b;}
@@ -1502,9 +1510,39 @@ body{margin:0;padding:0;}
 .hg-em{font-size:28px;line-height:1;display:block;}
 .hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
 .hg-logout .hg-lb{color:#dc2626;}
-</style>"""
+</style>
+""" + _stat_html + _grid_html + """
+<script>
+(function(){
+  try {
+    var pd = window.parent.document;
+    if (!pd.getElementById('_nbh')) {
+      var s = pd.createElement('style');
+      s.id = '_nbh';
+      s.textContent = 'button:has(> div > p[data-testid="stMarkdownContainer"] > p:first-child) { display:none!important; }';
+      pd.head.appendChild(s);
+    }
+  } catch(e) {}
+})();
 
-    st_html.html(_css + _stat_html + _grid_html, height=_th)
+function nb(idx) {
+  try {
+    var pd = window.parent.document;
+    var btns = [];
+    pd.querySelectorAll('button').forEach(function(b){
+      if (b.textContent.trim().indexOf('__nav_') === 0) btns.push(b);
+    });
+    if (btns[idx]) {
+      btns[idx].style.display = 'block';
+      btns[idx].click();
+      btns[idx].style.display = 'none';
+    }
+  } catch(e) { console.log('nb err', e); }
+}
+</script>
+"""
+
+    st_html.html(_html, height=_th)
 
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
