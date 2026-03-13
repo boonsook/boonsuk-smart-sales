@@ -1440,40 +1440,77 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: <a href target="_parent"> ──
-    import urllib.parse as _up
-    _qs_tok = st.query_params.get("s", "")
+    # ── Home Grid ──
+    # st.markdown CSS ซ่อนปุ่ม (main DOM) + st.button navigation + st_html grid visual
 
-    def _navurl(target):
-        if target == "__LOGOUT__":
-            return "/?logout=1"
-        return "/?s=" + _qs_tok + "&nav=" + _up.quote(target)
+    # CSS ซ่อนปุ่ม nav ทั้งหมดในหน้าหลัก (st.markdown = main DOM ไม่ใช่ iframe)
+    st.markdown("""<style>
+[data-testid="stButton"] button[kind="secondary"] {
+    opacity: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    display: block !important;
+    pointer-events: none !important;
+    line-height: 0 !important;
+    font-size: 0 !important;
+}
+[data-testid="stButton"] {
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+</style>""", unsafe_allow_html=True)
 
-    def _scard(em, lb, val, tgt):
-        u = _navurl(tgt)
-        return ('<a class="hg-stat" href="' + u + '" target="_parent">'
+    # real st.button (ซ่อน) — navigation engine
+    _stat_offset = 3 if _role2 != "customer" else 0
+    if _role2 != "customer":
+        if st.button("s0", key="hs_stk"):
+            st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
+        if st.button("s1", key="hs_pend"):
+            st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+        if st.button("s2", key="hs_cls"):
+            st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+
+    for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
+        if st.button("m%d" % _mi, key="hm_%d" % _mi):
+            if _tgt == "__LOGOUT__":
+                for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
+                    st.session_state[k] = "" if k != "logged_in" else False
+                st.query_params.clear()
+            else:
+                st.session_state["_current_page"] = _tgt
+            st.rerun()
+
+    # HTML grid (visual) — JS คลิก button จริงโดย index
+    def _scard(em, lb, val, idx):
+        return ('<div class="hg-stat" onclick="nb(' + str(idx) + ')">'
                 + '<span class="hg-em">' + em + '</span>'
                 + '<span class="hg-st">' + lb + '</span>'
-                + '<strong>' + str(val) + '</strong></a>')
+                + '<strong>' + str(val) + '</strong></div>')
 
-    def _mcard(em, lb, tgt):
-        u = _navurl(tgt)
+    def _mcard(em, lb, tgt, idx):
         cls = "hg-card hg-logout" if tgt == "__LOGOUT__" else "hg-card"
-        return ('<a class="' + cls + '" href="' + u + '" target="_parent">'
+        return ('<div class="' + cls + '" onclick="nb(' + str(idx) + ')">'
                 + '<span class="hg-em">' + em + '</span>'
-                + '<span class="hg-lb">' + lb + '</span></a>')
+                + '<span class="hg-lb">' + lb + '</span></div>')
 
     _stat_html = ""
     if _role2 != "customer":
         _stat_html = ('<div class="hg-stats">'
-            + _scard("📦","สต๊อก", str(_s1)+" รุ่น","📦 จัดการสต๊อก")
-            + _scard("⏳","ค้าง", str(_total_pend)+" งาน","📋 จัดการงาน / สถานะ")
-            + _scard("✅","ปิดแล้ว", str(_total_closed)+" งาน","📋 จัดการงาน / สถานะ")
+            + _scard("📦","สต๊อก",str(_s1)+" รุ่น", 0)
+            + _scard("⏳","ค้าง",str(_total_pend)+" งาน", 1)
+            + _scard("✅","ปิดแล้ว",str(_total_closed)+" งาน", 2)
             + '</div>')
 
     _grid_html = '<div class="hg-grid">'
-    for _em, _lb, _tgt in menus_home:
-        _grid_html += _mcard(_em, _lb, _tgt)
+    for _mi, (_em, _lb, _tgt) in enumerate(menus_home):
+        _grid_html += _mcard(_em, _lb, _tgt, _mi + _stat_offset)
     _grid_html += '</div>'
 
     _nr = (len(menus_home) + 2) // 3
@@ -1483,7 +1520,6 @@ if page == "🏠 หน้าหลัก":
     _html = """<style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;}
-a{text-decoration:none;}
 .hg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
 .hg-stat{background:#fff;border:1.5px solid #dbeafe;border-radius:14px;
   padding:8px 4px;text-align:center;cursor:pointer;
@@ -1504,8 +1540,21 @@ a{text-decoration:none;}
 .hg-em{font-size:28px;line-height:1;display:block;}
 .hg-lb{font-size:12px;font-weight:700;color:#1e3a5f;line-height:1.2;display:block;}
 .hg-logout .hg-lb{color:#dc2626;}
-</style>""" + _stat_html + _grid_html
-
+</style>""" + _stat_html + _grid_html + """
+<script>
+function nb(idx) {
+  try {
+    var pd = window.parent.document;
+    var btns = pd.querySelectorAll('[data-testid="stButton"] button');
+    if (btns[idx]) {
+      // ปลด pointer-events ชั่วคราว แล้ว click
+      btns[idx].style.pointerEvents = 'auto';
+      btns[idx].dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+    }
+  } catch(e) { console.log(e); }
+}
+</script>
+"""
     st_html.html(_html, height=_th)
 
 # ══════════════════════════════════════════════
