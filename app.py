@@ -1432,37 +1432,54 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── st.button (navigation 100%) + CSS บังคับ 3-col ──
+    # ── st.button (navigation 100%) + CSS inject via st_html ──
     _qs_tok = st.query_params.get("s", "")
 
-    st.markdown("""<style>
-/* force 3-col grid บน mobile */
-[data-testid="stHorizontalBlock"] {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 6px !important;
-}
-[data-testid="stHorizontalBlock"] > [data-testid="column"] {
-    flex: 1 1 0 !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    padding: 0 !important;
-}
-[data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] {
-    width: 100% !important;
-    min-height: 78px !important;
-    border-radius: 14px !important;
-    border: 1.5px solid #dbeafe !important;
-    background: white !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    color: #1e3a5f !important;
-    white-space: pre-wrap !important;
-    line-height: 1.4 !important;
-    padding: 8px 2px !important;
-}
-</style>""", unsafe_allow_html=True)
+    # inject CSS เข้า parent document โดยตรง — ชนะ Streamlit inline style ได้
+    st_html.html("""<script>
+(function(){
+  try {
+    var d = window.parent.document;
+    var id = '_hg3col';
+    if(d.getElementById(id)) d.getElementById(id).remove();
+    var s = d.createElement('style');
+    s.id = id;
+    s.textContent = `
+      [data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+        width: 100% !important;
+      }
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        flex: none !important;
+        padding: 0 !important;
+      }
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] > div {
+        width: 100% !important;
+      }
+      [data-testid="stHorizontalBlock"] > [data-testid="column"] button[kind="secondary"] {
+        width: 100% !important;
+        min-height: 80px !important;
+        border-radius: 14px !important;
+        border: 1.5px solid #dbeafe !important;
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #1e3a5f !important;
+        white-space: pre-wrap !important;
+        line-height: 1.4 !important;
+        padding: 8px 2px !important;
+      }
+    `;
+    d.head.appendChild(s);
+  } catch(e) { console.log('css inject err', e); }
+})();
+</script>""", height=0)
 
     # Stat row
     if _role2 != "customer":
