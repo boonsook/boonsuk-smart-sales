@@ -1440,10 +1440,9 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: postMessage architecture ──
-    # Iframe 1 (height=0): inject postMessage listener เข้า parent window
-    # Iframe 2 (grid): ส่ง postMessage เมื่อกด → listener navigate parent
-
+    # ── Home Grid: inject <a> into parent.document + click ──
+    # allow-same-origin ให้เข้า parent.document ได้
+    # สร้าง <a href> ใน parent DOM แล้ว click = navigate parent (ไม่ใช่ iframe)
     import urllib.parse as _up
     _qs_tok = st.query_params.get("s", "")
 
@@ -1452,42 +1451,27 @@ if page == "🏠 หน้าหลัก":
             return "/?logout=1"
         return "/?s=" + _qs_tok + "&nav=" + _up.quote(target)
 
-    # Iframe 1: listener
-    st_html.html("""<script>
-(function(){
-  var p = window.parent;
-  if (p.__boonsukNav) return;
-  p.__boonsukNav = true;
-  p.addEventListener('message', function(e){
-    if (e.data && e.data.type === 'boonsuk_nav') {
-      p.location.href = e.data.url;
-    }
-  });
-})();
-</script>""", height=0)
-
-    # Iframe 2: HTML grid
     def _scard(em, lb, val, tgt):
         u = _navurl(tgt)
-        return ('<div class="hg-stat" onclick="go('' + u + '')">' +
-                '<span class="hg-em">' + em + '</span>' +
-                '<span class="hg-st">' + lb + '</span>' +
-                '<strong>' + str(val) + '</strong></div>')
+        return ('<div class="hg-stat" onclick="go('' + u + '')">'
+                + '<span class="hg-em">' + em + '</span>'
+                + '<span class="hg-st">' + lb + '</span>'
+                + '<strong>' + str(val) + '</strong></div>')
 
     def _mcard(em, lb, tgt):
         u = _navurl(tgt)
         cls = "hg-card hg-logout" if tgt == "__LOGOUT__" else "hg-card"
-        return ('<div class="' + cls + '" onclick="go('' + u + '')">' +
-                '<span class="hg-em">' + em + '</span>' +
-                '<span class="hg-lb">' + lb + '</span></div>')
+        return ('<div class="' + cls + '" onclick="go('' + u + '')">'
+                + '<span class="hg-em">' + em + '</span>'
+                + '<span class="hg-lb">' + lb + '</span></div>')
 
     _stat_html = ""
     if _role2 != "customer":
-        _stat_html = ('<div class="hg-stats">' +
-            _scard("📦","สต๊อก", str(_s1)+" รุ่น","📦 จัดการสต๊อก") +
-            _scard("⏳","ค้าง", str(_total_pend)+" งาน","📋 จัดการงาน / สถานะ") +
-            _scard("✅","ปิดแล้ว", str(_total_closed)+" งาน","📋 จัดการงาน / สถานะ") +
-            '</div>')
+        _stat_html = ('<div class="hg-stats">'
+            + _scard("📦","สต๊อก", str(_s1)+" รุ่น","📦 จัดการสต๊อก")
+            + _scard("⏳","ค้าง", str(_total_pend)+" งาน","📋 จัดการงาน / สถานะ")
+            + _scard("✅","ปิดแล้ว", str(_total_closed)+" งาน","📋 จัดการงาน / สถานะ")
+            + '</div>')
 
     _grid_html = '<div class="hg-grid">'
     for _em, _lb, _tgt in menus_home:
@@ -1525,7 +1509,18 @@ body{margin:0;padding:0;}
 
     _js = """<script>
 function go(url) {
-  window.parent.postMessage({type:'boonsuk_nav', url:url}, '*');
+  try {
+    // สร้าง <a> ใน parent document แล้ว click = navigate parent frame
+    var pd = window.parent.document;
+    var a = pd.createElement('a');
+    a.href = url;
+    pd.body.appendChild(a);
+    a.click();
+    pd.body.removeChild(a);
+  } catch(e) {
+    // fallback
+    location.href = url;
+  }
 }
 </script>"""
 
