@@ -253,6 +253,16 @@ def check_login():
         st.session_state.full_name  = ""
         st.session_state.user_phone = ""
 
+    # handle logout จาก HTML grid (href /?logout=1)
+    if st.query_params.get("logout", "") == "1":
+        st.session_state.logged_in  = False
+        st.session_state.username   = ""
+        st.session_state.role       = ""
+        st.session_state.full_name  = ""
+        st.session_state.user_phone = ""
+        st.session_state["_current_page"] = "🏠 หน้าหลัก"
+        st.query_params.clear()
+
     # ลอง restore session จาก query param
     if not st.session_state.logged_in:
         try:
