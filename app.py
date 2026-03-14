@@ -1476,7 +1476,7 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 }
 .hg-lb-lo { color: #dc2626; }
 /* stat row button smaller */
-.hg-stat-row section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {
+.hg-stat-row [data-testid="stHorizontalBlock"] button[kind="secondary"] {
     min-height: 58px !important; font-size: 22px !important;
 }
 .hg-sub { text-align:center; font-size:9px; color:#64748b; margin:-4px 0 0; }
