@@ -1472,7 +1472,7 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 /* label under button */
 .hg-lb {
     text-align: center; font-size: 11px; font-weight: 700;
-    color: #1e3a5f; margin: -2px 0 6px; line-height: 1.2;
+    color: #334155; margin: 0 0 6px; line-height: 1.2;
 }
 .hg-lb-lo { color: #dc2626; }
 /* stat row button smaller */
