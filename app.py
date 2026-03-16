@@ -429,7 +429,6 @@ def inject_pwa():
     """, unsafe_allow_html=True)
 
 def login_page():
-    inject_pwa()
     st.markdown("""
     <style>
     [data-testid="stSidebar"],
@@ -1622,24 +1621,21 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
     if _role2 != "customer":
         _stk_msg = f"⚠️ {_low_stk} ใกล้หมด" if _low_stk > 0 else "ปกติ"
         st.markdown(f'''<div class="bs-stats">
-          <a href="?nav=📦+จัดการสต๊อก" target="_self" class="bs-stat-link">
-            <div class="bs-stat-card" style="border-top:3px solid #3b82f6;">
-              <div class="bs-stat-num" style="color:#1e40af;">📦 {_s1}</div>
-              <div class="bs-stat-label">สต๊อก · {_stk_msg}</div>
-            </div>
-          </a>
-          <a href="?nav=📋+จัดการงาน+/+สถานะ" target="_self" class="bs-stat-link">
-            <div class="bs-stat-card" style="border-top:3px solid #f59e0b;">
-              <div class="bs-stat-num" style="color:#b45309;">⏳ {_total_pend}</div>
-              <div class="bs-stat-label">งานค้าง · แอร์ {_ac_pend} ซ่อม {_sv_pend}</div>
-            </div>
-          </a>
-          <a href="?nav=📋+จัดการงาน+/+สถานะ" target="_self" class="bs-stat-link">
-            <div class="bs-stat-card" style="border-top:3px solid #10b981;">
-              <div class="bs-stat-num" style="color:#047857;">✅ {_total_closed}</div>
-              <div class="bs-stat-label">ปิดแล้ว · แอร์ {_ac_closed} ซ่อม {_sv_closed}</div>
-            </div>
-          </a>
+          <div class="bs-stat-card" style="border-top:3px solid #3b82f6;cursor:pointer;"
+               onclick="var u=new URL(window.location);u.searchParams.set('nav','📦 จัดการสต๊อก');window.location=u.toString();">
+            <div class="bs-stat-num" style="color:#1e40af;">📦 {_s1}</div>
+            <div class="bs-stat-label">สต๊อก · {_stk_msg}</div>
+          </div>
+          <div class="bs-stat-card" style="border-top:3px solid #f59e0b;cursor:pointer;"
+               onclick="var u=new URL(window.location);u.searchParams.set('nav','📋 จัดการงาน / สถานะ');window.location=u.toString();">
+            <div class="bs-stat-num" style="color:#b45309;">⏳ {_total_pend}</div>
+            <div class="bs-stat-label">งานค้าง · แอร์ {_ac_pend} ซ่อม {_sv_pend}</div>
+          </div>
+          <div class="bs-stat-card" style="border-top:3px solid #10b981;cursor:pointer;"
+               onclick="var u=new URL(window.location);u.searchParams.set('nav','📋 จัดการงาน / สถานะ');window.location=u.toString();">
+            <div class="bs-stat-num" style="color:#047857;">✅ {_total_closed}</div>
+            <div class="bs-stat-label">ปิดแล้ว · แอร์ {_ac_closed} ซ่อม {_sv_closed}</div>
+          </div>
         </div>''', unsafe_allow_html=True)
 
     # === MENU SECTION ===
