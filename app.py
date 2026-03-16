@@ -238,13 +238,19 @@ def suggest_capacity(btu):
 # ──────────────────────────────────────────────
 def _encode_session(data: dict) -> str:
     import json, base64
-    return base64.urlsafe_b64encode(json.dumps(data).encode()).decode()
+    raw = base64.urlsafe_b64encode(json.dumps(data, ensure_ascii=True).encode()).decode()
+    return raw.rstrip("=")  # ลบ padding ที่อาจหายเมื่อผ่าน URL
 
 def _decode_session(token: str) -> dict:
     import json, base64
     try:
+        token = str(token).strip()
+        # เติม padding กลับ
+        pad = 4 - len(token) % 4
+        if pad != 4:
+            token += "=" * pad
         return json.loads(base64.urlsafe_b64decode(token.encode()).decode())
-    except:
+    except Exception:
         return {}
 
 def check_login():
@@ -264,29 +270,29 @@ def check_login():
         st.session_state.user_phone = ""
         st.session_state["_current_page"] = "🏠 หน้าหลัก"
         st.query_params.clear()
+        return
 
-    # ลอง restore session จาก query param
-    if not st.session_state.logged_in:
-        try:
-            params = st.query_params
-            token = params.get("s", "")
-            if token:
-                data = _decode_session(token)
+    # ถ้า logged in อยู่แล้วใน session_state — ไม่ต้องทำอะไร
+    if st.session_state.logged_in:
+        return
+
+    # ลอง restore session จาก query param "s"
+    # (จำเป็นเมื่อมือถือ reconnect websocket แล้ว session_state หาย)
+    try:
+        token = str(st.query_params.get("s", "")).strip()
+        if token:
+            data = _decode_session(token)
+            if data and isinstance(data, dict):
                 import time
-                if data and data.get("exp", 0) > time.time():
+                exp = data.get("exp", 0)
+                if isinstance(exp, (int, float)) and exp > time.time():
                     st.session_state.logged_in  = True
-                    st.session_state.username   = data.get("u", "")
-                    st.session_state.role       = data.get("r", "")
-                    st.session_state.full_name  = data.get("n", "")
-                    st.session_state.user_phone = data.get("p", "")
-                elif data and data.get("exp", 0) > 0:
-                    # session expired — ลบเฉพาะ token ไม่ clear ทั้งหมด
-                    try:
-                        del st.query_params["s"]
-                    except:
-                        pass
-        except:
-            pass
+                    st.session_state.username   = str(data.get("u", ""))
+                    st.session_state.role       = str(data.get("r", ""))
+                    st.session_state.full_name  = str(data.get("n", ""))
+                    st.session_state.user_phone = str(data.get("p", ""))
+    except Exception:
+        pass
 
 def _save_session():
     """บันทึก session ลง URL query param อายุ 30 วัน"""
@@ -1318,6 +1324,11 @@ st.markdown("""
 check_login()
 if not st.session_state.logged_in:
     login_page(); st.stop()
+
+# รีเฟรช session token ลง URL ทุกครั้งที่ logged in อยู่
+# (ป้องกัน token หายเมื่อมือถือ reconnect)
+if not st.query_params.get("s", ""):
+    _save_session()
 
 # PWA inject หลัง login สำเร็จเท่านั้น
 inject_pwa()
