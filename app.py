@@ -635,6 +635,7 @@ def load_log() -> pd.DataFrame:
                 if "status"      not in df.columns: df["status"]      = JOB_STATUSES[0]
                 if "receipt_no"  not in df.columns: df["receipt_no"]  = ""
                 if "paid_amount" not in df.columns: df["paid_amount"] = df.get("net_total", 0)
+                if "payment_method" not in df.columns: df["payment_method"] = ""
                 return df
             return pd.DataFrame()
         except Exception as e:
@@ -646,6 +647,7 @@ def load_log() -> pd.DataFrame:
             if "status"      not in df.columns: df["status"]      = JOB_STATUSES[0]
             if "receipt_no"  not in df.columns: df["receipt_no"]  = ""
             if "paid_amount" not in df.columns: df["paid_amount"] = df.get("net_total", 0)
+            if "payment_method" not in df.columns: df["payment_method"] = ""
             return df
         except Exception:
             pass
@@ -677,6 +679,7 @@ def log_customer_job(quote: dict):
     record.setdefault("status",      JOB_STATUSES[0])
     record.setdefault("receipt_no",  "")
     record.setdefault("paid_amount", record.get("net_total", 0))
+    record.setdefault("payment_method", "")
     record.setdefault("saved_by",    st.session_state.get("username",""))
     # ── Supabase ──
     if _use_supabase():
@@ -1128,23 +1131,31 @@ def make_job_line_text(job) -> str:
     except Exception:
         btu_str = str(job.get('model_btu', ''))
     task = f"{safe_text(job.get('section',''))} {safe_text(job.get('model',''))} {btu_str}".strip()
-    return "\n".join([
+    lines = [
         f"❄️ งานแอร์ — {STORE_NAME}",
         "────────────────────",
         f"👤 ลูกค้า: {safe_text(job.get('customer_name',''))}",
         f"📞 โทร: {safe_text(job.get('customer_phone',''))}",
         f"📍 ที่อยู่: {safe_text(job.get('customer_address',''))}",
         f"💰 ราคาสุทธิ: ฿{fmt_baht(job.get('net_total', 0))}",
+        f"💵 รับเงิน: ฿{fmt_baht(job.get('paid_amount', 0))}",
         f"📅 วันที่: {safe_text(job.get('date',''))}",
         f"🗂️ บันทึกโดย: {safe_text(job.get('saved_by',''))}",
         f"⚡ งาน: {task}",
-        f"📌 สถานะ: {safe_text(job.get('status',''))}",
-        "────────────────────",
-    ])
+    ]
+    pm = safe_text(job.get('payment_method',''))
+    if pm:
+        lines.append(f"💳 ชำระ: {pm}")
+    rn = safe_text(job.get('receipt_no',''))
+    if rn:
+        lines.append(f"🧾 ใบเสร็จ: {rn}")
+    lines.append(f"📌 สถานะ: {safe_text(job.get('status',''))}")
+    lines.append("────────────────────")
+    return "\n".join(lines)
 
 def make_service_line_text(r) -> str:
     """งานซ่อม/บริการ — แชร์จากหน้าจัดการงาน"""
-    return "\n".join([
+    lines = [
         f"🛠️ งานซ่อม/บริการ — {STORE_NAME}",
         "────────────────────",
         f"👤 ลูกค้า: {safe_text(r.get('customer_name',''))}",
@@ -1155,9 +1166,13 @@ def make_service_line_text(r) -> str:
         f"📅 วันที่: {safe_text(r.get('date',''))}",
         f"🗂️ บันทึกโดย: {safe_text(r.get('saved_by',''))}",
         f"⚡ อาการ/งาน: {safe_text(r.get('symptom',''))}",
-        f"📌 สถานะ: {safe_text(r.get('status',''))}",
-        "────────────────────",
-    ])
+    ]
+    note = safe_text(r.get('note',''))
+    if note:
+        lines.append(f"📝 หมายเหตุ: {note}")
+    lines.append(f"📌 สถานะ: {safe_text(r.get('status',''))}")
+    lines.append("────────────────────")
+    return "\n".join(lines)
 
 def line_share_link(text):
     # LINE share ต้องใช้ %0A แทน newline และ encode ให้ถูกต้อง
@@ -1847,14 +1862,7 @@ if page == "🧾 สร้างใบเสนอราคา":
     if a1.button("💾 บันทึกงาน", use_container_width=True, type="primary"):
         log_customer_job(quote_data)
         st.success("บันทึกแล้ว ✅")
-        notify_msg = "\n".join([
-            "🧾 มีใบเสนอราคาใหม่!",
-            f"👤 ลูกค้า: {quote_data.get('customer_name','-')}",
-            f"📞 โทร: {quote_data.get('customer_phone','-')}",
-            f"❄️ รุ่น: {quote_data.get('model','-')}",
-            f"💰 ราคา: {fmt_baht(quote_data.get('net_total',0))} บาท",
-            f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
-        ])
+        notify_msg = make_line_text(quote_data)
         line_notify_owner(notify_msg)
         line_notify_queue(notify_msg)
     if a2.button("📄 สร้าง PDF ใบเสนอราคา", use_container_width=True):
@@ -2019,14 +2027,7 @@ elif page == "🏗️ ติดตั้งแอร์":
     if ia1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="inst_save"):
         log_customer_job(inst_quote)
         st.success("บันทึกแล้ว ✅")
-        notify_msg = "\n".join([
-            f"🏗️ งานติดตั้ง ({inst_type_label})",
-            f"👤 ลูกค้า: {inst_name or '-'}",
-            f"📞 โทร: {inst_phone or '-'}",
-            f"❄️ แอร์: {inst_model or '-'}",
-            f"💰 รวม: {fmt_baht(inst_net)} บาท",
-            f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
-        ])
+        notify_msg = make_line_text(inst_quote)
         line_notify_owner(notify_msg)
         line_notify_queue(notify_msg)
     if ia2.button("📄 สร้าง PDF", use_container_width=True, key="inst_pdf"):
@@ -2090,26 +2091,35 @@ elif page == "📋 จัดการงาน / สถานะ":
                     c2.markdown(f"**รับเงิน:** ฿{fmt_baht(job.get('paid_amount',job.get('net_total',0)))}")
                     c2.markdown(f"**บันทึกโดย:** {job.get('saved_by','-')}")
                     st.divider()
-                    e1, e2, e3 = st.columns(3)
+                    e1, e2 = st.columns(2)
                     new_status  = e1.selectbox("เปลี่ยนสถานะ", JOB_STATUSES,
                                     index=JOB_STATUSES.index(status) if status in JOB_STATUSES else 0,
                                     key=f"st_{idx}")
-                    receipt_no  = e2.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
-                    paid_amount = e3.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
+                    _PAY_METHODS = ["", "💵 เงินสด", "📲 โอนจ่าย"]
+                    _cur_pm = str(job.get("payment_method",""))
+                    pay_method = e2.selectbox("วิธีชำระเงิน", _PAY_METHODS,
+                                    index=_PAY_METHODS.index(_cur_pm) if _cur_pm in _PAY_METHODS else 0,
+                                    key=f"pm_{idx}")
+                    e3, e4 = st.columns(2)
+                    receipt_no  = e3.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
+                    paid_amount = e4.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
+                    # แนบสลิปโอนเงิน
+                    slip_file = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key=f"slip_{idx}", label_visibility="collapsed" if pay_method != "📲 โอนจ่าย" else "visible")
+                    if slip_file:
+                        st.image(slip_file, caption="สลิปโอนเงิน", width=250)
 
                     u1, u2, u3, u4, u5 = st.columns(5)
                     if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
                         df_log.at[idx,"status"]      = new_status
                         df_log.at[idx,"receipt_no"]  = receipt_no
                         df_log.at[idx,"paid_amount"] = paid_amount
+                        df_log.at[idx,"payment_method"] = pay_method
                         save_log(df_log)
-                        notify_msg = "\n".join([
-                            "📋 อัปเดตสถานะงานแอร์",
-                            f"👤 ลูกค้า: {job.get('customer_name','-')}",
-                            f"❄️ รุ่น: {job.get('model','-')}",
-                            f"📊 สถานะใหม่: {new_status}",
-                            f"👤 อัปเดตโดย: {st.session_state.get('username','-')}",
-                        ])
+                        _upd_job = job.to_dict()
+                        _upd_job["status"] = new_status
+                        _upd_job["paid_amount"] = paid_amount
+                        _upd_job["receipt_no"] = receipt_no
+                        notify_msg = make_job_line_text(_upd_job)
                         if any(x in new_status for x in ["รับเงิน","ติดตั้งแล้ว"]):
                             line_notify_done(notify_msg)
                         else:
@@ -2218,14 +2228,10 @@ elif page == "📋 จัดการงาน / สถานะ":
                         df_sv2.at[idx2,"status"] = new_st2
                         df_sv2.at[idx2,"price"]  = new_price2
                         save_service(df_sv2)
-                        notify_msg = "\n".join([
-                            "🛠️ อัปเดตสถานะงานซ่อม",
-                            f"🔧 ประเภท: {r2.get('service_type','-')}",
-                            f"👤 ลูกค้า: {r2.get('customer_name','-')}",
-                            f"📊 สถานะใหม่: {new_st2}",
-                            f"💰 ค่าบริการ: {fmt_baht(new_price2)} บาท",
-                            f"👤 อัปเดตโดย: {st.session_state.get('username','-')}",
-                        ])
+                        _upd_sv = r2.to_dict() if hasattr(r2,'to_dict') else dict(r2)
+                        _upd_sv["status"] = new_st2
+                        _upd_sv["price"] = new_price2
+                        notify_msg = make_service_line_text(_upd_sv)
                         if any(x in new_st2 for x in ["รับเงิน","เสร็จแล้ว"]):
                             line_notify_done(notify_msg)
                         else:
@@ -2531,14 +2537,7 @@ elif page == "☀️ งานโซล่าเซลล์":
     if sa1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="sol_save"):
         save_service(sol_record)
         st.success("บันทึกงานโซล่าเซลล์แล้ว ✅")
-        notify_msg = "\n".join([
-            f"☀️ งานโซล่าเซลล์ใหม่!",
-            f"📋 ประเภท: {sol_type}",
-            f"👤 ลูกค้า: {sol_name or '-'}",
-            f"📞 โทร: {sol_phone or '-'}",
-            f"💰 ราคา: {fmt_baht(sol_net)} บาท",
-            f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
-        ])
+        notify_msg = make_service_line_text(sol_record)
         line_notify_owner(notify_msg)
         line_notify_queue(notify_msg)
 
@@ -2620,14 +2619,7 @@ if page == "🛠️ รับงานซ่อม/บริการ":
                 st.success(f"✅ บันทึกใบงานสำเร็จ! ลูกค้า: {sv_name.strip()}")
                 st.balloons()
                 # แจ้งเจ้าของร้านทาง LINE
-                notify_msg = "\n".join([
-                    "🛠️ มีงานซ่อม/บริการใหม่!",
-                    f"🔧 ประเภท: {sv_type}",
-                    f"👤 ลูกค้า: {sv_name.strip()}",
-                    f"📞 โทร: {sv_phone.strip()}",
-                    f"⚡ อาการ: {sv_symptom.strip()[:50]}",
-                    f"👤 บันทึกโดย: {st.session_state.get('username','-')}",
-                ])
+                notify_msg = make_service_line_text(rec)
                 line_notify_owner(notify_msg)
                 line_notify_queue(notify_msg)
 
