@@ -1312,9 +1312,11 @@ st.markdown("""
 # MAIN
 # ──────────────────────────────────────────────
 check_login()
-inject_pwa()
 if not st.session_state.logged_in:
     login_page(); st.stop()
+
+# PWA inject หลัง login สำเร็จเท่านั้น
+inject_pwa()
 
 # Sidebar
 def _back_home(key_suffix=""):
