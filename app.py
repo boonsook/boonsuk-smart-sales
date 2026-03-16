@@ -1307,27 +1307,33 @@ def _back_home(key_suffix=""):
     """ปุ่มย้อนกลับหน้าหลัก — แสดงบนทุกหน้าย่อย"""
     st.markdown("""<style>
     div[data-testid="stButton"].back-btn > button {
-        background: linear-gradient(135deg,#1565c0,#1a237e) !important;
+        background: linear-gradient(135deg,#0f172a,#1e3a8a) !important;
         color: white !important;
         border: none !important;
-        border-radius: 12px !important;
+        border-radius: 14px !important;
         font-size: 14px !important;
-        font-weight: 600 !important;
-        padding: 6px 18px !important;
-        box-shadow: 0 2px 8px rgba(21,101,192,0.3) !important;
-        height: 2.4rem !important;
+        font-weight: 700 !important;
+        padding: 8px 22px !important;
+        box-shadow: 0 4px 14px rgba(15,23,42,0.25) !important;
+        height: 2.6rem !important;
+        letter-spacing: 0.3px !important;
+        transition: all 0.2s ease !important;
     }
     div[data-testid="stButton"].back-btn > button:hover {
-        background: linear-gradient(135deg,#0d47a1,#1a237e) !important;
-        box-shadow: 0 4px 12px rgba(21,101,192,0.4) !important;
+        background: linear-gradient(135deg,#1e3a8a,#3b82f6) !important;
+        box-shadow: 0 6px 20px rgba(59,130,246,0.35) !important;
+        transform: translateY(-1px) !important;
+    }
+    div[data-testid="stButton"].back-btn > button:active {
+        transform: translateY(0px) !important;
     }
     </style>""", unsafe_allow_html=True)
     st.markdown('<div class="back-btn">', unsafe_allow_html=True)
-    if st.button("← ย้อนกลับ", key=f"bh_{key_suffix}", help="กลับหน้าหลัก"):
+    if st.button("◀ ย้อนกลับ", key=f"bh_{key_suffix}", help="กลับหน้าหลัก"):
         st.session_state["_current_page"] = "🏠 หน้าหลัก"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
 
 
 # ── Navigation ไม่ใช้ sidebar — ใช้ session_state แทน ──
@@ -1378,38 +1384,41 @@ page = st.session_state["_current_page"]
 
 # df_all loaded per-page only when needed
 
-# ══════════════════════════════════════════════
-# PAGE 0: HOME GRID
-# ══════════════════════════════════════════════
+
+# ======================================
+
+# PAGE 0: HOME GRID  (Redesigned UI v2)
+# ======================================
 if page == "🏠 หน้าหลัก":
     _role2 = st.session_state.get("role","staff")
     _name2 = st.session_state.get("full_name", st.session_state.get("username",""))
 
     if _role2 == "customer":
         menus_home = [
-            ("🧾", "ใบเสนอ",   "🧾 ขอใบเสนอราคาแอร์"),
-            ("🛠️", "แจ้งซ่อม", "🛠️ แจ้งซ่อม/บริการ"),
-            ("📋", "งานของฉัน","📋 งานของฉัน"),
-            ("🧮", "BTU",      "🧮 คำนวณ BTU"),
-            ("⚠️", "Error",   "🔧 คลังเออเร่อแอร์"),
-            ("🚪", "ออกจาก",  "__LOGOUT__"),
+            ("🧾", "ขอใบเสนอราคา",   "🧾 ขอใบเสนอราคาแอร์",  "#3b82f6","#dbeafe"),
+            ("🛠️", "แจ้งซ่อม/บริการ", "🛠️ แจ้งซ่อม/บริการ",  "#f59e0b","#fef3c7"),
+            ("📋", "งานของฉัน",       "📋 งานของฉัน",          "#10b981","#d1fae5"),
+            ("🧮", "คำนวณ BTU",       "🧮 คำนวณ BTU",          "#8b5cf6","#ede9fe"),
+            ("⚠️", "คลังเออเร่อโค้ด","🔧 คลังเออเร่อแอร์",    "#ef4444","#fee2e2"),
+            ("🚪", "ออกจากระบบ",      "__LOGOUT__",             "#64748b","#f1f5f9"),
         ]
     else:
         menus_home = [
-            ("🧾", "ใบเสนอ",   "🧾 สร้างใบเสนอราคา"),
-            ("🏗️", "ติดตั้ง",  "🏗️ ติดตั้งแอร์"),
-            ("☀️", "โซล่า",    "☀️ งานโซล่าเซลล์"),
-            ("🛠️", "รับซ่อม",  "🛠️ รับงานซ่อม/บริการ"),
-            ("📋", "จัดการงาน","📋 จัดการงาน / สถานะ"),
-            ("📦", "สต๊อก",    "📦 จัดการสต๊อก"),
-            ("📊", "Dashboard","📊 Dashboard"),
-            ("🧮", "BTU",      "🧮 คำนวณ BTU"),
-            ("⚠️", "Error",   "🔧 คลังเออเร่อแอร์"),
+            ("🧾", "ใบเสนอราคา",     "🧾 สร้างใบเสนอราคา",    "#3b82f6","#dbeafe"),
+            ("🏗️", "ติดตั้งแอร์",    "🏗️ ติดตั้งแอร์",        "#ec4899","#fce7f3"),
+            ("☀️", "โซล่าเซลล์",     "☀️ งานโซล่าเซลล์",      "#f59e0b","#fef3c7"),
+            ("🛠️", "รับซ่อม/บริการ",  "🛠️ รับงานซ่อม/บริการ",  "#ef4444","#fee2e2"),
+            ("📋", "จัดการงาน",       "📋 จัดการงาน / สถานะ",   "#06b6d4","#cffafe"),
+            ("📦", "จัดการสต๊อก",     "📦 จัดการสต๊อก",          "#8b5cf6","#ede9fe"),
+            ("📊", "Dashboard",       "📊 Dashboard",            "#10b981","#d1fae5"),
+            ("🧮", "คำนวณ BTU",       "🧮 คำนวณ BTU",            "#f97316","#ffedd5"),
+            ("⚠️", "คลังเออเร่อ",   "🔧 คลังเออเร่อแอร์",      "#dc2626","#fecaca"),
         ]
         if _role2 == "admin":
-            menus_home.append(("⚙️", "นำเข้า/ออก", "⚙️ นำเข้า/ส่งออกข้อมูล"))
-        menus_home.append(("🚪", "ออกจาก", "__LOGOUT__"))
+            menus_home.append(("⚙️", "นำเข้า/ส่งออก", "⚙️ นำเข้า/ส่งออกข้อมูล", "#475569","#f1f5f9"))
+        menus_home.append(("🚪", "ออกจากระบบ", "__LOGOUT__", "#94a3b8","#f8fafc"))
 
+    # Load stats
     if _role2 != "customer":
         df_stk = load_stock(); df_lg = load_log(); df_sv = load_service()
         _s1 = len(df_stk)
@@ -1421,26 +1430,158 @@ if page == "🏠 หน้าหลัก":
         _sv_closed = len(df_sv[ df_sv["status"].isin(_CLOSED_SV)]) if not df_sv.empty and "status" in df_sv.columns else 0
         _total_pend   = _ac_pend + _sv_pend
         _total_closed = _ac_closed + _sv_closed
+        _low_stk = 0
+        if not df_stk.empty and "stock_qty" in df_stk.columns:
+            _low_stk = len(df_stk[df_stk["stock_qty"].fillna(0).astype(int) <= LOW_STOCK_THRESHOLD])
     else:
-        _s1=_total_pend=_total_closed=_ac_pend=_sv_pend=_ac_closed=_sv_closed=0
+        _s1=_total_pend=_total_closed=_ac_pend=_sv_pend=_ac_closed=_sv_closed=_low_stk=0
 
-    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
+    role_badge = "👑 Admin" if _role2=="admin" else "👔 Staff" if _role2=="staff" else "👤 ลูกค้า"
 
-    st.markdown('<style>.main,.block-container{background:#f0f4f8!important;}</style>', unsafe_allow_html=True)
+    # === INJECT CSS ===
+    _menu_colors_css = ""
+    for _mi in range(12):
+        _clr_map = ["#3b82f6","#ec4899","#f59e0b","#ef4444","#06b6d4","#8b5cf6","#10b981","#f97316","#dc2626","#475569","#94a3b8","#94a3b8"]
+        _bg_map = ["#dbeafe","#fce7f3","#fef3c7","#fee2e2","#cffafe","#ede9fe","#d1fae5","#ffedd5","#fecaca","#f1f5f9","#f8fafc","#f8fafc"]
+        _c = _clr_map[_mi] if _mi < len(_clr_map) else "#94a3b8"
+        _b = _bg_map[_mi] if _mi < len(_bg_map) else "#f8fafc"
+        _menu_colors_css += f'[data-testid="stButton"]:has(button[key="hm_{_mi}"]) button {{ background: linear-gradient(145deg, white 60%, {_b}) !important; border-left: 3px solid {_c} !important; }}\n'
 
-    # Header
+    st.markdown(f'''<style>
+.main, .block-container {{ background: #f0f4f8 !important; }}
+
+.bs-header {{
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+    border-radius: 22px;
+    padding: 22px 24px;
+    margin-bottom: 16px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 8px 32px rgba(15,23,42,0.35);
+    position: relative;
+    overflow: hidden;
+}}
+.bs-header::before {{
+    content: "";
+    position: absolute;
+    top: -50%; right: -30%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(96,165,250,0.25) 0%, transparent 70%);
+    border-radius: 50%;
+}}
+.bs-logo {{
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 3px solid rgba(255,255,255,0.35);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    position: relative; z-index: 1;
+}}
+.bs-header-text {{ position: relative; z-index: 1; }}
+.bs-greet {{ font-size: 12px; opacity: 0.8; font-weight: 400; letter-spacing: 0.5px; }}
+.bs-name {{ font-size: 24px; font-weight: 800; line-height: 1.2; margin: 2px 0 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
+.bs-badge {{
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    display: inline-block;
+    padding: 3px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(255,255,255,0.15);
+}}
+
+.bs-stats {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}}
+.bs-stat-card {{
+    background: white;
+    border-radius: 16px;
+    padding: 14px 10px 10px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.04);
+    transition: all 0.15s ease;
+}}
+.bs-stat-icon {{ font-size: 22px; margin-bottom: 2px; }}
+.bs-stat-num {{ font-size: 22px; font-weight: 800; line-height: 1.1; }}
+.bs-stat-label {{ font-size: 10px; color: #64748b; font-weight: 600; margin-top: 2px; }}
+
+.bs-section-title {{
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    margin: 2px 0 10px;
+    padding-left: 4px;
+    letter-spacing: 0.3px;
+}}
+
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {{
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+}}
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
+    width: auto !important; min-width: 0 !important;
+    max-width: none !important; flex: none !important;
+    padding: 0 !important;
+}}
+
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {{
+    width: 100% !important;
+    min-height: 86px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(0,0,0,0.04) !important;
+    background: white !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+    font-size: 34px !important;
+    padding: 10px 4px 6px !important;
+    line-height: 1 !important;
+    transition: all 0.15s ease !important;
+}}
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {{
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12) !important;
+}}
+section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"]:active {{
+    transform: scale(0.96) !important;
+}}
+
+.bs-menu-label {{
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 2px 0 10px;
+    line-height: 1.25;
+}}
+.bs-menu-label-logout {{ color: #dc2626 !important; }}
+
+{_menu_colors_css}
+
+[data-testid="stButton"]:has(button[key="hs_stk"]) button {{ background: linear-gradient(135deg,#eff6ff,#dbeafe) !important; border-left: 3px solid #3b82f6 !important; min-height: 52px !important; font-size: 22px !important; }}
+[data-testid="stButton"]:has(button[key="hs_pend"]) button {{ background: linear-gradient(135deg,#fffbeb,#fef3c7) !important; border-left: 3px solid #f59e0b !important; min-height: 52px !important; font-size: 22px !important; }}
+[data-testid="stButton"]:has(button[key="hs_cls"]) button {{ background: linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-left: 3px solid #10b981 !important; min-height: 52px !important; font-size: 22px !important; }}
+</style>''', unsafe_allow_html=True)
+
+    # === HEADER ===
     logo_src = f'data:image/png;base64,{LOGO_B64}'
-    st.markdown(f'''<div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#60a5fa 100%);
-        border-radius:20px;padding:18px 20px;margin-bottom:14px;color:white;
-        display:flex;align-items:center;gap:14px;
-        box-shadow:0 6px 20px rgba(30,58,138,0.3);">
-      <img src="{logo_src}" style="width:56px;height:56px;border-radius:50%;
-          object-fit:cover;flex-shrink:0;border:3px solid rgba(255,255,255,0.4);">
-      <div>
-        <div style="font-size:12px;opacity:0.85;">สวัสดี,</div>
-        <div style="font-size:23px;font-weight:800;">{_name2}</div>
-        <div style="background:rgba(255,255,255,0.22);border-radius:20px;
-            display:inline-block;padding:2px 12px;font-size:11.5px;margin-top:4px;">{role_badge}</div>
+    _hour = datetime.now().hour
+    _greet_text = "สวัสดีตอนเช้า ☀️" if _hour < 12 else ("สวัสดีตอนบ่าย 🌤️" if _hour < 17 else "สวัสดีตอนเย็น 🌙")
+    st.markdown(f'''<div class="bs-header">
+      <img src="{logo_src}" class="bs-logo">
+      <div class="bs-header-text">
+        <div class="bs-greet">{_greet_text}</div>
+        <div class="bs-name">{_name2}</div>
+        <div class="bs-badge">{role_badge} · {STORE_NAME}</div>
       </div>
     </div>''', unsafe_allow_html=True)
 
@@ -1454,88 +1595,45 @@ if page == "🏠 หน้าหลัก":
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # ── Home Grid: st.button (emoji) + st.markdown label ──
-    # วิธีที่พิสูจน์แล้วจากวิดีโอว่าทำงานบน Android Chrome
-
-    st.markdown("""<style>
-/* 3-column grid */
-section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-    width: 100% !important;
-}
-section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-    width: auto !important; min-width: 0 !important;
-    max-width: none !important; flex: none !important;
-    padding: 0 !important;
-}
-/* menu card button */
-section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {
-    width: 100% !important;
-    min-height: 82px !important;
-    border-radius: 20px !important;
-    border: none !important;
-    background: #f0f7ff !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05) !important;
-    font-size: 36px !important;
-    padding: 6px 4px !important;
-    line-height: 1 !important;
-    transition: transform 0.1s, box-shadow 0.1s !important;
-}
-section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"]:active {
-    transform: scale(0.95) !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
-}
-/* label under button */
-.hg-lb {
-    text-align: center; font-size: 11.5px; font-weight: 700;
-    color: #1e3a5f; margin: 0 0 8px; line-height: 1.2;
-}
-.hg-lb-lo { color: #dc2626; }
-/* stat buttons */
-[data-testid="stButton"]:has(button[key="hs_stk"]) button { background: linear-gradient(135deg,#dbeafe,#bfdbfe) !important; }
-[data-testid="stButton"]:has(button[key="hs_pend"]) button { background: linear-gradient(135deg,#fef9c3,#fde68a) !important; }
-[data-testid="stButton"]:has(button[key="hs_cls"]) button { background: linear-gradient(135deg,#dcfce7,#bbf7d0) !important; }
-/* menu button colors */
-[data-testid="stButton"]:has(button[key="hm_0"]) button { background: linear-gradient(135deg,#dbeafe,#93c5fd) !important; }
-[data-testid="stButton"]:has(button[key="hm_1"]) button { background: linear-gradient(135deg,#fce7f3,#f9a8d4) !important; }
-[data-testid="stButton"]:has(button[key="hm_2"]) button { background: linear-gradient(135deg,#fef9c3,#fde68a) !important; }
-[data-testid="stButton"]:has(button[key="hm_3"]) button { background: linear-gradient(135deg,#ffe4e6,#fca5a5) !important; }
-[data-testid="stButton"]:has(button[key="hm_4"]) button { background: linear-gradient(135deg,#e0f2fe,#7dd3fc) !important; }
-[data-testid="stButton"]:has(button[key="hm_5"]) button { background: linear-gradient(135deg,#f3e8ff,#d8b4fe) !important; }
-[data-testid="stButton"]:has(button[key="hm_6"]) button { background: linear-gradient(135deg,#dcfce7,#86efac) !important; }
-[data-testid="stButton"]:has(button[key="hm_7"]) button { background: linear-gradient(135deg,#fff7ed,#fed7aa) !important; }
-[data-testid="stButton"]:has(button[key="hm_8"]) button { background: linear-gradient(135deg,#fef2f2,#fca5a5) !important; }
-[data-testid="stButton"]:has(button[key="hm_9"]) button { background: linear-gradient(135deg,#f0fdfa,#99f6e4) !important; }
-[data-testid="stButton"]:has(button[key="hm_10"]) button { background: linear-gradient(135deg,#f8fafc,#e2e8f0) !important; }
-/* logout */
-.hg-logout-btn button[kind="secondary"] {
-    background: linear-gradient(135deg,#fff1f2,#fecdd3) !important;
-}
-/* stat text */
-.hg-sub { text-align:center; font-size:9px; color:#64748b; margin:-4px 0 0; }
-.hg-num { text-align:center; font-size:13px; font-weight:800; color:#1e3a8a; margin:0 0 4px; }
-</style>""", unsafe_allow_html=True)
-
-    # ── Stat row ──
+    # === STAT ROW (staff/admin only) ===
     if _role2 != "customer":
+        _stat_html = f'''<div class="bs-stats">
+          <div class="bs-stat-card" style="border-top: 3px solid #3b82f6;">
+            <div class="bs-stat-icon">📦</div>
+            <div class="bs-stat-num" style="color:#1e40af;">{_s1}</div>
+            <div class="bs-stat-label">สต๊อก (รุ่น)</div>
+          </div>
+          <div class="bs-stat-card" style="border-top: 3px solid #f59e0b;">
+            <div class="bs-stat-icon">⏳</div>
+            <div class="bs-stat-num" style="color:#b45309;">{_total_pend}</div>
+            <div class="bs-stat-label">งานค้าง</div>
+          </div>
+          <div class="bs-stat-card" style="border-top: 3px solid #10b981;">
+            <div class="bs-stat-icon">✅</div>
+            <div class="bs-stat-num" style="color:#047857;">{_total_closed}</div>
+            <div class="bs-stat-label">ปิดแล้ว</div>
+          </div>
+        </div>'''
+        st.markdown(_stat_html, unsafe_allow_html=True)
+
         sc1, sc2, sc3 = st.columns(3)
         with sc1:
-            if st.button("📦", key="hs_stk", use_container_width=True):
+            if st.button("📦", key="hs_stk", use_container_width=True, help="ไปหน้าสต๊อก"):
                 st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-            st.markdown('<p class="hg-sub">สต๊อก</p><p class="hg-num">%d รุ่น</p>' % _s1, unsafe_allow_html=True)
+            _stk_msg = f"⚠️ {_low_stk} ใกล้หมด" if _low_stk > 0 else "ปกติ ✓"
+            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-4px 0 0;">{_stk_msg}</p>', unsafe_allow_html=True)
         with sc2:
-            if st.button("⏳", key="hs_pend", use_container_width=True):
+            if st.button("⏳", key="hs_pend", use_container_width=True, help="ดูงานค้าง"):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('<p class="hg-sub">ค้าง</p><p class="hg-num">%d งาน</p>' % _total_pend, unsafe_allow_html=True)
+            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-4px 0 0;">แอร์ {_ac_pend} · ซ่อม {_sv_pend}</p>', unsafe_allow_html=True)
         with sc3:
-            if st.button("✅", key="hs_cls", use_container_width=True):
+            if st.button("✅", key="hs_cls", use_container_width=True, help="ดูงานปิดแล้ว"):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown('<p class="hg-sub">ปิดแล้ว</p><p class="hg-num">%d งาน</p>' % _total_closed, unsafe_allow_html=True)
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-4px 0 0;">แอร์ {_ac_closed} · ซ่อม {_sv_closed}</p>', unsafe_allow_html=True)
 
-    # ── Menu grid ──
+    # === MENU SECTION ===
+    st.markdown('<p class="bs-section-title">📱 เมนูหลัก</p>', unsafe_allow_html=True)
+
     _padded = list(menus_home)
     while len(_padded) % 3 != 0:
         _padded.append(None)
@@ -1548,11 +1646,9 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
                 if _itm is None:
                     st.empty()
                 else:
-                    _em, _lb, _tgt = _itm
+                    _em, _lb, _tgt, _clr, _bg = _itm
                     _lo = _tgt == "__LOGOUT__"
                     _key = "hm_%d" % (_rs + _ci)
-                    if _lo:
-                        st.markdown('<div class="hg-logout-btn">', unsafe_allow_html=True)
                     if st.button(_em, key=_key, use_container_width=True):
                         if _lo:
                             for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
@@ -1561,11 +1657,22 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
                         else:
                             st.session_state["_current_page"] = _tgt
                         st.rerun()
-                    if _lo:
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    _lc = "hg-lb hg-lb-lo" if _lo else "hg-lb"
+                    _lc = "bs-menu-label bs-menu-label-logout" if _lo else "bs-menu-label"
                     st.markdown('<p class="%s">%s</p>' % (_lc, _lb), unsafe_allow_html=True)
 
+    # === FOOTER ===
+    st.markdown(f'''<div style="text-align:center; margin-top:20px; padding:16px 0 8px;
+        border-top:1px solid #e2e8f0;">
+      <p style="font-size:11px; color:#94a3b8; margin:0;">
+        {STORE_NAME} · ☎ {STORE_PHONE}
+      </p>
+      <p style="font-size:10px; color:#cbd5e1; margin:4px 0 0;">
+        Smart Sales v5 · Powered by Streamlit
+      </p>
+    </div>''', unsafe_allow_html=True)
+
+
+# ======================================
 # ══════════════════════════════════════════════
 # PAGE BTU CALCULATOR
 # ══════════════════════════════════════════════
