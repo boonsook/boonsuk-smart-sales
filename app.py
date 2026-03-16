@@ -269,49 +269,32 @@ def check_login():
         st.session_state.full_name  = ""
         st.session_state.user_phone = ""
         st.session_state["_current_page"] = "🏠 หน้าหลัก"
-        # set s="" แทน clear ทั้งหมด เพื่อป้องกัน localStorage redirect กลับ
-        st.query_params["s"] = ""
-        try: del st.query_params["logout"]
-        except: pass
-        try: del st.query_params["nav"]
-        except: pass
+        st.query_params.clear()
         return
 
     # ถ้า logged in อยู่แล้ว — ไม่ต้องทำอะไร
     if st.session_state.logged_in:
         return
 
-    # ลอง restore จาก URL query param "s"
-    import time
-    token = str(st.query_params.get("s", "")).strip()
-    if token:
-        data = _decode_session(token)
-        if data and isinstance(data, dict):
-            exp = data.get("exp", 0)
-            if isinstance(exp, (int, float)) and exp > time.time():
-                st.session_state.logged_in  = True
-                st.session_state.username   = str(data.get("u", ""))
-                st.session_state.role       = str(data.get("r", ""))
-                st.session_state.full_name  = str(data.get("n", ""))
-                st.session_state.user_phone = str(data.get("p", ""))
-                return
-
-    # URL ไม่มี token — ลอง restore จาก localStorage (กันมือถือหลุด)
-    st.markdown('''<script>
-    (function(){
-        var t = localStorage.getItem("bs_session");
-        if(t && t.length > 10){
-            var u = new URL(window.location);
-            if(!u.searchParams.has("s") && !u.searchParams.has("logout")){
-                u.searchParams.set("s", t);
-                window.location.replace(u.toString());
-            }
-        }
-    })();
-    </script>''', unsafe_allow_html=True)
+    # Restore session จาก URL query param "s"
+    try:
+        token = str(st.query_params.get("s", "")).strip()
+        if token:
+            data = _decode_session(token)
+            if data and isinstance(data, dict):
+                import time
+                exp = data.get("exp", 0)
+                if isinstance(exp, (int, float)) and exp > time.time():
+                    st.session_state.logged_in  = True
+                    st.session_state.username   = str(data.get("u", ""))
+                    st.session_state.role       = str(data.get("r", ""))
+                    st.session_state.full_name  = str(data.get("n", ""))
+                    st.session_state.user_phone = str(data.get("p", ""))
+    except Exception:
+        pass
 
 def _save_session():
-    """บันทึก session ลง URL query param + localStorage อายุ 30 วัน"""
+    """บันทึก session ลง URL — เรียกเฉพาะตอน login เท่านั้น"""
     import time
     data = {
         "u": st.session_state.get("username",""),
@@ -320,26 +303,8 @@ def _save_session():
         "p": st.session_state.get("user_phone",""),
         "exp": time.time() + (30 * 24 * 3600),
     }
-    token = _encode_session(data)
-    st.query_params["s"] = token
-    # Backup ลง localStorage ด้วย (กันมือถือ URL หาย token)
-    st.markdown(f'<script>localStorage.setItem("bs_session","{token}");</script>', unsafe_allow_html=True)
+    st.query_params["s"] = _encode_session(data)
 
-def _ensure_session_token():
-    """ตรวจว่า session token อยู่ใน URL + localStorage"""
-    import time
-    current_s = str(st.query_params.get("s", "")).strip()
-    if current_s:
-        data = _decode_session(current_s)
-        if data and isinstance(data, dict):
-            exp = data.get("exp", 0)
-            if isinstance(exp, (int, float)) and exp > time.time():
-                # token ดีอยู่ — sync ลง localStorage ด้วย
-                st.markdown(f'<script>localStorage.setItem("bs_session","{current_s}");</script>', unsafe_allow_html=True)
-                return
-    # token ไม่มี หรือเสียหาย — สร้างใหม่
-    if st.session_state.get("logged_in", False):
-        _save_session()
 
 def inject_pwa():
     """ใส่ PWA manifest inline via base64 + Install prompt banner"""
@@ -474,8 +439,6 @@ def inject_pwa():
     """, unsafe_allow_html=True)
 
 def login_page():
-    # ล้าง localStorage token เมื่อแสดงหน้า login (กัน localStorage redirect กลับหลัง logout)
-    st.markdown('<script>localStorage.removeItem("bs_session");</script>', unsafe_allow_html=True)
     st.markdown("""
     <style>
     [data-testid="stSidebar"],
@@ -682,6 +645,7 @@ def load_log() -> pd.DataFrame:
                 if "receipt_no"  not in df.columns: df["receipt_no"]  = ""
                 if "paid_amount" not in df.columns: df["paid_amount"] = df.get("net_total", 0)
                 if "payment_method" not in df.columns: df["payment_method"] = ""
+                if "slip_image" not in df.columns: df["slip_image"] = ""
                 return df
             return pd.DataFrame()
         except Exception as e:
@@ -694,6 +658,7 @@ def load_log() -> pd.DataFrame:
             if "receipt_no"  not in df.columns: df["receipt_no"]  = ""
             if "paid_amount" not in df.columns: df["paid_amount"] = df.get("net_total", 0)
             if "payment_method" not in df.columns: df["payment_method"] = ""
+            if "slip_image" not in df.columns: df["slip_image"] = ""
             return df
         except Exception:
             pass
@@ -726,6 +691,7 @@ def log_customer_job(quote: dict):
     record.setdefault("receipt_no",  "")
     record.setdefault("paid_amount", record.get("net_total", 0))
     record.setdefault("payment_method", "")
+    record.setdefault("slip_image", "")
     record.setdefault("saved_by",    st.session_state.get("username",""))
     # ── Supabase ──
     if _use_supabase():
@@ -1364,9 +1330,6 @@ st.markdown("""
 check_login()
 if not st.session_state.logged_in:
     login_page(); st.stop()
-
-# บังคับให้ session token อยู่ใน URL เสมอ (ป้องกันมือถือ reconnect)
-_ensure_session_token()
 
 # PWA inject หลัง login สำเร็จเท่านั้น
 inject_pwa()
@@ -2144,6 +2107,9 @@ elif page == "📋 จัดการงาน / สถานะ":
                     c1.markdown(f"**รุ่น:** {job.get('model','-')} | {int(job.get('model_btu',0)):,} BTU")
                     c2.markdown(f"**ราคาสุทธิ:** ฿{fmt_baht(job.get('net_total',0))}")
                     c2.markdown(f"**รับเงิน:** ฿{fmt_baht(job.get('paid_amount',job.get('net_total',0)))}")
+                    _pm_display = str(job.get('payment_method',''))
+                    if _pm_display:
+                        c2.markdown(f"**ชำระ:** {_pm_display}")
                     c2.markdown(f"**บันทึกโดย:** {job.get('saved_by','-')}")
                     st.divider()
                     e1, e2 = st.columns(2)
@@ -2159,9 +2125,16 @@ elif page == "📋 จัดการงาน / สถานะ":
                     receipt_no  = e3.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
                     paid_amount = e4.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
                     # แนบสลิปโอนเงิน
-                    slip_file = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key=f"slip_{idx}", label_visibility="collapsed" if pay_method != "📲 โอนจ่าย" else "visible")
+                    _existing_slip = str(job.get("slip_image",""))
+                    if _existing_slip:
+                        import base64 as _b64s
+                        try:
+                            st.image(_b64s.b64decode(_existing_slip), caption="🧾 สลิปที่บันทึกไว้", width=250)
+                        except Exception:
+                            pass
+                    slip_file = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key=f"slip_{idx}")
                     if slip_file:
-                        st.image(slip_file, caption="สลิปโอนเงิน", width=250)
+                        st.image(slip_file, caption="สลิปใหม่ (กด อัปเดต เพื่อบันทึก)", width=250)
 
                     u1, u2, u3, u4, u5 = st.columns(5)
                     if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
@@ -2169,6 +2142,11 @@ elif page == "📋 จัดการงาน / สถานะ":
                         df_log.at[idx,"receipt_no"]  = receipt_no
                         df_log.at[idx,"paid_amount"] = paid_amount
                         df_log.at[idx,"payment_method"] = pay_method
+                        # บันทึกสลิปเป็น base64
+                        if slip_file:
+                            import base64 as _b64s
+                            slip_file.seek(0)
+                            df_log.at[idx,"slip_image"] = _b64s.b64encode(slip_file.read()).decode()
                         save_log(df_log)
                         _upd_job = job.to_dict()
                         _upd_job["status"] = new_status
