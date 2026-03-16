@@ -1598,6 +1598,10 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 .bs-stat-label {{ font-size: 9px; color: #64748b; font-weight: 600; margin-top: 1px; }}
 
 {_menu_colors_css}
+
+[data-testid="stButton"]:has(button[key="hs_stk"]) button {{ background: linear-gradient(135deg,#eff6ff,#dbeafe) !important; border-left: 3px solid #3b82f6 !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 16px !important; color: #1e40af !important; }}
+[data-testid="stButton"]:has(button[key="hs_pend"]) button {{ background: linear-gradient(135deg,#fffbeb,#fef3c7) !important; border-left: 3px solid #f59e0b !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 16px !important; color: #b45309 !important; }}
+[data-testid="stButton"]:has(button[key="hs_cls"]) button {{ background: linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-left: 3px solid #10b981 !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 16px !important; color: #047857 !important; }}
 </style>''', unsafe_allow_html=True)
 
     # === HEADER ===
@@ -1623,26 +1627,22 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # === STAT ROW (staff/admin only) — clickable HTML cards ===
+    # === STAT ROW (staff/admin only) — Streamlit buttons ===
     if _role2 != "customer":
         _stk_msg = f"⚠️ {_low_stk} ใกล้หมด" if _low_stk > 0 else "ปกติ"
-        st.markdown(f'''<div class="bs-stats">
-          <div class="bs-stat-card" style="border-top:3px solid #3b82f6;cursor:pointer;"
-               onclick="var u=new URL(window.location);u.searchParams.set('nav','📦 จัดการสต๊อก');window.location=u.toString();">
-            <div class="bs-stat-num" style="color:#1e40af;">📦 {_s1}</div>
-            <div class="bs-stat-label">สต๊อก · {_stk_msg}</div>
-          </div>
-          <div class="bs-stat-card" style="border-top:3px solid #f59e0b;cursor:pointer;"
-               onclick="var u=new URL(window.location);u.searchParams.set('nav','📋 จัดการงาน / สถานะ');window.location=u.toString();">
-            <div class="bs-stat-num" style="color:#b45309;">⏳ {_total_pend}</div>
-            <div class="bs-stat-label">งานค้าง · แอร์ {_ac_pend} ซ่อม {_sv_pend}</div>
-          </div>
-          <div class="bs-stat-card" style="border-top:3px solid #10b981;cursor:pointer;"
-               onclick="var u=new URL(window.location);u.searchParams.set('nav','📋 จัดการงาน / สถานะ');window.location=u.toString();">
-            <div class="bs-stat-num" style="color:#047857;">✅ {_total_closed}</div>
-            <div class="bs-stat-label">ปิดแล้ว · แอร์ {_ac_closed} ซ่อม {_sv_closed}</div>
-          </div>
-        </div>''', unsafe_allow_html=True)
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            if st.button(f"📦 {_s1}", key="hs_stk", use_container_width=True):
+                st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
+            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-8px 0 6px;">สต๊อก · {_stk_msg}</p>', unsafe_allow_html=True)
+        with sc2:
+            if st.button(f"⏳ {_total_pend}", key="hs_pend", use_container_width=True):
+                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-8px 0 6px;">งานค้าง · แอร์ {_ac_pend} ซ่อม {_sv_pend}</p>', unsafe_allow_html=True)
+        with sc3:
+            if st.button(f"✅ {_total_closed}", key="hs_cls", use_container_width=True):
+                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
+            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-8px 0 6px;">ปิดแล้ว · แอร์ {_ac_closed} ซ่อม {_sv_closed}</p>', unsafe_allow_html=True)
 
     # === MENU SECTION ===
     st.markdown('<p class="bs-section-title">📱 เมนูหลัก</p>', unsafe_allow_html=True)
