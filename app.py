@@ -273,14 +273,18 @@ def check_login():
             if token:
                 data = _decode_session(token)
                 import time
-                if data.get("exp", 0) > time.time():
+                if data and data.get("exp", 0) > time.time():
                     st.session_state.logged_in  = True
                     st.session_state.username   = data.get("u", "")
                     st.session_state.role       = data.get("r", "")
                     st.session_state.full_name  = data.get("n", "")
                     st.session_state.user_phone = data.get("p", "")
-                else:
-                    st.query_params.clear()
+                elif data and data.get("exp", 0) > 0:
+                    # session expired — ลบเฉพาะ token ไม่ clear ทั้งหมด
+                    try:
+                        del st.query_params["s"]
+                    except:
+                        pass
         except:
             pass
 
@@ -2788,13 +2792,7 @@ if page == "🧾 ขอใบเสนอราคาแอร์":
             log_service_job(rec)
             st.success("✅ ส่งคำขอสำเร็จ! ทางร้านจะติดต่อกลับเร็วๆ นี้ครับ")
             st.balloons()
-            line_notify_queue(
-                f"🧾 ลูกค้าขอใบเสนอราคา!\n"
-                f"👤 {cust_name} | 📞 {cust_phone}\n"
-                f"📍 {cq_addr.strip()}\n"
-                f"❄️ สนใจ: {cq_section_text} รุ่น {cq_model_text}\n"
-                f"💰 ราคา: {cq_price_text} ฿\n"
-            )
+            line_notify_queue(make_service_line_text(rec))
 
 # ══════════════════════════════════════════════
 # PAGE: ลูกค้า — แจ้งซ่อม/บริการ
@@ -2837,12 +2835,7 @@ elif page == "🛠️ แจ้งซ่อม/บริการ":
             log_service_job(rec)
             st.success("✅ แจ้งซ่อมสำเร็จ! ทางร้านจะติดต่อกลับเร็วๆ นี้ครับ")
             st.balloons()
-            line_notify_queue(
-                f"🛠️ ลูกค้าแจ้งซ่อม!\n"
-                f"🔧 {cs_type}\n"
-                f"👤 {cust_name} | 📞 {cust_phone}\n"
-                f"⚡ {cs_symptom.strip()[:60]}\n"
-            )
+            line_notify_queue(make_service_line_text(rec))
 
 # ══════════════════════════════════════════════
 # PAGE: ลูกค้า — งานของฉัน
