@@ -1452,14 +1452,14 @@ if page == "🏠 หน้าหลัก":
 
 .bs-header {{
     background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
-    border-radius: 22px;
-    padding: 22px 24px;
-    margin-bottom: 16px;
+    border-radius: 18px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
     color: white;
     display: flex;
     align-items: center;
-    gap: 16px;
-    box-shadow: 0 8px 32px rgba(15,23,42,0.35);
+    gap: 14px;
+    box-shadow: 0 6px 24px rgba(15,23,42,0.3);
     position: relative;
     overflow: hidden;
 }}
@@ -1472,17 +1472,17 @@ if page == "🏠 หน้าหลัก":
     border-radius: 50%;
 }}
 .bs-logo {{
-    width: 60px; height: 60px;
+    width: 48px; height: 48px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 3px solid rgba(255,255,255,0.35);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 2px solid rgba(255,255,255,0.35);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
     position: relative; z-index: 1;
 }}
 .bs-header-text {{ position: relative; z-index: 1; }}
-.bs-greet {{ font-size: 12px; opacity: 0.8; font-weight: 400; letter-spacing: 0.5px; }}
-.bs-name {{ font-size: 24px; font-weight: 800; line-height: 1.2; margin: 2px 0 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
+.bs-greet {{ font-size: 11px; opacity: 0.8; font-weight: 400; letter-spacing: 0.5px; }}
+.bs-name {{ font-size: 20px; font-weight: 800; line-height: 1.2; margin: 1px 0 4px; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
 .bs-badge {{
     background: rgba(255,255,255,0.2);
     backdrop-filter: blur(8px);
@@ -1495,38 +1495,19 @@ if page == "🏠 หน้าหลัก":
     border: 1px solid rgba(255,255,255,0.15);
 }}
 
-.bs-stats {{
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 14px;
-}}
-.bs-stat-card {{
-    background: white;
-    border-radius: 16px;
-    padding: 14px 10px 10px;
-    text-align: center;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    border: 1px solid rgba(0,0,0,0.04);
-    transition: all 0.15s ease;
-}}
-.bs-stat-icon {{ font-size: 22px; margin-bottom: 2px; }}
-.bs-stat-num {{ font-size: 22px; font-weight: 800; line-height: 1.1; }}
-.bs-stat-label {{ font-size: 10px; color: #64748b; font-weight: 600; margin-top: 2px; }}
-
 .bs-section-title {{
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: #475569;
-    margin: 2px 0 10px;
-    padding-left: 4px;
+    margin: 0 0 6px;
+    padding-left: 2px;
     letter-spacing: 0.3px;
 }}
 
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {{
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 10px !important;
+    gap: 6px !important;
     width: 100% !important;
 }}
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
@@ -1537,13 +1518,14 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="
 
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {{
     width: 100% !important;
-    min-height: 86px !important;
-    border-radius: 18px !important;
-    border: 1px solid rgba(0,0,0,0.04) !important;
+    min-height: 48px !important;
+    max-height: 52px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
     background: white !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
-    font-size: 34px !important;
-    padding: 10px 4px 6px !important;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05) !important;
+    font-size: 20px !important;
+    padding: 4px 4px 2px !important;
     line-height: 1 !important;
     transition: all 0.15s ease !important;
 }}
@@ -1557,19 +1539,45 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 
 .bs-menu-label {{
     text-align: center;
-    font-size: 11.5px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #1e293b;
-    margin: 2px 0 10px;
-    line-height: 1.25;
+    margin: 0 0 6px;
+    line-height: 1.15;
 }}
 .bs-menu-label-logout {{ color: #dc2626 !important; }}
 
-{_menu_colors_css}
+.bs-stats {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}}
+.bs-stat-link {{
+    text-decoration: none !important;
+    color: inherit !important;
+}}
+.bs-stat-card {{
+    background: white;
+    border-radius: 14px;
+    padding: 10px 6px 8px;
+    text-align: center;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.04);
+    transition: all 0.15s ease;
+    cursor: pointer;
+}}
+.bs-stat-card:hover {{
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}}
+.bs-stat-card:active {{
+    transform: scale(0.97);
+}}
+.bs-stat-num {{ font-size: 18px; font-weight: 800; line-height: 1.3; }}
+.bs-stat-label {{ font-size: 9px; color: #64748b; font-weight: 600; margin-top: 1px; }}
 
-[data-testid="stButton"]:has(button[key="hs_stk"]) button {{ background: linear-gradient(135deg,#eff6ff,#dbeafe) !important; border-left: 3px solid #3b82f6 !important; min-height: 52px !important; font-size: 22px !important; }}
-[data-testid="stButton"]:has(button[key="hs_pend"]) button {{ background: linear-gradient(135deg,#fffbeb,#fef3c7) !important; border-left: 3px solid #f59e0b !important; min-height: 52px !important; font-size: 22px !important; }}
-[data-testid="stButton"]:has(button[key="hs_cls"]) button {{ background: linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-left: 3px solid #10b981 !important; min-height: 52px !important; font-size: 22px !important; }}
+{_menu_colors_css}
 </style>''', unsafe_allow_html=True)
 
     # === HEADER ===
@@ -1595,41 +1603,29 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
             st.session_state['_current_page'] = target
         st.rerun()
 
-    # === STAT ROW (staff/admin only) ===
+    # === STAT ROW (staff/admin only) — clickable HTML cards ===
     if _role2 != "customer":
-        _stat_html = f'''<div class="bs-stats">
-          <div class="bs-stat-card" style="border-top: 3px solid #3b82f6;">
-            <div class="bs-stat-icon">📦</div>
-            <div class="bs-stat-num" style="color:#1e40af;">{_s1}</div>
-            <div class="bs-stat-label">สต๊อก (รุ่น)</div>
-          </div>
-          <div class="bs-stat-card" style="border-top: 3px solid #f59e0b;">
-            <div class="bs-stat-icon">⏳</div>
-            <div class="bs-stat-num" style="color:#b45309;">{_total_pend}</div>
-            <div class="bs-stat-label">งานค้าง</div>
-          </div>
-          <div class="bs-stat-card" style="border-top: 3px solid #10b981;">
-            <div class="bs-stat-icon">✅</div>
-            <div class="bs-stat-num" style="color:#047857;">{_total_closed}</div>
-            <div class="bs-stat-label">ปิดแล้ว</div>
-          </div>
-        </div>'''
-        st.markdown(_stat_html, unsafe_allow_html=True)
-
-        sc1, sc2, sc3 = st.columns(3)
-        with sc1:
-            if st.button("📦", key="hs_stk", use_container_width=True, help="ไปหน้าสต๊อก"):
-                st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-            _stk_msg = f"⚠️ {_low_stk} ใกล้หมด" if _low_stk > 0 else "ปกติ ✓"
-            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-4px 0 0;">{_stk_msg}</p>', unsafe_allow_html=True)
-        with sc2:
-            if st.button("⏳", key="hs_pend", use_container_width=True, help="ดูงานค้าง"):
-                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-4px 0 0;">แอร์ {_ac_pend} · ซ่อม {_sv_pend}</p>', unsafe_allow_html=True)
-        with sc3:
-            if st.button("✅", key="hs_cls", use_container_width=True, help="ดูงานปิดแล้ว"):
-                st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-4px 0 0;">แอร์ {_ac_closed} · ซ่อม {_sv_closed}</p>', unsafe_allow_html=True)
+        _stk_msg = f"⚠️ {_low_stk} ใกล้หมด" if _low_stk > 0 else "ปกติ"
+        st.markdown(f'''<div class="bs-stats">
+          <a href="?nav=📦+จัดการสต๊อก" target="_self" class="bs-stat-link">
+            <div class="bs-stat-card" style="border-top:3px solid #3b82f6;">
+              <div class="bs-stat-num" style="color:#1e40af;">📦 {_s1}</div>
+              <div class="bs-stat-label">สต๊อก · {_stk_msg}</div>
+            </div>
+          </a>
+          <a href="?nav=📋+จัดการงาน+/+สถานะ" target="_self" class="bs-stat-link">
+            <div class="bs-stat-card" style="border-top:3px solid #f59e0b;">
+              <div class="bs-stat-num" style="color:#b45309;">⏳ {_total_pend}</div>
+              <div class="bs-stat-label">งานค้าง · แอร์ {_ac_pend} ซ่อม {_sv_pend}</div>
+            </div>
+          </a>
+          <a href="?nav=📋+จัดการงาน+/+สถานะ" target="_self" class="bs-stat-link">
+            <div class="bs-stat-card" style="border-top:3px solid #10b981;">
+              <div class="bs-stat-num" style="color:#047857;">✅ {_total_closed}</div>
+              <div class="bs-stat-label">ปิดแล้ว · แอร์ {_ac_closed} ซ่อม {_sv_closed}</div>
+            </div>
+          </a>
+        </div>''', unsafe_allow_html=True)
 
     # === MENU SECTION ===
     st.markdown('<p class="bs-section-title">📱 เมนูหลัก</p>', unsafe_allow_html=True)
@@ -1661,13 +1657,13 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
                     st.markdown('<p class="%s">%s</p>' % (_lc, _lb), unsafe_allow_html=True)
 
     # === FOOTER ===
-    st.markdown(f'''<div style="text-align:center; margin-top:20px; padding:16px 0 8px;
+    st.markdown(f'''<div style="text-align:center; margin-top:12px; padding:10px 0 4px;
         border-top:1px solid #e2e8f0;">
-      <p style="font-size:11px; color:#94a3b8; margin:0;">
+      <p style="font-size:10px; color:#94a3b8; margin:0;">
         {STORE_NAME} · ☎ {STORE_PHONE}
       </p>
-      <p style="font-size:10px; color:#cbd5e1; margin:4px 0 0;">
-        Smart Sales v5 · Powered by Streamlit
+      <p style="font-size:9px; color:#cbd5e1; margin:2px 0 0;">
+        Smart Sales v5
       </p>
     </div>''', unsafe_allow_html=True)
 
