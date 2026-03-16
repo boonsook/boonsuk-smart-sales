@@ -261,7 +261,7 @@ def check_login():
         st.session_state.full_name  = ""
         st.session_state.user_phone = ""
 
-    # handle logout จาก HTML grid (href /?logout=1)
+    # handle logout
     if st.query_params.get("logout", "") == "1":
         st.session_state.logged_in  = False
         st.session_state.username   = ""
@@ -269,33 +269,49 @@ def check_login():
         st.session_state.full_name  = ""
         st.session_state.user_phone = ""
         st.session_state["_current_page"] = "🏠 หน้าหลัก"
-        st.query_params.clear()
+        # set s="" แทน clear ทั้งหมด เพื่อป้องกัน localStorage redirect กลับ
+        st.query_params["s"] = ""
+        try: del st.query_params["logout"]
+        except: pass
+        try: del st.query_params["nav"]
+        except: pass
         return
 
-    # ถ้า logged in อยู่แล้วใน session_state — ไม่ต้องทำอะไร
+    # ถ้า logged in อยู่แล้ว — ไม่ต้องทำอะไร
     if st.session_state.logged_in:
         return
 
-    # ลอง restore session จาก query param "s"
-    # (จำเป็นเมื่อมือถือ reconnect websocket แล้ว session_state หาย)
-    try:
-        token = str(st.query_params.get("s", "")).strip()
-        if token:
-            data = _decode_session(token)
-            if data and isinstance(data, dict):
-                import time
-                exp = data.get("exp", 0)
-                if isinstance(exp, (int, float)) and exp > time.time():
-                    st.session_state.logged_in  = True
-                    st.session_state.username   = str(data.get("u", ""))
-                    st.session_state.role       = str(data.get("r", ""))
-                    st.session_state.full_name  = str(data.get("n", ""))
-                    st.session_state.user_phone = str(data.get("p", ""))
-    except Exception:
-        pass
+    # ลอง restore จาก URL query param "s"
+    import time
+    token = str(st.query_params.get("s", "")).strip()
+    if token:
+        data = _decode_session(token)
+        if data and isinstance(data, dict):
+            exp = data.get("exp", 0)
+            if isinstance(exp, (int, float)) and exp > time.time():
+                st.session_state.logged_in  = True
+                st.session_state.username   = str(data.get("u", ""))
+                st.session_state.role       = str(data.get("r", ""))
+                st.session_state.full_name  = str(data.get("n", ""))
+                st.session_state.user_phone = str(data.get("p", ""))
+                return
+
+    # URL ไม่มี token — ลอง restore จาก localStorage (กันมือถือหลุด)
+    st.markdown('''<script>
+    (function(){
+        var t = localStorage.getItem("bs_session");
+        if(t && t.length > 10){
+            var u = new URL(window.location);
+            if(!u.searchParams.has("s") && !u.searchParams.has("logout")){
+                u.searchParams.set("s", t);
+                window.location.replace(u.toString());
+            }
+        }
+    })();
+    </script>''', unsafe_allow_html=True)
 
 def _save_session():
-    """บันทึก session ลง URL query param อายุ 30 วัน"""
+    """บันทึก session ลง URL query param + localStorage อายุ 30 วัน"""
     import time
     data = {
         "u": st.session_state.get("username",""),
@@ -304,7 +320,26 @@ def _save_session():
         "p": st.session_state.get("user_phone",""),
         "exp": time.time() + (30 * 24 * 3600),
     }
-    st.query_params["s"] = _encode_session(data)
+    token = _encode_session(data)
+    st.query_params["s"] = token
+    # Backup ลง localStorage ด้วย (กันมือถือ URL หาย token)
+    st.markdown(f'<script>localStorage.setItem("bs_session","{token}");</script>', unsafe_allow_html=True)
+
+def _ensure_session_token():
+    """ตรวจว่า session token อยู่ใน URL + localStorage"""
+    import time
+    current_s = str(st.query_params.get("s", "")).strip()
+    if current_s:
+        data = _decode_session(current_s)
+        if data and isinstance(data, dict):
+            exp = data.get("exp", 0)
+            if isinstance(exp, (int, float)) and exp > time.time():
+                # token ดีอยู่ — sync ลง localStorage ด้วย
+                st.markdown(f'<script>localStorage.setItem("bs_session","{current_s}");</script>', unsafe_allow_html=True)
+                return
+    # token ไม่มี หรือเสียหาย — สร้างใหม่
+    if st.session_state.get("logged_in", False):
+        _save_session()
 
 def inject_pwa():
     """ใส่ PWA manifest inline via base64 + Install prompt banner"""
@@ -439,6 +474,8 @@ def inject_pwa():
     """, unsafe_allow_html=True)
 
 def login_page():
+    # ล้าง localStorage token เมื่อแสดงหน้า login (กัน localStorage redirect กลับหลัง logout)
+    st.markdown('<script>localStorage.removeItem("bs_session");</script>', unsafe_allow_html=True)
     st.markdown("""
     <style>
     [data-testid="stSidebar"],
@@ -1328,10 +1365,8 @@ check_login()
 if not st.session_state.logged_in:
     login_page(); st.stop()
 
-# รีเฟรช session token ลง URL ทุกครั้งที่ logged in อยู่
-# (ป้องกัน token หายเมื่อมือถือ reconnect)
-if not st.query_params.get("s", ""):
-    _save_session()
+# บังคับให้ session token อยู่ใน URL เสมอ (ป้องกันมือถือ reconnect)
+_ensure_session_token()
 
 # PWA inject หลัง login สำเร็จเท่านั้น
 inject_pwa()
@@ -1636,7 +1671,9 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
         if target == '__LOGOUT__':
             for k in ['logged_in','username','role','full_name','user_phone','_current_page']:
                 st.session_state[k] = '' if k != 'logged_in' else False
-            st.query_params.clear()
+            st.query_params["s"] = ""
+            try: del st.query_params["nav"]
+            except: pass
         else:
             st.session_state['_current_page'] = target
         st.rerun()
@@ -1680,7 +1717,9 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
                         if _lo:
                             for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                                 st.session_state[k] = "" if k != "logged_in" else False
-                            st.query_params.clear()
+                            st.query_params["s"] = ""
+                            try: del st.query_params["nav"]
+                            except: pass
                         else:
                             st.session_state["_current_page"] = _tgt
                         st.rerun()
