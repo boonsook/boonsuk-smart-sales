@@ -1468,7 +1468,7 @@ if page == "🏠 หน้าหลัก":
     else:
         _s1=_total_pend=_total_closed=_ac_pend=_sv_pend=_ac_closed=_sv_closed=_low_stk=0
 
-    role_badge = "👑 Admin" if _role2=="admin" else "👔 Staff" if _role2=="staff" else "👤 ลูกค้า"
+    role_badge = "👑 ผู้ดูแลระบบ" if _role2=="admin" else "👔 พนักงาน" if _role2=="staff" else "👤 ลูกค้า"
 
     # === INJECT CSS ===
     _menu_colors_css = ""
@@ -1528,18 +1528,18 @@ if page == "🏠 หน้าหลัก":
 }}
 
 .bs-section-title {{
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     color: #475569;
-    margin: 0 0 6px;
-    padding-left: 2px;
+    margin: 6px 0 10px;
+    padding-left: 4px;
     letter-spacing: 0.3px;
 }}
 
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {{
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 6px !important;
+    gap: 10px !important;
     width: 100% !important;
 }}
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
@@ -1550,14 +1550,13 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="
 
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {{
     width: 100% !important;
-    min-height: 48px !important;
-    max-height: 52px !important;
-    border-radius: 14px !important;
-    border: 1px solid rgba(0,0,0,0.05) !important;
+    min-height: 90px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(0,0,0,0.04) !important;
     background: white !important;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.05) !important;
-    font-size: 20px !important;
-    padding: 4px 4px 2px !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+    font-size: 38px !important;
+    padding: 12px 4px 6px !important;
     line-height: 1 !important;
     transition: all 0.15s ease !important;
 }}
@@ -1571,11 +1570,11 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 
 .bs-menu-label {{
     text-align: center;
-    font-size: 10.5px;
+    font-size: 13px;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 6px;
-    line-height: 1.15;
+    margin: 2px 0 10px;
+    line-height: 1.25;
 }}
 .bs-menu-label-logout {{ color: #dc2626 !important; }}
 
@@ -1611,9 +1610,9 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 
 {_menu_colors_css}
 
-[data-testid="stButton"]:has(button[key="hs_stk"]) button {{ background: linear-gradient(135deg,#eff6ff,#dbeafe) !important; border-left: 3px solid #3b82f6 !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 16px !important; color: #1e40af !important; }}
-[data-testid="stButton"]:has(button[key="hs_pend"]) button {{ background: linear-gradient(135deg,#fffbeb,#fef3c7) !important; border-left: 3px solid #f59e0b !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 16px !important; color: #b45309 !important; }}
-[data-testid="stButton"]:has(button[key="hs_cls"]) button {{ background: linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-left: 3px solid #10b981 !important; border-radius: 14px !important; font-weight: 800 !important; font-size: 16px !important; color: #047857 !important; }}
+[data-testid="stButton"]:has(button[key="hs_stk"]) button {{ background: linear-gradient(135deg,#eff6ff,#dbeafe) !important; border-left: 3px solid #3b82f6 !important; border-radius: 16px !important; font-weight: 800 !important; font-size: 18px !important; color: #1e40af !important; min-height: 52px !important; }}
+[data-testid="stButton"]:has(button[key="hs_pend"]) button {{ background: linear-gradient(135deg,#fffbeb,#fef3c7) !important; border-left: 3px solid #f59e0b !important; border-radius: 16px !important; font-weight: 800 !important; font-size: 18px !important; color: #b45309 !important; min-height: 52px !important; }}
+[data-testid="stButton"]:has(button[key="hs_cls"]) button {{ background: linear-gradient(135deg,#f0fdf4,#dcfce7) !important; border-left: 3px solid #10b981 !important; border-radius: 16px !important; font-weight: 800 !important; font-size: 18px !important; color: #047857 !important; min-height: 52px !important; }}
 </style>''', unsafe_allow_html=True)
 
     # === HEADER ===
@@ -1648,15 +1647,24 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
         with sc1:
             if st.button(f"📦 {_s1}", key="hs_stk", use_container_width=True):
                 st.session_state["_current_page"] = "📦 จัดการสต๊อก"; st.rerun()
-            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-8px 0 6px;">สต๊อก · {_stk_msg}</p>', unsafe_allow_html=True)
+            st.markdown(f'''<div style="text-align:center;margin:-10px 0 8px;line-height:1.4;">
+                <div style="font-size:10px;color:#64748b;font-weight:600;">สต๊อก</div>
+                <div style="font-size:9px;color:#94a3b8;">รุ่น · {_stk_msg}</div>
+            </div>''', unsafe_allow_html=True)
         with sc2:
             if st.button(f"⏳ {_total_pend}", key="hs_pend", use_container_width=True):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-8px 0 6px;">งานค้าง · แอร์ {_ac_pend} ซ่อม {_sv_pend}</p>', unsafe_allow_html=True)
+            st.markdown(f'''<div style="text-align:center;margin:-10px 0 8px;line-height:1.4;">
+                <div style="font-size:10px;color:#64748b;font-weight:600;">งานค้าง</div>
+                <div style="font-size:9px;color:#94a3b8;">แอร์ {_ac_pend} | ซ่อม {_sv_pend}</div>
+            </div>''', unsafe_allow_html=True)
         with sc3:
             if st.button(f"✅ {_total_closed}", key="hs_cls", use_container_width=True):
                 st.session_state["_current_page"] = "📋 จัดการงาน / สถานะ"; st.rerun()
-            st.markdown(f'<p style="text-align:center;font-size:9px;color:#64748b;margin:-8px 0 6px;">ปิดแล้ว · แอร์ {_ac_closed} ซ่อม {_sv_closed}</p>', unsafe_allow_html=True)
+            st.markdown(f'''<div style="text-align:center;margin:-10px 0 8px;line-height:1.4;">
+                <div style="font-size:10px;color:#64748b;font-weight:600;">ปิดงานแล้ว</div>
+                <div style="font-size:9px;color:#94a3b8;">แอร์ {_ac_closed} | ซ่อม {_sv_closed}</div>
+            </div>''', unsafe_allow_html=True)
 
     # === MENU SECTION ===
     st.markdown('<p class="bs-section-title">📱 เมนูหลัก</p>', unsafe_allow_html=True)
