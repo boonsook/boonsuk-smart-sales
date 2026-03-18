@@ -829,6 +829,7 @@ def save_service(df: pd.DataFrame):
                         "status": str(row.get("status","")),
                         "note":   str(row.get("note","")),
                         "price":  int(row.get("price",0)),
+                        "payment_method": str(row.get("payment_method","")),
                     }).eq("id", int(sb_id)).execute()
             return
         except Exception as e:
@@ -840,7 +841,7 @@ def log_service_job(rec: dict):
         try:
             sb = _get_supabase()
             insert_cols = ["date","service_type","customer_name","customer_phone",
-                           "customer_address","symptom","note","price","status","saved_by"]
+                           "customer_address","symptom","note","price","status","payment_method","saved_by"]
             row = {c: rec.get(c,"") for c in insert_cols}
             row["price"] = int(row.get("price",0))
             sb.table("service_jobs").insert(row).execute()
@@ -1888,6 +1889,9 @@ if page == "🧾 สร้างใบเสนอราคา":
     )
 
     st.divider(); st.subheader("📤 ดำเนินการ")
+    _PAY_Q = ["", "💵 เงินสด", "📲 โอนจ่าย"]
+    q_pay = st.selectbox("💳 วิธีชำระเงิน", _PAY_Q, key="q_pay_method")
+    quote_data["payment_method"] = q_pay
     a1, a2, a3 = st.columns(3)
     if a1.button("💾 บันทึกงาน", use_container_width=True, type="primary"):
         log_customer_job(quote_data)
@@ -2054,6 +2058,9 @@ elif page == "🏗️ ติดตั้งแอร์":
     )
 
     st.divider(); st.subheader("📤 ดำเนินการ")
+    _PAY_I = ["", "💵 เงินสด", "📲 โอนจ่าย"]
+    i_pay = st.selectbox("💳 วิธีชำระเงิน", _PAY_I, key="inst_pay_method")
+    inst_quote["payment_method"] = i_pay
     ia1, ia2, ia3 = st.columns(3)
     if ia1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="inst_save"):
         log_customer_job(inst_quote)
@@ -2258,6 +2265,9 @@ elif page == "📋 จัดการงาน / สถานะ":
                     d1.markdown(f"**📍 ที่อยู่:** {r2.get('customer_address','-')}")
                     d2.markdown(f"**💰 ค่าบริการ:** ฿{fmt_baht(r2.get('price',0))}")
                     d2.markdown(f"**📅 วันที่:** {r2.get('date','-')}")
+                    _sv_pm = str(r2.get('payment_method',''))
+                    if _sv_pm:
+                        d2.markdown(f"**💳 ชำระ:** {_sv_pm}")
                     d2.markdown(f"**บันทึกโดย:** {r2.get('saved_by','-')}")
                     st.markdown(f"**⚡ อาการ/งาน:** {r2.get('symptom','-')}")
                     if r2.get("note",""):
@@ -2270,13 +2280,20 @@ elif page == "📋 จัดการงาน / สถานะ":
                                 key=f"sv2_st_{idx2}")
                     new_price2 = sv2_u2.number_input("ค่าบริการ (฿)", min_value=0, step=50,
                                 value=int(r2.get("price",0)), key=f"sv2_pr_{idx2}")
+                    _PAY_SV2 = ["", "💵 เงินสด", "📲 โอนจ่าย"]
+                    _cur_pm2 = str(r2.get("payment_method",""))
+                    new_pm2 = st.selectbox("💳 วิธีชำระเงิน", _PAY_SV2,
+                                index=_PAY_SV2.index(_cur_pm2) if _cur_pm2 in _PAY_SV2 else 0,
+                                key=f"sv2_pm_{idx2}")
                     if sv2_u3.button("💾", key=f"sv2_save_{idx2}", help="บันทึก"):
                         df_sv2.at[idx2,"status"] = new_st2
                         df_sv2.at[idx2,"price"]  = new_price2
+                        df_sv2.at[idx2,"payment_method"] = new_pm2
                         save_service(df_sv2)
                         _upd_sv = r2.to_dict() if hasattr(r2,'to_dict') else dict(r2)
                         _upd_sv["status"] = new_st2
                         _upd_sv["price"] = new_price2
+                        _upd_sv["payment_method"] = new_pm2
                         notify_msg = make_service_line_text(_upd_sv)
                         if any(x in new_st2 for x in ["รับเงิน","เสร็จแล้ว"]):
                             line_notify_done(notify_msg)
@@ -2579,6 +2596,9 @@ elif page == "☀️ งานโซล่าเซลล์":
     }
 
     st.divider(); st.subheader("📤 ดำเนินการ")
+    _PAY_S = ["", "💵 เงินสด", "📲 โอนจ่าย"]
+    s_pay = st.selectbox("💳 วิธีชำระเงิน", _PAY_S, key="sol_pay_method")
+    sol_record["payment_method"] = s_pay
     sa1, sa2, sa3 = st.columns(3)
     if sa1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="sol_save"):
         save_service(sol_record)
@@ -2639,6 +2659,8 @@ if page == "🛠️ รับงานซ่อม/บริการ":
         c5, c6 = st.columns(2)
         sv_price  = c5.number_input("💰 ค่าบริการ (บาท)", min_value=0, step=50, value=0)
         sv_status = c6.selectbox("📊 สถานะ", SERVICE_STATUSES)
+        _PAY_SV = ["", "💵 เงินสด", "📲 โอนจ่าย"]
+        sv_pay_method = st.selectbox("💳 วิธีชำระเงิน", _PAY_SV, key="sv_pay_method")
 
         st.divider()
         if st.button("💾 บันทึกใบงาน", use_container_width=True, type="primary"):
@@ -2659,6 +2681,7 @@ if page == "🛠️ รับงานซ่อม/บริการ":
                     "note":            sv_note.strip(),
                     "price":           int(sv_price),
                     "status":          sv_status,
+                    "payment_method":  sv_pay_method,
                     "saved_by":        st.session_state.get("username",""),
                 }
                 log_service_job(rec)
