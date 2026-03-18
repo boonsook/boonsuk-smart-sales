@@ -1425,6 +1425,7 @@ if _role == "customer":
         "🧾 ขอใบเสนอราคาแอร์",
         "🛠️ แจ้งซ่อม/บริการ",
         "📋 งานของฉัน",
+        "🤖 AI ผู้ช่วย",
         "🧮 คำนวณ BTU",
         "🔧 คลังเออเร่อแอร์",
     ]
@@ -1438,6 +1439,7 @@ else:
         "📋 จัดการงาน / สถานะ",
         "📦 จัดการสต๊อก",
         "📊 Dashboard",
+        "🤖 AI ผู้ช่วย",
         "🧮 คำนวณ BTU",
         "🔧 คลังเออเร่อแอร์",
     ]
@@ -1477,6 +1479,7 @@ if page == "🏠 หน้าหลัก":
             ("🧾", "สนใจซื้อแอร์",   "🧾 ขอใบเสนอราคาแอร์",  "#3b82f6","#dbeafe"),
             ("🛠️", "แจ้งซ่อม/บริการ", "🛠️ แจ้งซ่อม/บริการ",  "#f59e0b","#fef3c7"),
             ("📋", "งานของฉัน",       "📋 งานของฉัน",          "#10b981","#d1fae5"),
+            ("🤖", "AI ผู้ช่วย",     "🤖 AI ผู้ช่วย",         "#6366f1","#e0e7ff"),
             ("🧮", "คำนวณ BTU",       "🧮 คำนวณ BTU",          "#8b5cf6","#ede9fe"),
             ("⚠️", "Error Code",     "🔧 คลังเออเร่อแอร์",    "#ef4444","#fee2e2"),
             ("🚪", "ออกจากระบบ",      "__LOGOUT__",             "#64748b","#f1f5f9"),
@@ -1490,6 +1493,7 @@ if page == "🏠 หน้าหลัก":
             ("📋", "จัดการงาน",       "📋 จัดการงาน / สถานะ",   "#06b6d4","#cffafe"),
             ("📦", "สต๊อกแอร์",      "📦 จัดการสต๊อก",          "#8b5cf6","#ede9fe"),
             ("📊", "Dashboard",       "📊 Dashboard",            "#10b981","#d1fae5"),
+            ("🤖", "AI ผู้ช่วย",    "🤖 AI ผู้ช่วย",          "#6366f1","#e0e7ff"),
             ("🧮", "คำนวณ BTU",       "🧮 คำนวณ BTU",            "#f97316","#ffedd5"),
             ("⚠️", "Error Code",    "🔧 คลังเออเร่อแอร์",      "#dc2626","#fecaca"),
         ]
@@ -3336,6 +3340,280 @@ ERROR_DB = {
 WASHER_DB = {'Samsung (เครื่องซักผ้า)': [{'code': '4E / 4C', 'desc': 'น้ำไม่เข้า / แรงดันน้ำต่ำ', 'cause': 'ก๊อกน้ำปิด / ตะแกรงกรองอุดตัน / วาล์วน้ำเสีย', 'fix': 'เปิดก๊อกน้ำ, ล้างตะแกรงกรองน้ำ, ตรวจวาล์วน้ำ', 'parts': 'วาล์วน้ำเข้า (Water inlet valve)'}, {'code': '5E / 5C', 'desc': 'น้ำไม่ออก / ระบายน้ำไม่ได้', 'cause': 'ท่อระบายอุดตัน / ปั๊มน้ำทิ้งเสีย / ฟิลเตอร์อุดตัน', 'fix': 'ล้างฟิลเตอร์ปั๊ม, ตรวจท่อน้ำทิ้ง, เปลี่ยนปั๊ม', 'parts': 'ปั๊มน้ำทิ้ง (Drain pump)'}, {'code': 'E2', 'desc': 'ระบบน้ำเข้า/ระบาย ผิดปกติ', 'cause': 'วาล์วน้ำเสีย / ปั๊มเสีย', 'fix': 'ตรวจวาล์วและปั๊ม', 'parts': 'วาล์วน้ำ, ปั๊มน้ำ'}, {'code': '3E', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์ร้อนเกิน / โหลดหนักเกิน', 'fix': 'ลดผ้า, รอให้เย็น, ตรวจมอเตอร์', 'parts': 'มอเตอร์ซัก'}, {'code': 'UE / UB', 'desc': 'ผ้าไม่สมดุล (Unbalance)', 'cause': 'ผ้ากระจุกด้านเดียว', 'fix': 'หยุดเครื่อง, จัดผ้าใหม่', 'parts': '-'}, {'code': 'DC', 'desc': 'ฝาไม่ปิดสนิท', 'cause': 'บานพับเสีย / ประตูไม่ล็อก', 'fix': 'ตรวจล็อกประตู, เปลี่ยนล็อค', 'parts': 'Door lock switch'}, {'code': 'LC / LC1', 'desc': 'น้ำรั่วภายใน', 'cause': 'จุกยางรั่ว / ถาดน้ำยาผิดปกติ', 'fix': 'ตรวจท่อยางภายใน, ตรวจถาดน้ำ', 'parts': 'ท่อยางภายใน, จุกยาง'}, {'code': 'HE1', 'desc': 'เซ็นเซอร์ความร้อนผิดปกติ', 'cause': 'ฮีตเตอร์เสีย / เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนฮีตเตอร์หรือเซ็นเซอร์', 'parts': 'Heater, NTC Sensor'}, {'code': 'HE2', 'desc': 'Steam heater ผิดปกติ', 'cause': 'ขั้วต่อหลวม / ฮีตเตอร์เสีย', 'fix': 'ตรวจขั้วต่อ, เปลี่ยนฮีตเตอร์', 'parts': 'Steam heater'}, {'code': 'tE', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'NTC Temperature sensor'}, {'code': 'nF', 'desc': 'ระบบทำน้ำร้อนผิดปกติ', 'cause': 'ฮีตเตอร์เสีย', 'fix': 'เปลี่ยนฮีตเตอร์', 'parts': 'Heater'}, {'code': 'CE', 'desc': 'กระแสไฟมอเตอร์เกิน', 'cause': 'มอเตอร์เสีย / ผ้าหนักเกิน', 'fix': 'ลดน้ำหนักผ้า, ตรวจมอเตอร์', 'parts': 'มอเตอร์ซัก'}, {'code': 'OE', 'desc': 'น้ำล้น', 'cause': 'วาล์วน้ำค้าง / เซ็นเซอร์ระดับน้ำเสีย', 'fix': 'ตรวจวาล์ว, เปลี่ยนเซ็นเซอร์', 'parts': 'Pressure switch, วาล์วน้ำ'}, {'code': 'AE', 'desc': 'ประตูไม่ล็อก', 'cause': 'ล็อคประตูเสีย', 'fix': 'เปลี่ยน door lock', 'parts': 'Door lock assembly'}], 'LG (เครื่องซักผ้า)': [{'code': 'IE', 'desc': 'น้ำไม่เข้า', 'cause': 'ก๊อกปิด / วาล์วเสีย / แรงดันน้ำต่ำ', 'fix': 'เปิดก๊อก, ล้างตะแกรง, ตรวจวาล์ว', 'parts': 'วาล์วน้ำเข้า'}, {'code': 'OE', 'desc': 'น้ำไม่ออก', 'cause': 'ปั๊มน้ำเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, ตรวจท่อ, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'UE', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากองด้านเดียว', 'fix': 'จัดผ้าใหม่ให้สม่ำเสมอ', 'parts': '-'}, {'code': 'PE', 'desc': 'เซ็นเซอร์ระดับน้ำผิดปกติ', 'cause': 'Pressure switch เสีย / ท่อเซ็นเซอร์อุดตัน', 'fix': 'เปลี่ยน pressure switch, ล้างท่อเซ็นเซอร์', 'parts': 'Pressure switch (Water level sensor)'}, {'code': 'DE', 'desc': 'ฝาไม่ปิด (Door Error)', 'cause': 'ล็อคประตูเสีย / ประตูบิด', 'fix': 'ตรวจประตู, เปลี่ยน door lock', 'parts': 'Door lock'}, {'code': 'FE', 'desc': 'น้ำล้น', 'cause': 'วาล์วค้าง / เซ็นเซอร์เสีย', 'fix': 'ตรวจวาล์ว, เปลี่ยนเซ็นเซอร์', 'parts': 'วาล์วน้ำ, Pressure switch'}, {'code': 'LE', 'desc': 'มอเตอร์ล็อค / ร้อนเกิน', 'cause': 'มอเตอร์เสีย / ผ้าหนักเกิน', 'fix': 'ลดผ้า, รอเย็น, ตรวจมอเตอร์', 'parts': 'DD Motor / Belt motor'}, {'code': 'tE', 'desc': 'เซ็นเซอร์ความร้อนผิดปกติ', 'cause': 'NTC เสีย', 'fix': 'เปลี่ยน NTC sensor', 'parts': 'NTC Thermistor'}, {'code': 'CE', 'desc': 'กระแสไฟเกิน', 'cause': 'มอเตอร์/PCB เสีย', 'fix': 'ตรวจ IPM, เปลี่ยนมอเตอร์', 'parts': 'มอเตอร์, PCB'}, {'code': 'EE', 'desc': 'EEPROM ผิดปกติ', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}, {'code': 'dHE', 'desc': 'Door heater ผิดปกติ', 'cause': 'ฮีตเตอร์ประตูเสีย', 'fix': 'เปลี่ยนฮีตเตอร์ประตู', 'parts': 'Door heater'}], 'Panasonic (เครื่องซักผ้า)': [{'code': 'U11', 'desc': 'น้ำไม่เข้า', 'cause': 'ก๊อกปิด / แรงดันต่ำ / วาล์วเสีย', 'fix': 'เปิดก๊อก, ตรวจวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'U12', 'desc': 'น้ำไม่ออก', 'cause': 'ท่ออุดตัน / ปั๊มเสีย', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'U13', 'desc': 'ระดับน้ำผิดปกติ', 'cause': 'Pressure switch เสีย', 'fix': 'เปลี่ยน pressure switch', 'parts': 'Pressure switch'}, {'code': 'U14', 'desc': 'อุณหภูมิน้ำสูงเกิน', 'cause': 'Thermostat/เซ็นเซอร์เสีย', 'fix': 'ตรวจฮีตเตอร์, เปลี่ยนเซ็นเซอร์', 'parts': 'Thermostat, NTC'}, {'code': 'U21', 'desc': 'ฝาไม่ปิดสนิท', 'cause': 'ล็อคประตูเสีย', 'fix': 'เปลี่ยน door lock', 'parts': 'Door lock'}, {'code': 'U23', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากองด้านเดียว', 'fix': 'จัดผ้าใหม่', 'parts': '-'}, {'code': 'H01', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย / ร้อนเกิน', 'fix': 'ตรวจมอเตอร์, รอเย็น', 'parts': 'มอเตอร์'}, {'code': 'H07', 'desc': 'PCB ผิดปกติ', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Toshiba (เครื่องซักผ้า)': [{'code': 'E1', 'desc': 'น้ำเข้าช้า/ไม่เข้า', 'cause': 'แรงดันน้ำต่ำ / วาล์วเสีย', 'fix': 'ตรวจก๊อก, เปลี่ยนวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'E2', 'desc': 'น้ำระบายไม่ออก', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E3', 'desc': 'น้ำล้น', 'cause': 'วาล์วค้าง', 'fix': 'ตรวจวาล์วน้ำ', 'parts': 'วาล์วน้ำเข้า'}, {'code': 'E4', 'desc': 'ผ้าไม่สมดุล', 'cause': 'โหลดไม่สม่ำเสมอ', 'fix': 'จัดผ้าใหม่', 'parts': '-'}, {'code': 'E5', 'desc': 'ฝาไม่ปิด', 'cause': 'Door switch เสีย', 'fix': 'เปลี่ยน door switch', 'parts': 'Door switch'}, {'code': 'E6', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์/capacitor เสีย', 'fix': 'เปลี่ยนมอเตอร์หรือ capacitor', 'parts': 'Motor, Capacitor'}, {'code': 'E8', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'NTC เสีย', 'fix': 'เปลี่ยน NTC', 'parts': 'NTC Thermistor'}], 'Haier (เครื่องซักผ้า)': [{'code': 'E1', 'desc': 'น้ำไม่เข้า', 'cause': 'ก๊อกปิด / วาล์วเสีย', 'fix': 'เปิดก๊อก, ตรวจวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'E2', 'desc': 'น้ำไม่ออก', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E3', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากระจุก', 'fix': 'จัดผ้าใหม่', 'parts': '-'}, {'code': 'E4', 'desc': 'ฝาไม่ปิดสนิท', 'cause': 'Door lock เสีย', 'fix': 'เปลี่ยน door lock', 'parts': 'Door lock'}, {'code': 'E5', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Motor'}, {'code': 'E6', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'NTC เสีย', 'fix': 'เปลี่ยน NTC', 'parts': 'NTC'}, {'code': 'E7', 'desc': 'PCB ผิดปกติ', 'cause': 'Main board เสีย', 'fix': 'เปลี่ยน Main board', 'parts': 'Main PCB'}, {'code': 'E9', 'desc': 'น้ำล้น', 'cause': 'วาล์วค้าง / pressure switch เสีย', 'fix': 'ตรวจวาล์ว, เปลี่ยนเซ็นเซอร์', 'parts': 'วาล์วน้ำ, Pressure switch'}], 'Sharp (เครื่องซักผ้า)': [{'code': 'E1', 'desc': 'น้ำไม่เข้า', 'cause': 'วาล์วเสีย / ก๊อกปิด', 'fix': 'ตรวจก๊อก, เปลี่ยนวาล์ว', 'parts': 'Water inlet valve'}, {'code': 'E2', 'desc': 'น้ำไม่ออก', 'cause': 'ปั๊มเสีย / ท่อตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E3', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย / โหลดหนัก', 'fix': 'ลดผ้า, ตรวจมอเตอร์', 'parts': 'Motor'}, {'code': 'E4', 'desc': 'ฝาไม่ล็อก', 'cause': 'Door switch เสีย', 'fix': 'เปลี่ยน door switch', 'parts': 'Door switch'}, {'code': 'E5', 'desc': 'เซ็นเซอร์ระดับน้ำผิดปกติ', 'cause': 'Pressure switch เสีย', 'fix': 'เปลี่ยน pressure switch', 'parts': 'Pressure switch'}, {'code': 'E7', 'desc': 'เซ็นเซอร์อุณหภูมิผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Thermistor'}, {'code': 'E9', 'desc': 'ผ้าไม่สมดุล', 'cause': 'ผ้ากระจุก', 'fix': 'จัดผ้าใหม่', 'parts': '-'}], 'Electrolux (เครื่องซักผ้า)': [{'code': 'E10', 'desc': 'น้ำไม่เข้าภายใน 5 นาที', 'cause': 'วาล์วเสีย / แรงดันต่ำ', 'fix': 'ตรวจวาล์ว, เพิ่มแรงดันน้ำ', 'parts': 'Water inlet valve'}, {'code': 'E20', 'desc': 'น้ำไม่ระบายใน 5 นาที', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์ปั๊ม, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'E40', 'desc': 'ฝาไม่ปิด', 'cause': 'Door lock เสีย', 'fix': 'เปลี่ยน door interlock', 'parts': 'Door interlock'}, {'code': 'E50', 'desc': 'มอเตอร์ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'ตรวจ/เปลี่ยนมอเตอร์', 'parts': 'Motor'}, {'code': 'E90', 'desc': 'PCB โปรแกรมผิดพลาด', 'cause': 'Firmware/PCB เสีย', 'fix': 'รีเซ็ต, เปลี่ยน PCB', 'parts': 'Main PCB'}, {'code': 'EH0', 'desc': 'แรงดันไฟผิดปกติ', 'cause': 'ไฟบ้านต่ำ/สูงเกิน', 'fix': 'ตรวจแรงดันไฟ', 'parts': '-'}], 'Whirlpool (เครื่องซักผ้า)': [{'code': 'F01', 'desc': 'แผง EEPROM ผิดปกติ', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}, {'code': 'F05', 'desc': 'น้ำไม่ระบาย', 'cause': 'ปั๊มเสีย / ท่ออุดตัน', 'fix': 'ล้างฟิลเตอร์, เปลี่ยนปั๊ม', 'parts': 'Drain pump'}, {'code': 'F06', 'desc': 'มอเตอร์/tacho ผิดปกติ', 'cause': 'มอเตอร์หรือตัวตรวจจับความเร็วเสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Motor, Tacho'}, {'code': 'F07', 'desc': 'Triac มอเตอร์เสีย', 'cause': 'PCB เสีย', 'fix': 'เปลี่ยน PCB', 'parts': 'PCB'}, {'code': 'F08', 'desc': 'ฮีตเตอร์ผิดปกติ', 'cause': 'ฮีตเตอร์ขาด / Thermostat ทริป', 'fix': 'เปลี่ยนฮีตเตอร์หรือ thermostat', 'parts': 'Heater, Thermostat'}, {'code': 'F09', 'desc': 'โปรแกรมผิดพลาด', 'cause': 'PCB เสีย', 'fix': 'รีเซ็ต, เปลี่ยน PCB', 'parts': 'Main PCB'}, {'code': 'F11', 'desc': 'มอเตอร์ขับ (Drive motor) ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Drive motor'}]}
 
 FRIDGE_DB = {'Samsung (ตู้เย็น)': [{'code': '1E', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'เซ็นเซอร์ขาด/ช็อต', 'fix': 'วัดค่าความต้านทานเซ็นเซอร์ เปลี่ยนถ้าผิดปกติ (ปกติ ~5kΩ ที่ 25°C)', 'parts': 'Freezer temperature sensor'}, {'code': '2E', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'ตรวจ/เปลี่ยนเซ็นเซอร์ช่องธรรมดา', 'parts': 'Fridge temperature sensor'}, {'code': '4E', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'เซ็นเซอร์ defrost เสีย', 'fix': 'ตรวจบริเวณ evaporator, เปลี่ยนเซ็นเซอร์', 'parts': 'Defrost sensor'}, {'code': '5E', 'desc': 'พัดลม Freezer ผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์พัดลม', 'parts': 'Freezer fan motor'}, {'code': '6E', 'desc': 'เซ็นเซอร์ ambient ผิดปกติ', 'cause': 'เซ็นเซอร์อุณหภูมิภายนอกเสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Ambient sensor'}, {'code': '8E', 'desc': 'เซ็นเซอร์ Ice Maker ผิดปกติ', 'cause': 'เซ็นเซอร์ ice maker เสีย', 'fix': 'ตรวจ/เปลี่ยนเซ็นเซอร์ ice maker', 'parts': 'Ice maker sensor'}, {'code': '14E', 'desc': 'พัดลม Fridge ผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย', 'fix': 'เปลี่ยนมอเตอร์พัดลม fridge', 'parts': 'Fridge fan motor'}, {'code': '22E', 'desc': 'Defrost sensor ช่องธรรมดาผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์ defrost fridge', 'parts': 'Fridge defrost sensor'}, {'code': '24E', 'desc': 'ระบบ Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์ละลายน้ำแข็งเสีย / thermostat ทริป', 'fix': 'ตรวจฮีตเตอร์ defrost ด้วยโอห์มมิเตอร์', 'parts': 'Defrost heater, Defrost thermostat'}, {'code': '39E', 'desc': 'Ice maker ผิดปกติ', 'cause': 'วาล์วน้ำ ice maker เสีย / เซ็นเซอร์เสีย', 'fix': 'ตรวจวาล์วน้ำ, เปลี่ยนชุด ice maker', 'parts': 'Ice maker assembly, Water valve'}, {'code': '40E', 'desc': 'Ice maker เซ็นเซอร์ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Ice maker thermistor'}, {'code': '88', 'desc': 'โหมดทดสอบ / ไฟดับกะทันหัน', 'cause': 'เครื่องเพิ่งเสียบปลั๊ก', 'fix': 'ปกติ — รอสักครู่ หรือกดปุ่มใด ๆ เพื่อออก', 'parts': '-'}, {'code': 'PC ER', 'desc': 'การสื่อสาร PCB ผิดปกติ', 'cause': 'ขั้วต่อ PCB หลวม / PCB เสีย', 'fix': 'ตรวจขั้วต่อทุกจุด, เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'LG (ตู้เย็น)': [{'code': 'Er FF', 'desc': 'พัดลม Freezer ผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์', 'parts': 'Freezer evaporator fan motor'}, {'code': 'Er CF', 'desc': 'พัดลม Condenser ผิดปกติ', 'cause': 'มอเตอร์พัดลม condenser เสีย', 'fix': 'เปลี่ยนมอเตอร์พัดลม', 'parts': 'Condenser fan motor'}, {'code': 'Er dH', 'desc': 'Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์ defrost เสีย', 'fix': 'ตรวจฮีตเตอร์ด้วยโอห์มมิเตอร์', 'parts': 'Defrost heater, Thermostat'}, {'code': 'Er rF', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'NTC sensor เสีย', 'fix': 'เปลี่ยน NTC fridge', 'parts': 'NTC Temperature sensor'}, {'code': 'Er rt', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'NTC sensor เสีย', 'fix': 'เปลี่ยน NTC freezer', 'parts': 'NTC Freezer sensor'}, {'code': 'Er It', 'desc': 'เซ็นเซอร์ ice maker ผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'ตรวจ/เปลี่ยนเซ็นเซอร์', 'parts': 'Ice maker sensor'}, {'code': 'Er FS', 'desc': 'เซ็นเซอร์ประตู Freezer ผิดปกติ', 'cause': 'Reed switch เสีย', 'fix': 'เปลี่ยน door sensor', 'parts': 'Door switch sensor'}, {'code': 'Er IS', 'desc': 'เซ็นเซอร์ประตู Fridge ผิดปกติ', 'cause': 'Reed switch เสีย', 'fix': 'เปลี่ยน door sensor', 'parts': 'Door switch sensor'}, {'code': 'Er CO', 'desc': 'การสื่อสารผิดปกติ', 'cause': 'PCB เสีย / สายขาด', 'fix': 'ตรวจสาย ribbon, เปลี่ยน PCB', 'parts': 'Main PCB, Ribbon cable'}, {'code': 'Er gF', 'desc': 'เซ็นเซอร์ประตู freezer 2 ผิดปกติ', 'cause': 'เซ็นเซอร์เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Door sensor'}], 'Panasonic (ตู้เย็น)': [{'code': 'F11', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'ตรวจวัดค่า thermistor เปลี่ยนถ้าผิดปกติ', 'parts': 'Freezer thermistor'}, {'code': 'F12', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor ช่องธรรมดา', 'parts': 'Fridge thermistor'}, {'code': 'F13', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'Defrost sensor เสีย', 'fix': 'เปลี่ยน defrost sensor', 'parts': 'Defrost sensor'}, {'code': 'F21', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์', 'parts': 'Evaporator fan motor'}, {'code': 'F22', 'desc': 'พัดลม condenser ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Condenser fan motor'}, {'code': 'F31', 'desc': 'Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์ defrost เสีย', 'fix': 'ตรวจฮีตเตอร์, เปลี่ยน', 'parts': 'Defrost heater'}, {'code': 'F41', 'desc': 'Inverter ผิดปกติ', 'cause': 'Inverter board เสีย', 'fix': 'เปลี่ยน inverter PCB', 'parts': 'Inverter PCB'}, {'code': 'H99', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Mitsubishi Electric (ตู้เย็น)': [{'code': 'E1', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor freezer', 'parts': 'Freezer thermistor'}, {'code': 'E2', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor fridge', 'parts': 'Fridge thermistor'}, {'code': 'E3', 'desc': 'Defrost ผิดปกติ', 'cause': 'ฮีตเตอร์/sensor defrost เสีย', 'fix': 'ตรวจฮีตเตอร์, เปลี่ยน', 'parts': 'Defrost heater, Defrost sensor'}, {'code': 'E4', 'desc': 'พัดลมผิดปกติ', 'cause': 'มอเตอร์พัดลมเสีย', 'fix': 'ตรวจ/เปลี่ยนมอเตอร์', 'parts': 'Fan motor'}, {'code': 'E6', 'desc': 'Compressor ผิดปกติ', 'cause': 'Compressor เสีย / แรงดันผิดปกติ', 'fix': 'ตรวจแรงดันน้ำยา, ตรวจ compressor', 'parts': 'Compressor'}, {'code': 'E7', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Toshiba (ตู้เย็น)': [{'code': 'E01', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor freezer', 'parts': 'Freezer sensor'}, {'code': 'E02', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor fridge', 'parts': 'Fridge sensor'}, {'code': 'E03', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'Defrost sensor เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Defrost sensor'}, {'code': 'E04', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Evaporator fan motor'}, {'code': 'E05', 'desc': 'ระบบ defrost ผิดปกติ', 'cause': 'ฮีตเตอร์เสีย', 'fix': 'เปลี่ยนฮีตเตอร์ defrost', 'parts': 'Defrost heater'}, {'code': 'E06', 'desc': 'Inverter ผิดปกติ', 'cause': 'Inverter PCB เสีย', 'fix': 'เปลี่ยน inverter PCB', 'parts': 'Inverter PCB'}, {'code': 'E07', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}], 'Haier (ตู้เย็น)': [{'code': 'E1', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Freezer thermistor'}, {'code': 'E2', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Fridge thermistor'}, {'code': 'E3', 'desc': 'เซ็นเซอร์ ambient ผิดปกติ', 'cause': 'Ambient sensor เสีย', 'fix': 'เปลี่ยน sensor', 'parts': 'Ambient sensor'}, {'code': 'E4', 'desc': 'Defrost heater ผิดปกติ', 'cause': 'ฮีตเตอร์ขาด', 'fix': 'ตรวจ/เปลี่ยนฮีตเตอร์', 'parts': 'Defrost heater'}, {'code': 'E5', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย / น้ำแข็งขัด', 'fix': 'ละลายน้ำแข็ง, ตรวจมอเตอร์', 'parts': 'Evaporator fan motor'}, {'code': 'E6', 'desc': 'Compressor ผิดปกติ', 'cause': 'Compressor เสีย', 'fix': 'ตรวจ/เปลี่ยน compressor', 'parts': 'Compressor'}, {'code': 'E7', 'desc': 'PCB ผิดปกติ', 'cause': 'Main board เสีย', 'fix': 'เปลี่ยน Main board', 'parts': 'Main PCB'}, {'code': 'F1', 'desc': 'เซ็นเซอร์ ice maker ผิดปกติ', 'cause': 'Ice maker sensor เสีย', 'fix': 'เปลี่ยนเซ็นเซอร์', 'parts': 'Ice maker sensor'}], 'Sharp (ตู้เย็น)': [{'code': 'E1', 'desc': 'เซ็นเซอร์ Freezer ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Freezer thermistor'}, {'code': 'E2', 'desc': 'เซ็นเซอร์ Fridge ผิดปกติ', 'cause': 'Thermistor เสีย', 'fix': 'เปลี่ยน thermistor', 'parts': 'Fridge thermistor'}, {'code': 'E3', 'desc': 'เซ็นเซอร์ defrost ผิดปกติ', 'cause': 'Defrost sensor เสีย', 'fix': 'เปลี่ยน defrost sensor', 'parts': 'Defrost sensor'}, {'code': 'E4', 'desc': 'Defrost heater ผิดปกติ', 'cause': 'ฮีตเตอร์ขาด', 'fix': 'เปลี่ยนฮีตเตอร์', 'parts': 'Defrost heater'}, {'code': 'E5', 'desc': 'พัดลม evaporator ผิดปกติ', 'cause': 'มอเตอร์เสีย', 'fix': 'เปลี่ยนมอเตอร์', 'parts': 'Fan motor'}, {'code': 'E6', 'desc': 'PCB ผิดปกติ', 'cause': 'Main PCB เสีย', 'fix': 'เปลี่ยน Main PCB', 'parts': 'Main PCB'}, {'code': 'E7', 'desc': 'Compressor ผิดปกติ', 'cause': 'Compressor เสีย', 'fix': 'ตรวจ/เปลี่ยน compressor', 'parts': 'Compressor'}]}
+
+# ══════════════════════════════════════════════
+# PAGE: AI ผู้ช่วย
+# ══════════════════════════════════════════════
+if page == "🤖 AI ผู้ช่วย":
+    st.title("🤖 AI ผู้ช่วยร้านบุญสุข")
+    _back_home()
+
+    # --- AI Helper ---
+    def _get_ai_key():
+        k = os.environ.get("OPENAI_API_KEY", "")
+        if not k:
+            try: k = st.secrets.get("OPENAI_API_KEY", "")
+            except: pass
+        return k
+
+    def _call_ai(messages, model="gpt-4o-mini", max_tokens=1500):
+        import requests as _rq, json as _js
+        key = _get_ai_key()
+        if not key:
+            return "❌ ยังไม่ได้ตั้งค่า OPENAI_API_KEY — กรุณาเพิ่มใน Streamlit Secrets หรือ Environment Variables"
+        try:
+            resp = _rq.post("https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": 0.7},
+                timeout=60)
+            if resp.status_code == 200:
+                return resp.json()["choices"][0]["message"]["content"]
+            else:
+                return f"❌ API Error {resp.status_code}: {resp.text[:200]}"
+        except Exception as e:
+            return f"❌ เกิดข้อผิดพลาด: {e}"
+
+    def _call_ai_vision(prompt, image_bytes, model="gpt-4o"):
+        import requests as _rq, base64 as _b64v
+        key = _get_ai_key()
+        if not key:
+            return "❌ ยังไม่ได้ตั้งค่า OPENAI_API_KEY"
+        try:
+            b64img = _b64v.b64encode(image_bytes).decode()
+            messages = [{"role": "user", "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64img}", "detail": "low"}}
+            ]}]
+            resp = _rq.post("https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": messages, "max_tokens": 1500, "temperature": 0.5},
+                timeout=60)
+            if resp.status_code == 200:
+                return resp.json()["choices"][0]["message"]["content"]
+            return f"❌ API Error {resp.status_code}: {resp.text[:200]}"
+        except Exception as e:
+            return f"❌ เกิดข้อผิดพลาด: {e}"
+
+    # --- สร้างข้อมูลสต๊อกสำหรับ AI แนะนำ ---
+    def _stock_summary():
+        df = load_stock()
+        if df.empty:
+            return "ไม่มีข้อมูลสต๊อก"
+        lines = []
+        for _, r in df.iterrows():
+            qty = int(r.get("stock_qty", 0))
+            if qty > 0:
+                lines.append(f"- {r.get('section','')} รุ่น {r.get('model','')} BTU:{int(r.get('btu',0)):,} ราคาพร้อมติดตั้ง:{int(r.get('price_install',0)):,}฿ ประกันคอมฯ:{r.get('w_comp','')} สต๊อก:{qty}")
+        return "\n".join(lines) if lines else "สินค้าในสต๊อกหมดทุกรุ่น"
+
+    # --- 4 Tabs ---
+    tab_diag, tab_rec, tab_fb, tab_err = st.tabs([
+        "🔧 วินิจฉัยปัญหา", "❄️ แนะนำแอร์", "📱 เขียนโพสต์ FB", "📸 อ่าน Error Code"
+    ])
+
+    # ═══ Tab 1: วินิจฉัยปัญหาแอร์ ═══
+    with tab_diag:
+        st.markdown("### 🔧 AI วินิจฉัยปัญหาแอร์/เครื่องใช้ไฟฟ้า")
+        st.caption("พิมพ์อาการเสีย AI จะวิเคราะห์สาเหตุและแนะนำวิธีแก้ให้")
+        diag_type = st.selectbox("ประเภทเครื่องใช้ไฟฟ้า", ["แอร์/เครื่องปรับอากาศ","ตู้เย็น","เครื่องซักผ้า","ทีวี LED/LCD","อื่นๆ"], key="ai_diag_type")
+        diag_brand = st.text_input("ยี่ห้อ/รุ่น (ถ้าทราบ)", placeholder="เช่น Daikin Inverter 12000 BTU", key="ai_diag_brand")
+        diag_symptom = st.text_area("⚡ อาการเสีย / ปัญหาที่พบ", placeholder="เช่น แอร์เปิดแล้วไม่เย็น คอมเพรสเซอร์ไม่ทำงาน มีเสียงดัง น้ำหยด ขึ้น Error E1", height=120, key="ai_diag_sym")
+        if st.button("🔍 วิเคราะห์ปัญหา", use_container_width=True, type="primary", key="ai_diag_btn"):
+            if not diag_symptom.strip():
+                st.error("กรุณากรอกอาการเสีย")
+            else:
+                with st.spinner("🤖 AI กำลังวิเคราะห์..."):
+                    result = _call_ai([
+                        {"role": "system", "content": f"""คุณเป็นช่างซ่อม{diag_type}มืออาชีพประจำร้านบุญสุขอิเล็กทรอนิกส์ จ.นครราชสีมา
+ให้วิเคราะห์อาการเสียแล้วตอบเป็นภาษาไทย ในรูปแบบ:
+1. 🔍 สาเหตุที่เป็นไปได้ (เรียงจากน่าจะเป็นมากที่สุด)
+2. 🛠️ วิธีแก้ไขเบื้องต้นที่ลูกค้าทำเองได้
+3. ⚠️ กรณีที่ต้องเรียกช่าง
+4. 💰 ค่าซ่อมโดยประมาณ (ช่วงราคา)
+ตอบกระชับ ได้ใจความ เข้าใจง่าย"""},
+                        {"role": "user", "content": f"ประเภท: {diag_type}\nยี่ห้อ/รุ่น: {diag_brand or 'ไม่ระบุ'}\nอาการ: {diag_symptom}"}
+                    ])
+                st.markdown(result)
+
+    # ═══ Tab 2: แนะนำแอร์ (SMART — ไม่ต้อง API key) ═══
+    with tab_rec:
+        st.markdown("### ❄️ AI แนะนำแอร์ที่เหมาะกับคุณ")
+        st.caption("กรอกข้อมูลห้องและงบ — ระบบจะแนะนำรุ่นที่เหมาะสุดจากสินค้า 97 รุ่นของร้าน")
+
+        with st.form("ai_rec_form"):
+            st.markdown("**📐 ข้อมูลห้อง**")
+            rc1, rc2 = st.columns(2)
+            rec_w = rc1.number_input("กว้าง (ม.)", min_value=1.0, max_value=30.0, value=4.0, step=0.5, key="ai_rw")
+            rec_l = rc2.number_input("ยาว (ม.)", min_value=1.0, max_value=30.0, value=5.0, step=0.5, key="ai_rl")
+            rec_room = st.selectbox("🏠 ประเภทห้อง", list(BTU_FACTORS.keys()), key="ai_rtype")
+            rec_floor = st.selectbox("🏢 ชั้น/ตำแหน่ง", ["ชั้นล่าง/ใต้ร่มเงา","ชั้นบน/โดนแดด","ห้องกระจก/โดนแดดมาก"], key="ai_rfloor")
+            rec_ppl = st.number_input("👥 จำนวนคน", min_value=1, max_value=20, value=2, key="ai_rppl")
+            st.markdown("**💰 งบประมาณ**")
+            bg1, bg2 = st.columns(2)
+            budget_min = bg1.number_input("ต่ำสุด (฿)", min_value=0, step=1000, value=0, key="ai_bmin")
+            budget_max = bg2.number_input("สูงสุด (฿)", min_value=0, step=1000, value=25000, key="ai_bmax")
+            st.markdown("**🎯 ความต้องการ**")
+            rec_pref = st.multiselect("สิ่งที่สำคัญ", ["ประหยัดไฟ (Inverter)","ราคาถูกที่สุด","ประกันยาว","ยี่ห้อดัง"], key="ai_rpref")
+            rec_brand = st.text_input("ยี่ห้อที่ชอบ (ถ้ามี)", placeholder="เช่น Daikin, Mitsubishi", key="ai_rbrand")
+            submitted_rec = st.form_submit_button("🔍 AI แนะนำแอร์ให้เลย!", use_container_width=True, type="primary")
+
+        if submitted_rec:
+            area = rec_w * rec_l
+            factor = BTU_FACTORS.get(rec_room, 850)
+            btu_need = area * factor
+            if "ชั้นบน" in rec_floor: btu_need *= 1.15
+            if "กระจก" in rec_floor: btu_need *= 1.25
+            if rec_ppl > 2: btu_need += (rec_ppl - 2) * 600
+            btu_need = int(btu_need)
+            btu_sizes = [9000,12000,13000,15000,18000,24000,30000,36000]
+            rec_btu = min([b for b in btu_sizes if b >= btu_need], default=36000)
+
+            st.markdown("---")
+            st.markdown(f"""<div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);padding:16px;border-radius:16px;border-left:4px solid #3b82f6;margin-bottom:16px;">
+                <div style="font-size:13px;color:#64748b;">📐 ห้อง {rec_w}x{rec_l} ม. ({area:.0f} ตร.ม.) | {rec_room}</div>
+                <div style="font-size:28px;font-weight:800;color:#1e40af;">🌡️ ต้องการ {btu_need:,} BTU</div>
+                <div style="font-size:15px;color:#2563eb;font-weight:600;">✅ แนะนำขนาด {rec_btu:,} BTU</div>
+            </div>""", unsafe_allow_html=True)
+
+            df_stk = load_stock()
+            df_m = df_stk[abs(df_stk["btu"].astype(int) - btu_need) <= 6000].copy()
+            if budget_max > 0:
+                df_m = df_m[df_m["price_install"].astype(int) <= budget_max]
+            if budget_min > 0:
+                df_m = df_m[df_m["price_install"].astype(int) >= budget_min]
+            if rec_brand.strip():
+                bm = df_m[df_m["section"].str.lower().str.contains(rec_brand.strip().lower(), na=False)]
+                if not bm.empty: df_m = bm
+
+            if df_m.empty:
+                st.warning("😔 ไม่พบรุ่นที่ตรงเงื่อนไข — ลองเพิ่มงบหรือเปลี่ยนขนาดห้อง")
+            else:
+                scores = []
+                for _, r in df_m.iterrows():
+                    sc = 100; pb = int(r["btu"]); pp = int(r["price_install"]); sec = str(r.get("section","")).lower()
+                    bd = pb - btu_need
+                    if abs(bd) <= 1500: sc += 30
+                    elif bd > 0: sc += 15
+                    else: sc -= 20
+                    if "ราคาถูกที่สุด" in rec_pref: sc += max(0, 30 - (pp // 1000))
+                    is_inv = "inverter" in sec or "invert" in sec
+                    if "ประหยัดไฟ (Inverter)" in rec_pref: sc += 25 if is_inv else -10
+                    if "ประกันยาว" in rec_pref:
+                        wc = str(r.get("w_comp",""))
+                        if "10" in wc: sc += 20
+                        elif "5" in wc: sc += 10
+                    if "ยี่ห้อดัง" in rec_pref:
+                        for big in ["daikin","mitsubishi","carrier","panasonic","lg","samsung"]:
+                            if big in sec: sc += 15; break
+                    if int(r.get("stock_qty",0)) > 0: sc += 10
+                    scores.append(sc)
+
+                df_m["_score"] = scores
+                df_m = df_m.sort_values("_score", ascending=False)
+                top = df_m.head(5)
+                st.markdown("### 🏆 แอร์ที่แนะนำสำหรับคุณ")
+
+                for rank, (_, r) in enumerate(top.iterrows(), 1):
+                    pb = int(r["btu"]); pp = int(r["price_install"]); ps = r.get("section",""); pm = r.get("model","")
+                    pq = int(r.get("stock_qty",0)); wc = r.get("w_comp",""); is_inv = "inverter" in ps.lower() or "invert" in ps.lower()
+                    medal = "🥇" if rank==1 else "🥈" if rank==2 else "🥉" if rank==3 else f"#{rank}"
+                    bc = "#f59e0b" if rank==1 else "#94a3b8" if rank==2 else "#b45309" if rank==3 else "#e2e8f0"
+                    bg = "#fffbeb" if rank==1 else "#ffffff"
+                    inv_b = '<span style="background:#10b981;color:white;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;">Inverter</span>' if is_inv else '<span style="background:#94a3b8;color:white;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;">Fix Speed</span>'
+                    stk_b = f'<span style="background:#10b981;color:white;padding:2px 8px;border-radius:8px;font-size:10px;">มีสต๊อก {pq}</span>' if pq > 0 else '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:8px;font-size:10px;">สั่งจอง</span>'
+                    bd = pb - btu_need
+                    bt = "✅ พอดี" if abs(bd)<=1500 else ("⬆️ เผื่อไว้" if bd>0 else "⚠️ อาจน้อย")
+                    st.markdown(f"""<div style="background:{bg};border:2px solid {bc};border-radius:16px;padding:14px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="font-size:18px;font-weight:800;">{medal} {ps}</div>
+                            <div>{inv_b} {stk_b}</div>
+                        </div>
+                        <div style="font-size:13px;color:#475569;margin:4px 0;">รุ่น: <b>{pm}</b></div>
+                        <div style="display:flex;gap:16px;margin:8px 0;">
+                            <div style="text-align:center;">
+                                <div style="font-size:10px;color:#94a3b8;">BTU</div>
+                                <div style="font-size:18px;font-weight:800;color:#1e40af;">{pb:,}</div>
+                                <div style="font-size:9px;color:#64748b;">{bt}</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:10px;color:#94a3b8;">ราคาพร้อมติดตั้ง</div>
+                                <div style="font-size:18px;font-weight:800;color:#059669;">{pp:,} ฿</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:10px;color:#94a3b8;">ประกันคอมฯ</div>
+                                <div style="font-size:18px;font-weight:800;color:#7c3aed;">{wc}</div>
+                            </div>
+                        </div>
+                        <div style="font-size:9px;color:#94a3b8;">ประกันติดตั้ง {r.get("w_install","")} | อะไหล่ {r.get("w_parts","")} | <i>เฉพาะซื้อพร้อมติดตั้งจากร้าน</i></div>
+                    </div>""", unsafe_allow_html=True)
+
+                # AI เสริม (ถ้ามี key)
+                if _get_ai_key():
+                    with st.expander("🤖 ขอคำแนะนำจาก AI เพิ่มเติม"):
+                        t3 = "\n".join([f"- {r.get('section','')} {r.get('model','')} BTU:{int(r['btu']):,} ราคา:{int(r['price_install']):,}฿" for _, r in top.head(3).iterrows()])
+                        if st.button("💬 ถาม AI", key="ai_rec_ask"):
+                            with st.spinner("🤖 ..."):
+                                res = _call_ai([{"role":"system","content":f"ที่ปรึกษาแอร์ร้านบุญสุข ห้อง {rec_w}x{rec_l} ม. BTU:{btu_need:,} งบ:{budget_min:,}-{budget_max:,}฿ TOP3:\n{t3}\nแนะนำสั้นๆภาษาไทย"},{"role":"user","content":"แนะนำแอร์ที่เหมาะสุด"}])
+                            st.markdown(res)
+                else:
+                    st.caption("💡 เพิ่ม OPENAI_API_KEY เพื่อให้ AI วิเคราะห์เพิ่มเติมได้")
+
+    # ═══ Tab 3: เขียนโพสต์ FB ═══
+    with tab_fb:
+        st.markdown("### 📱 AI เขียนโพสต์ Facebook / LINE")
+        st.caption("ป้อนข้อมูลโปรโมชัน AI จะเขียนแคปชันสวยๆ ให้")
+        fb_type = st.selectbox("ประเภทโพสต์", ["โปรโมชันแอร์","โปรโมชันล้างแอร์","โปรโมชันโซล่าเซลล์","รีวิวงานติดตั้ง","ประชาสัมพันธ์ร้าน","อื่นๆ"], key="ai_fb_type")
+        fb_detail = st.text_area("📝 รายละเอียด", placeholder="เช่น ลดราคาแอร์ Daikin 12000 BTU จาก 15,000 เหลือ 11,900 พร้อมติดตั้งฟรี ถึงสิ้นเดือนนี้เท่านั้น", height=120, key="ai_fb_detail")
+        fb_tone = st.selectbox("โทนการเขียน", ["สนุก ใช้ emoji เยอะ","มืออาชีพ น่าเชื่อถือ","เร่งด่วน จำกัดเวลา","อบอุ่น เป็นกันเอง"], key="ai_fb_tone")
+        fb_hashtag = st.checkbox("ใส่ #hashtag ด้วย", value=True, key="ai_fb_hash")
+        if st.button("✍️ เขียนโพสต์", use_container_width=True, type="primary", key="ai_fb_btn"):
+            if not fb_detail.strip():
+                st.error("กรุณากรอกรายละเอียด")
+            else:
+                with st.spinner("🤖 AI กำลังเขียนโพสต์..."):
+                    result = _call_ai([
+                        {"role": "system", "content": f"""คุณเป็นนักเขียนคอนเทนต์โซเชียลมืออาชีพ เขียนให้ร้านบุญสุขอิเล็กทรอนิกส์ จ.นครราชสีมา (โทร 086-2613829)
+โทนการเขียน: {fb_tone}
+{"ใส่ #hashtag ท้ายโพสต์ 5-8 อัน" if fb_hashtag else "ไม่ต้องใส่ hashtag"}
+เขียนเป็นภาษาไทย ยาวพอดี (4-8 บรรทัด) ดึงดูดลูกค้า มี emoji ตามโทน
+สร้าง 2 เวอร์ชัน: 1) สำหรับ Facebook  2) สำหรับ LINE (สั้นกว่า)"""},
+                        {"role": "user", "content": f"ประเภท: {fb_type}\nรายละเอียด: {fb_detail}"}
+                    ])
+                st.markdown(result)
+                st.markdown("---")
+                st.text_area("📋 คัดลอกข้อความ", value=result, height=200, key="ai_fb_copy")
+
+    # ═══ Tab 4: อ่าน Error Code จากรูป ═══
+    with tab_err:
+        st.markdown("### 📸 AI อ่าน Error Code จากรูปถ่าย")
+        st.caption("ถ่ายรูปหน้าจอแอร์/เครื่องใช้ไฟฟ้าที่ขึ้น Error → AI อ่านโค้ดแล้วบอกสาเหตุ + วิธีแก้")
+        err_type = st.selectbox("ประเภทเครื่อง", ["แอร์/เครื่องปรับอากาศ","เครื่องซักผ้า","ตู้เย็น","ทีวี LED/LCD","อื่นๆ"], key="ai_err_type")
+        err_brand = st.text_input("ยี่ห้อ (ถ้าทราบ)", placeholder="เช่น Daikin, Mitsubishi, Samsung", key="ai_err_brand")
+        err_img = st.file_uploader("📷 อัปโหลดรูปที่ขึ้น Error Code", type=["jpg","jpeg","png"], key="ai_err_img")
+        if err_img:
+            st.image(err_img, caption="รูปที่อัปโหลด", width=300)
+        err_note = st.text_input("รายละเอียดเพิ่มเติม (ถ้ามี)", placeholder="เช่น ไฟกระพริบ 3 ครั้ง / เพิ่งล้างแอร์มา", key="ai_err_note")
+        if st.button("🔍 วิเคราะห์ Error Code", use_container_width=True, type="primary", key="ai_err_btn"):
+            if not err_img:
+                st.error("กรุณาอัปโหลดรูปที่ขึ้น Error Code")
+            else:
+                with st.spinner("🤖 AI กำลังวิเคราะห์รูปภาพ..."):
+                    err_img.seek(0)
+                    result = _call_ai_vision(
+                        f"""ดูรูปภาพนี้ซึ่งเป็นหน้าจอ/ตัวเครื่อง{err_type} ยี่ห้อ: {err_brand or 'ไม่ระบุ'}
+รายละเอียดเพิ่มเติม: {err_note or 'ไม่มี'}
+
+ให้:
+1. 🔍 อ่าน Error Code / รหัสข้อผิดพลาดที่เห็นในรูป
+2. 📋 อธิบายความหมายของ Error Code
+3. ⚡ สาเหตุที่เป็นไปได้
+4. 🛠️ วิธีแก้ไขเบื้องต้น
+5. ⚠️ ต้องเรียกช่างหรือไม่
+6. 💰 ค่าซ่อมโดยประมาณ
+ตอบเป็นภาษาไทย กระชับ เข้าใจง่าย""",
+                        err_img.read()
+                    )
+                st.markdown(result)
 
 # ══════════════════════════════════════════════
 # PAGE 5: ERROR CODE LIBRARY
