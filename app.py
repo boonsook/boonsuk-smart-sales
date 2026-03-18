@@ -3411,29 +3411,56 @@ if page == "🤖 AI ผู้ช่วย":
         "🔧 วินิจฉัยปัญหา", "❄️ แนะนำแอร์", "📱 เขียนโพสต์ FB", "📸 อ่าน Error Code"
     ])
 
-    # ═══ Tab 1: วินิจฉัยปัญหาแอร์ ═══
+    # ═══ Tab 1: วินิจฉัยปัญหาแอร์ (Offline) ═══
     with tab_diag:
-        st.markdown("### 🔧 AI วินิจฉัยปัญหาแอร์/เครื่องใช้ไฟฟ้า")
-        st.caption("พิมพ์อาการเสีย AI จะวิเคราะห์สาเหตุและแนะนำวิธีแก้ให้")
-        diag_type = st.selectbox("ประเภทเครื่องใช้ไฟฟ้า", ["แอร์/เครื่องปรับอากาศ","ตู้เย็น","เครื่องซักผ้า","ทีวี LED/LCD","อื่นๆ"], key="ai_diag_type")
-        diag_brand = st.text_input("ยี่ห้อ/รุ่น (ถ้าทราบ)", placeholder="เช่น Daikin Inverter 12000 BTU", key="ai_diag_brand")
-        diag_symptom = st.text_area("⚡ อาการเสีย / ปัญหาที่พบ", placeholder="เช่น แอร์เปิดแล้วไม่เย็น คอมเพรสเซอร์ไม่ทำงาน มีเสียงดัง น้ำหยด ขึ้น Error E1", height=120, key="ai_diag_sym")
+        st.markdown("### 🔧 วินิจฉัยปัญหาแอร์/เครื่องใช้ไฟฟ้า")
+        st.caption("เลือกอาการ ระบบจะบอกสาเหตุ + วิธีแก้ทันที ไม่ต้องรอ!")
+        _DIAG_DB = {
+            "แอร์ไม่เย็น": {"cause":"🔍 น้ำยาแอร์รั่ว / ฟิลเตอร์ตัน / คอมเพรสเซอร์เสื่อม / คอยล์สกปรก","fix":"🛠️ ล้างฟิลเตอร์ / ตรวจน้ำยาแอร์ / ล้างคอยล์","warn":"⚠️ ถ้าล้างแล้วไม่ดีขึ้น ต้องเรียกช่างตรวจน้ำยา","cost":"💰 ล้างแอร์ 400-600฿ | เติมน้ำยา 800-2,500฿ | เปลี่ยนคอมฯ 5,000-12,000฿"},
+            "แอร์มีเสียงดัง": {"cause":"🔍 พัดลมหลวม / คอมเพรสเซอร์สั่น / มีสิ่งแปลกปลอมในเครื่อง","fix":"🛠️ ตรวจดูว่ามีอะไรติดในช่องลม / ขันน็อตพัดลม","warn":"⚠️ เสียงดัง กร๊อกๆ หรือ แกร๊กๆ ต้องเรียกช่างด่วน","cost":"💰 ซ่อมพัดลม 500-1,500฿ | เปลี่ยนมอเตอร์ 1,500-3,500฿"},
+            "แอร์น้ำหยด/น้ำรั่ว": {"cause":"🔍 ท่อน้ำทิ้งตัน / ถาดน้ำทิ้งเต็ม / คอยล์เย็นจัดเกิน / ติดตั้งไม่ได้ระดับ","fix":"🛠️ ล้างท่อน้ำทิ้ง / เป่าลมท่อดูดน้ำ / ตรวจระดับเครื่อง","warn":"⚠️ น้ำหยดเยอะต่อเนื่อง ควรเรียกช่างล้าง","cost":"💰 ล้างท่อน้ำทิ้ง 300-500฿ | ล้างแอร์ 400-600฿"},
+            "แอร์ขึ้น Error Code": {"cause":"🔍 เซ็นเซอร์เสีย / บอร์ดผิดปกติ / น้ำยาแอร์ผิดปกติ / ไฟฟ้าไม่เสถียร","fix":"🛠️ ลองปิดเครื่อง 5 นาที แล้วเปิดใหม่ / ดู Error Code ในคู่มือ","warn":"⚠️ ถ้า Error ซ้ำ ต้องเรียกช่างพร้อมจดรหัส Error","cost":"💰 เปลี่ยนเซ็นเซอร์ 500-1,500฿ | เปลี่ยนบอร์ด 2,000-5,000฿"},
+            "แอร์เปิดไม่ติด": {"cause":"🔍 ไฟฟ้าไม่เข้า / รีโมทเสีย / บอร์ดเสีย / ฟิวส์ขาด","fix":"🛠️ ตรวจเบรกเกอร์ / เปลี่ยนถ่านรีโมท / กดปุ่ม Emergency ที่ตัวเครื่อง","warn":"⚠️ ถ้ากดปุ่มที่ตัวเครื่องแล้วยังไม่ติด ต้องเรียกช่าง","cost":"💰 เปลี่ยนรีโมท 200-600฿ | เปลี่ยนบอร์ด 2,000-5,000฿"},
+            "แอร์มีกลิ่นเหม็น": {"cause":"🔍 เชื้อราในคอยล์ / ฟิลเตอร์สกปรก / มีสัตว์ตายในท่อ","fix":"🛠️ ล้างฟิลเตอร์ด้วยน้ำ / ใช้สเปรย์ฆ่าเชื้อ","warn":"⚠️ กลิ่นเหม็นต่อเนื่อง ควรล้างแอร์แบบ Deep Clean","cost":"💰 ล้างแอร์ 400-600฿ | ล้าง Deep Clean 800-1,200฿"},
+            "ตู้เย็นไม่เย็น": {"cause":"🔍 น้ำยาหมด / คอมเพรสเซอร์เสีย / ประตูปิดไม่สนิท / ขดลวดละลายน้ำแข็งเสีย","fix":"🛠️ ตรวจยางประตู / ลดอุณหภูมิลง / อย่าใส่ของเยอะเกินไป","warn":"⚠️ ตู้เย็นร้อนผิดปกติ/เสียงดัง ต้องเรียกช่าง","cost":"💰 เปลี่ยนยางประตู 300-800฿ | เติมน้ำยา 800-2,000฿"},
+            "เครื่องซักผ้าไม่หมุน": {"cause":"🔍 สายพานขาด / มอเตอร์เสีย / บอร์ดเสีย / น้ำหนักเกิน","fix":"🛠️ ตรวจน้ำหนักผ้า / ดูว่ามีอะไรติดถังหมุน / รีเซ็ตเครื่อง","warn":"⚠️ มีเสียงหมุนแต่ถังไม่หมุน = สายพานขาด ต้องเรียกช่าง","cost":"💰 เปลี่ยนสายพาน 300-800฿ | เปลี่ยนมอเตอร์ 2,000-4,000฿"},
+            "ทีวีเปิดไม่ติด": {"cause":"🔍 แหล่งจ่ายไฟเสีย / บอร์ดเมนเสีย / หลอด LED เสีย / สายไฟขาด","fix":"🛠️ ตรวจปลั๊กไฟ / ลองเปลี่ยนปลั๊ก / กดปุ่มที่ตัวเครื่อง","warn":"⚠️ ไฟสแตนด์บายไม่ติด = แหล่งจ่ายไฟเสีย ต้องเรียกช่าง","cost":"💰 เปลี่ยนบอร์ดจ่ายไฟ 800-2,500฿ | เปลี่ยนบอร์ดเมน 1,500-4,000฿"},
+        }
+        diag_sel = st.selectbox("⚡ เลือกอาการ", list(_DIAG_DB.keys()), key="ai_diag_sel")
+        diag_custom = st.text_input("หรือพิมพ์อาการเอง", placeholder="เช่น แอร์เปิดแล้วดับเอง", key="ai_diag_custom")
+        diag_brand = st.text_input("ยี่ห้อ/รุ่น (ถ้าทราบ)", placeholder="เช่น Daikin Inverter", key="ai_diag_brand")
+
         if st.button("🔍 วิเคราะห์ปัญหา", use_container_width=True, type="primary", key="ai_diag_btn"):
-            if not diag_symptom.strip():
-                st.error("กรุณากรอกอาการเสีย")
-            else:
-                with st.spinner("🤖 AI กำลังวิเคราะห์..."):
-                    result = _call_ai([
-                        {"role": "system", "content": f"""คุณเป็นช่างซ่อม{diag_type}มืออาชีพประจำร้านบุญสุขอิเล็กทรอนิกส์ จ.นครราชสีมา
-ให้วิเคราะห์อาการเสียแล้วตอบเป็นภาษาไทย ในรูปแบบ:
-1. 🔍 สาเหตุที่เป็นไปได้ (เรียงจากน่าจะเป็นมากที่สุด)
-2. 🛠️ วิธีแก้ไขเบื้องต้นที่ลูกค้าทำเองได้
-3. ⚠️ กรณีที่ต้องเรียกช่าง
-4. 💰 ค่าซ่อมโดยประมาณ (ช่วงราคา)
-ตอบกระชับ ได้ใจความ เข้าใจง่าย"""},
-                        {"role": "user", "content": f"ประเภท: {diag_type}\nยี่ห้อ/รุ่น: {diag_brand or 'ไม่ระบุ'}\nอาการ: {diag_symptom}"}
-                    ])
-                st.markdown(result)
+            # ค้นหาจากฐานข้อมูล
+            found = None
+            search = diag_custom.strip().lower() if diag_custom.strip() else diag_sel
+            for k, v in _DIAG_DB.items():
+                if any(w in str(search).lower() for w in k.replace("/","").lower().split()):
+                    found = (k, v); break
+            if not found:
+                found = (diag_sel, _DIAG_DB[diag_sel])
+
+            k, v = found
+            st.markdown(f"""
+            <div style="background:#fff;border-radius:16px;padding:16px;border-left:4px solid #ef4444;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin:8px 0;">
+                <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:8px;">🔧 {k}</div>
+                <div style="font-size:13px;color:#475569;line-height:1.8;">
+                    <b>{v['cause']}</b><br><br>
+                    <b>{v['fix']}</b><br><br>
+                    <b>{v['warn']}</b><br><br>
+                    <b>{v['cost']}</b>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.info(f"📞 ติดต่อช่างร้านบุญสุข: {STORE_PHONE}")
+
+            # AI เสริม (ถ้ามี key)
+            if _get_ai_key() and diag_custom.strip():
+                with st.expander("🤖 ถาม AI วิเคราะห์เพิ่มเติม"):
+                    if st.button("💬 ถาม AI", key="ai_diag_ask"):
+                        with st.spinner("🤖 ..."):
+                            res = _call_ai([{"role":"system","content":"ช่างซ่อมแอร์มืออาชีพ ร้านบุญสุข ตอบสั้นกระชับ ภาษาไทย"},{"role":"user","content":f"อาการ: {diag_custom}\nยี่ห้อ: {diag_brand or 'ไม่ระบุ'}"}])
+                        st.markdown(res)
 
     # ═══ Tab 2: แนะนำแอร์ (SMART — ไม่ต้อง API key) ═══
     with tab_rec:
@@ -3558,64 +3585,117 @@ if page == "🤖 AI ผู้ช่วย":
                 else:
                     st.caption("💡 เพิ่ม OPENAI_API_KEY เพื่อให้ AI วิเคราะห์เพิ่มเติมได้")
 
-    # ═══ Tab 3: เขียนโพสต์ FB ═══
+    # ═══ Tab 3: เขียนโพสต์ FB (Template — ไม่ต้อง API key) ═══
     with tab_fb:
-        st.markdown("### 📱 AI เขียนโพสต์ Facebook / LINE")
-        st.caption("ป้อนข้อมูลโปรโมชัน AI จะเขียนแคปชันสวยๆ ให้")
-        fb_type = st.selectbox("ประเภทโพสต์", ["โปรโมชันแอร์","โปรโมชันล้างแอร์","โปรโมชันโซล่าเซลล์","รีวิวงานติดตั้ง","ประชาสัมพันธ์ร้าน","อื่นๆ"], key="ai_fb_type")
-        fb_detail = st.text_area("📝 รายละเอียด", placeholder="เช่น ลดราคาแอร์ Daikin 12000 BTU จาก 15,000 เหลือ 11,900 พร้อมติดตั้งฟรี ถึงสิ้นเดือนนี้เท่านั้น", height=120, key="ai_fb_detail")
-        fb_tone = st.selectbox("โทนการเขียน", ["สนุก ใช้ emoji เยอะ","มืออาชีพ น่าเชื่อถือ","เร่งด่วน จำกัดเวลา","อบอุ่น เป็นกันเอง"], key="ai_fb_tone")
-        fb_hashtag = st.checkbox("ใส่ #hashtag ด้วย", value=True, key="ai_fb_hash")
-        if st.button("✍️ เขียนโพสต์", use_container_width=True, type="primary", key="ai_fb_btn"):
-            if not fb_detail.strip():
-                st.error("กรุณากรอกรายละเอียด")
-            else:
-                with st.spinner("🤖 AI กำลังเขียนโพสต์..."):
-                    result = _call_ai([
-                        {"role": "system", "content": f"""คุณเป็นนักเขียนคอนเทนต์โซเชียลมืออาชีพ เขียนให้ร้านบุญสุขอิเล็กทรอนิกส์ จ.นครราชสีมา (โทร 086-2613829)
-โทนการเขียน: {fb_tone}
-{"ใส่ #hashtag ท้ายโพสต์ 5-8 อัน" if fb_hashtag else "ไม่ต้องใส่ hashtag"}
-เขียนเป็นภาษาไทย ยาวพอดี (4-8 บรรทัด) ดึงดูดลูกค้า มี emoji ตามโทน
-สร้าง 2 เวอร์ชัน: 1) สำหรับ Facebook  2) สำหรับ LINE (สั้นกว่า)"""},
-                        {"role": "user", "content": f"ประเภท: {fb_type}\nรายละเอียด: {fb_detail}"}
-                    ])
-                st.markdown(result)
-                st.markdown("---")
-                st.text_area("📋 คัดลอกข้อความ", value=result, height=200, key="ai_fb_copy")
+        st.markdown("### 📱 สร้างโพสต์ Facebook / LINE")
+        st.caption("เลือกแบบโพสต์ กรอกข้อมูล → ได้ข้อความพร้อมโพสต์ทันที!")
+        fb_type = st.selectbox("ประเภทโพสต์", ["โปรโมชันแอร์","โปรโมชันล้างแอร์","โปรโมชันโซล่าเซลล์","รีวิวงานติดตั้ง","ประชาสัมพันธ์ร้าน"], key="ai_fb_type")
+        fb1, fb2 = st.columns(2)
+        fb_product = fb1.text_input("🏷️ สินค้า/บริการ", placeholder="เช่น Daikin Inverter 12000 BTU", key="ai_fb_prod")
+        fb_price = fb2.text_input("💰 ราคา", placeholder="เช่น 11,900 บาท", key="ai_fb_price")
+        fb_promo = st.text_input("🎁 โปรโมชัน/จุดเด่น", placeholder="เช่น ฟรีติดตั้ง ประกัน 5 ปี ผ่อน 0%", key="ai_fb_promo")
+        fb_deadline = st.text_input("⏰ ถึงวันที่", placeholder="เช่น สิ้นเดือนนี้, 31 มีนาคม", key="ai_fb_dead")
+        fb_hashtag = st.checkbox("ใส่ #hashtag", value=True, key="ai_fb_hash")
 
-    # ═══ Tab 4: อ่าน Error Code จากรูป ═══
+        if st.button("✍️ สร้างโพสต์", use_container_width=True, type="primary", key="ai_fb_btn"):
+            _prod = fb_product.strip() or "แอร์ใหม่"
+            _price = fb_price.strip() or "ราคาพิเศษ"
+            _promo = fb_promo.strip() or "พร้อมติดตั้งฟรี"
+            _dead = fb_deadline.strip()
+            _ht = "\n\n#ร้านบุญสุข #แอร์โคราช #ช่างแอร์โคราช #ติดตั้งแอร์ #แอร์ราคาถูก #บุญสุขอิเล็กทรอนิกส์" if fb_hashtag else ""
+
+            _templates = {
+                "โปรโมชันแอร์": f"🔥🔥 โปรแรง! {_prod} 🔥🔥\n\n❄️ ราคาเพียง {_price} เท่านั้น!\n✅ {_promo}\n🛡️ ประกันติดตั้ง 5 ปี\n{'⏰ ด่วน! ถึง ' + _dead + ' เท่านั้น!' if _dead else '⏰ จำนวนจำกัด!'}\n\n📞 สนใจโทร {STORE_PHONE}\n📍 ร้านบุญสุขอิเล็กทรอนิกส์ จ.นครราชสีมา{_ht}",
+                "โปรโมชันล้างแอร์": f"💨 ล้างแอร์หมดจดทั้งตัว! 💨\n\n🧼 บริการล้างแอร์มืออาชีพ\n✅ {_promo}\n💰 ราคาเริ่มต้น {_price}\n{'⏰ ถึง ' + _dead if _dead else '📅 นัดวันได้เลย!'}\n\n📞 โทรนัดคิว {STORE_PHONE}\n📍 ร้านบุญสุข จ.นครราชสีมา{_ht}",
+                "โปรโมชันโซล่าเซลล์": f"☀️ ประหยัดค่าไฟกับโซล่าเซลล์! ☀️\n\n⚡ {_prod}\n💰 {_price}\n✅ {_promo}\n🔋 ลดค่าไฟได้ถึง 80%\n{'⏰ ถึง ' + _dead if _dead else ''}\n\n📞 ปรึกษาฟรี {STORE_PHONE}\n📍 ร้านบุญสุข จ.นครราชสีมา{_ht}",
+                "รีวิวงานติดตั้ง": f"✅ งานติดตั้งเสร็จเรียบร้อย! ✅\n\n❄️ {_prod}\n📍 ติดตั้งเรียบร้อย ลูกค้าพอใจ 💯\n🛡️ {_promo}\n\nขอบคุณที่ไว้วางใจ ร้านบุญสุขครับ 🙏\n📞 {STORE_PHONE}{_ht}",
+                "ประชาสัมพันธ์ร้าน": f"🏪 ร้านบุญสุขอิเล็กทรอนิกส์ 🏪\n\n✅ {_promo}\n💰 {_prod} {_price}\n🛠️ ช่างมืออาชีพ ประสบการณ์กว่า 20 ปี\n\n📞 โทร {STORE_PHONE}\n📍 จ.นครราชสีมา{_ht}",
+            }
+            post = _templates.get(fb_type, _templates["โปรโมชันแอร์"])
+
+            st.markdown("#### 📋 Facebook")
+            st.code(post, language=None)
+
+            # LINE version (shorter)
+            _line_post = f"{_prod} {_price}\n{_promo}\n📞 {STORE_PHONE}"
+            st.markdown("#### 💬 LINE (สั้น)")
+            st.code(_line_post, language=None)
+
+            st.text_area("📋 คัดลอกข้อความ FB", value=post, height=200, key="ai_fb_copy")
+
+            # AI เสริม
+            if _get_ai_key():
+                with st.expander("🤖 ให้ AI เขียนเวอร์ชันที่ดีกว่า"):
+                    if st.button("💬 ถาม AI เขียนให้", key="ai_fb_ask"):
+                        with st.spinner("🤖 ..."):
+                            res = _call_ai([{"role":"system","content":f"นักเขียนคอนเทนต์ ร้านบุญสุข โทร {STORE_PHONE} เขียนโพสต์ FB สนุก มี emoji ภาษาไทย 4-8 บรรทัด"},{"role":"user","content":f"{fb_type}: {_prod} {_price} {_promo}"}])
+                        st.markdown(res)
+    # ═══ Tab 4: ค้นหา Error Code (Offline) ═══
     with tab_err:
-        st.markdown("### 📸 AI อ่าน Error Code จากรูปถ่าย")
-        st.caption("ถ่ายรูปหน้าจอแอร์/เครื่องใช้ไฟฟ้าที่ขึ้น Error → AI อ่านโค้ดแล้วบอกสาเหตุ + วิธีแก้")
-        err_type = st.selectbox("ประเภทเครื่อง", ["แอร์/เครื่องปรับอากาศ","เครื่องซักผ้า","ตู้เย็น","ทีวี LED/LCD","อื่นๆ"], key="ai_err_type")
-        err_brand = st.text_input("ยี่ห้อ (ถ้าทราบ)", placeholder="เช่น Daikin, Mitsubishi, Samsung", key="ai_err_brand")
-        err_img = st.file_uploader("📷 อัปโหลดรูปที่ขึ้น Error Code", type=["jpg","jpeg","png"], key="ai_err_img")
+        st.markdown("### 📸 ค้นหา Error Code แอร์")
+        st.caption("พิมพ์รหัส Error ที่ขึ้นบนรีโมท/ตัวเครื่อง → ระบบบอกสาเหตุ + วิธีแก้ทันที!")
+        _ERR_DB = {
+            "E1":("เซ็นเซอร์อุณหภูมิห้อง (Room Temp Sensor) ผิดปกติ","ปิดเครื่อง 5 นาที เปิดใหม่ / ถ้าซ้ำ ต้องเปลี่ยนเซ็นเซอร์","500-1,500"),
+            "E2":("เซ็นเซอร์ท่อทองแดง (Pipe Sensor) ผิดปกติ","ตรวจสายเซ็นเซอร์ / เปลี่ยนเซ็นเซอร์","500-1,500"),
+            "E3":("คอมเพรสเซอร์ทำงานผิดปกติ / ไม่ทำงาน","ตรวจไฟฟ้า / ตรวจน้ำยาแอร์ / เรียกช่างด่วน","2,000-12,000"),
+            "E4":("ระบบกันน้ำแข็ง (Defrost) ผิดปกติ / คอยล์แข็งตัว","ล้างคอยล์ / ตรวจน้ำยาแอร์","800-2,500"),
+            "E5":("แรงดันไฟฟ้าผิดปกติ (Over/Under Voltage)","ตรวจไฟบ้าน / ติดตั้งเครื่องปรับแรงดัน","500-2,000"),
+            "E6":("มอเตอร์พัดลม (Indoor Fan Motor) ผิดปกติ","ตรวจมอเตอร์ / เปลี่ยนมอเตอร์","1,500-3,500"),
+            "E7":("มอเตอร์พัดลมคอยล์ร้อน (Outdoor Fan) ผิดปกติ","ตรวจมอเตอร์คอยล์ร้อน","1,500-3,500"),
+            "F1":("เซ็นเซอร์อุณหภูมิ Indoor ขาดหรือลัดวงจร","เปลี่ยนเซ็นเซอร์","500-1,200"),
+            "F2":("เซ็นเซอร์อุณหภูมิ Outdoor ขาดหรือลัดวงจร","เปลี่ยนเซ็นเซอร์","500-1,200"),
+            "F3":("เซ็นเซอร์ท่อ Discharge ผิดปกติ","เปลี่ยนเซ็นเซอร์","500-1,500"),
+            "H1":("กำลัง Defrost (ละลายน้ำแข็ง) ปกติ รอ 5-10 นาที","รอให้ Defrost เสร็จ ไม่ต้องซ่อม","ฟรี"),
+            "H6":("เซ็นเซอร์ตรวจจับตำแหน่งคอมเพรสเซอร์ผิดปกติ","เรียกช่างตรวจ","2,000-5,000"),
+            "L5":("บอร์ด Outdoor (IPM Module) ผิดปกติ","เปลี่ยนบอร์ด IPM","2,500-6,000"),
+            "P0":("บอร์ด Inverter ผิดปกติ","เปลี่ยนบอร์ด Inverter","3,000-6,000"),
+            "U0":("น้ำยาแอร์ไม่เพียงพอ / แรงดันต่ำ","เติมน้ำยาแอร์ / ตรวจรอยรั่ว","800-2,500"),
+            "U2":("แรงดันไฟ Outdoor ผิดปกติ / กระแสเกิน","ตรวจไฟฟ้า / ตรวจคอมเพรสเซอร์","1,500-5,000"),
+            "U4":("สื่อสารระหว่าง Indoor-Outdoor ขาด","ตรวจสาย Signal 3 เส้น / ตรวจบอร์ด","500-3,000"),
+        }
+        err_brand = st.text_input("ยี่ห้อ (ถ้าทราบ)", placeholder="เช่น Daikin, Mitsubishi, Carrier", key="ai_err_brand")
+        err_code = st.text_input("⚡ พิมพ์รหัส Error Code", placeholder="เช่น E1, U4, F3, H1", key="ai_err_code")
+
+        if st.button("🔍 ค้นหา Error Code", use_container_width=True, type="primary", key="ai_err_btn"):
+            code = err_code.strip().upper()
+            if not code:
+                st.error("กรุณาพิมพ์รหัส Error Code")
+            elif code in _ERR_DB:
+                desc, fix, cost = _ERR_DB[code]
+                st.markdown(f"""
+                <div style="background:#fff;border-radius:16px;padding:16px;border-left:4px solid #f59e0b;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                    <div style="font-size:24px;font-weight:800;color:#dc2626;">⚠️ Error {code}</div>
+                    <div style="font-size:14px;color:#475569;margin:8px 0;line-height:1.8;">
+                        <b>📋 ความหมาย:</b> {desc}<br>
+                        <b>🛠️ วิธีแก้:</b> {fix}<br>
+                        <b>💰 ค่าซ่อมโดยประมาณ:</b> {cost} บาท
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.info(f"📞 ติดต่อช่างร้านบุญสุข: {STORE_PHONE}")
+            else:
+                st.warning(f"ไม่พบ Error Code **{code}** ในฐานข้อมูล")
+                st.info(f"📞 สอบถามช่างโดยตรง: {STORE_PHONE}")
+
+        # แสดงตาราง Error ทั้งหมด
+        with st.expander("📖 ดูรายการ Error Code ทั้งหมด"):
+            for c, (d, f, co) in sorted(_ERR_DB.items()):
+                st.markdown(f"**{c}** — {d} | วิธีแก้: {f} | ~{co}฿")
+
+        # AI เสริม
+        err_img = st.file_uploader("📷 หรืออัปโหลดรูป Error Code (ต้องมี API key)", type=["jpg","jpeg","png"], key="ai_err_img")
         if err_img:
             st.image(err_img, caption="รูปที่อัปโหลด", width=300)
-        err_note = st.text_input("รายละเอียดเพิ่มเติม (ถ้ามี)", placeholder="เช่น ไฟกระพริบ 3 ครั้ง / เพิ่งล้างแอร์มา", key="ai_err_note")
-        if st.button("🔍 วิเคราะห์ Error Code", use_container_width=True, type="primary", key="ai_err_btn"):
-            if not err_img:
-                st.error("กรุณาอัปโหลดรูปที่ขึ้น Error Code")
+            if _get_ai_key():
+                if st.button("🤖 AI อ่านรูป", key="ai_err_vision"):
+                    with st.spinner("🤖 ..."):
+                        err_img.seek(0)
+                        res = _call_ai_vision(f"อ่าน Error Code จากรูปแอร์ยี่ห้อ {err_brand or 'ไม่ระบุ'} บอกความหมาย+วิธีแก้ ภาษาไทย", err_img.read())
+                    st.markdown(res)
             else:
-                with st.spinner("🤖 AI กำลังวิเคราะห์รูปภาพ..."):
-                    err_img.seek(0)
-                    result = _call_ai_vision(
-                        f"""ดูรูปภาพนี้ซึ่งเป็นหน้าจอ/ตัวเครื่อง{err_type} ยี่ห้อ: {err_brand or 'ไม่ระบุ'}
-รายละเอียดเพิ่มเติม: {err_note or 'ไม่มี'}
+                st.caption("💡 เพิ่ม OPENAI_API_KEY เพื่อให้ AI อ่านรูปได้")
 
-ให้:
-1. 🔍 อ่าน Error Code / รหัสข้อผิดพลาดที่เห็นในรูป
-2. 📋 อธิบายความหมายของ Error Code
-3. ⚡ สาเหตุที่เป็นไปได้
-4. 🛠️ วิธีแก้ไขเบื้องต้น
-5. ⚠️ ต้องเรียกช่างหรือไม่
-6. 💰 ค่าซ่อมโดยประมาณ
-ตอบเป็นภาษาไทย กระชับ เข้าใจง่าย""",
-                        err_img.read()
-                    )
-                st.markdown(result)
 
-# ══════════════════════════════════════════════
 # PAGE 5: ERROR CODE LIBRARY
 # ══════════════════════════════════════════════
 if page == "🔧 คลังเออเร่อแอร์":
