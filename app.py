@@ -1892,8 +1892,16 @@ if page == "🧾 สร้างใบเสนอราคา":
     _PAY_Q = ["", "💵 เงินสด", "📲 โอนจ่าย"]
     q_pay = st.selectbox("💳 วิธีชำระเงิน", _PAY_Q, key="q_pay_method")
     quote_data["payment_method"] = q_pay
+    q_slip = None
+    if q_pay == "📲 โอนจ่าย":
+        q_slip = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key="q_slip")
+        if q_slip:
+            st.image(q_slip, caption="สลิปโอนเงิน", width=250)
     a1, a2, a3 = st.columns(3)
     if a1.button("💾 บันทึกงาน", use_container_width=True, type="primary"):
+        if q_slip:
+            import base64 as _b64q; q_slip.seek(0)
+            quote_data["slip_image"] = _b64q.b64encode(q_slip.read()).decode()
         log_customer_job(quote_data)
         st.success("บันทึกแล้ว ✅")
         notify_msg = make_line_text(quote_data)
@@ -2061,8 +2069,16 @@ elif page == "🏗️ ติดตั้งแอร์":
     _PAY_I = ["", "💵 เงินสด", "📲 โอนจ่าย"]
     i_pay = st.selectbox("💳 วิธีชำระเงิน", _PAY_I, key="inst_pay_method")
     inst_quote["payment_method"] = i_pay
+    i_slip = None
+    if i_pay == "📲 โอนจ่าย":
+        i_slip = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key="inst_slip")
+        if i_slip:
+            st.image(i_slip, caption="สลิปโอนเงิน", width=250)
     ia1, ia2, ia3 = st.columns(3)
     if ia1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="inst_save"):
+        if i_slip:
+            import base64 as _b64i; i_slip.seek(0)
+            inst_quote["slip_image"] = _b64i.b64encode(i_slip.read()).decode()
         log_customer_job(inst_quote)
         st.success("บันทึกแล้ว ✅")
         notify_msg = make_line_text(inst_quote)
@@ -2599,6 +2615,10 @@ elif page == "☀️ งานโซล่าเซลล์":
     _PAY_S = ["", "💵 เงินสด", "📲 โอนจ่าย"]
     s_pay = st.selectbox("💳 วิธีชำระเงิน", _PAY_S, key="sol_pay_method")
     sol_record["payment_method"] = s_pay
+    if s_pay == "📲 โอนจ่าย":
+        s_slip = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key="sol_slip")
+        if s_slip:
+            st.image(s_slip, caption="สลิปโอนเงิน", width=250)
     sa1, sa2, sa3 = st.columns(3)
     if sa1.button("💾 บันทึกงาน", use_container_width=True, type="primary", key="sol_save"):
         save_service(sol_record)
@@ -2661,6 +2681,11 @@ if page == "🛠️ รับงานซ่อม/บริการ":
         sv_status = c6.selectbox("📊 สถานะ", SERVICE_STATUSES)
         _PAY_SV = ["", "💵 เงินสด", "📲 โอนจ่าย"]
         sv_pay_method = st.selectbox("💳 วิธีชำระเงิน", _PAY_SV, key="sv_pay_method")
+        sv_slip_file = None
+        if sv_pay_method == "📲 โอนจ่าย":
+            sv_slip_file = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key="sv_slip")
+            if sv_slip_file:
+                st.image(sv_slip_file, caption="สลิปโอนเงิน", width=250)
 
         st.divider()
         if st.button("💾 บันทึกใบงาน", use_container_width=True, type="primary"):
