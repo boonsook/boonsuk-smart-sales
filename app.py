@@ -311,7 +311,10 @@ def _save_session():
         "exp": time.time() + (30 * 24 * 3600),
     }
     token = _encode_session(data)
-    st.query_params["s"] = token
+    # เขียน query_params เฉพาะเมื่อ token เปลี่ยนจริง (ป้องกัน rerun ซ้ำ)
+    old_token = str(st.query_params.get("s", "")).strip()
+    if old_token != token:
+        st.query_params["s"] = token
     # Backup ลง localStorage ด้วย JS จริง
     _run_js(f'''
         try {{ parent.localStorage.setItem("bs_token","{token}"); }} catch(e) {{}}
@@ -1373,10 +1376,10 @@ check_login()
 if not st.session_state.logged_in:
     login_page(); st.stop()
 
-# ตรวจให้ token อยู่ใน URL + localStorage เสมอ (กันมือถือสลับแอปแล้ว token หาย)
+# ตรวจให้ token อยู่ใน URL เสมอ (กันมือถือสลับแอปแล้ว token หาย)
 _cur_s = str(st.query_params.get("s", "")).strip()
-if not _cur_s:
-    _save_session()  # URL ไม่มี token → ใส่ใหม่พร้อม backup localStorage
+if not _cur_s and st.session_state.get("logged_in", False):
+    _save_session()  # URL ไม่มี token → ใส่ใหม่
 
 # PWA inject หลัง login สำเร็จเท่านั้น
 inject_pwa()
@@ -1684,8 +1687,10 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
         if target == '__LOGOUT__':
             for k in ['logged_in','username','role','full_name','user_phone','_current_page']:
                 st.session_state[k] = '' if k != 'logged_in' else False
-            st.query_params.clear()
-            st.query_params["logout"] = "1"
+            st.query_params["s"] = ""
+            try: del st.query_params["nav"]
+            except: pass
+            _run_js('try{localStorage.removeItem("bs_token")}catch(e){}')
         else:
             st.session_state['_current_page'] = target
         st.rerun()
@@ -1738,8 +1743,10 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
                         if _lo:
                             for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
                                 st.session_state[k] = "" if k != "logged_in" else False
-                            st.query_params.clear()
-                            st.query_params["logout"] = "1"
+                            st.query_params["s"] = ""
+                            try: del st.query_params["nav"]
+                            except: pass
+                            _run_js('try{localStorage.removeItem("bs_token")}catch(e){}')
                         else:
                             st.session_state["_current_page"] = _tgt
                         st.rerun()
