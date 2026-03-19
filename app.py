@@ -3683,7 +3683,7 @@ if page == "🤖 AI ผู้ช่วย":
                     stk_b = f'<span style="background:#10b981;color:white;padding:2px 8px;border-radius:8px;font-size:10px;">มีสต๊อก {pq}</span>' if pq > 0 else '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:8px;font-size:10px;">สั่งจอง</span>'
                     bd = pb - btu_need
                     bt = "✅ พอดี" if abs(bd)<=1500 else ("⬆️ เผื่อไว้" if bd>0 else "⚠️ อาจน้อย")
-                    st.markdown(f"""<div style="background:{bg};border:2px solid {bc};border-radius:16px;padding:14px;margin-bottom:10px;">
+                    st.markdown(f"""<div style="background:{bg};border:2px solid {bc};border-radius:16px;padding:14px;margin-bottom:4px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
                             <div style="font-size:18px;font-weight:800;">{medal} {ps}</div>
                             <div>{inv_b} {stk_b}</div>
@@ -3706,6 +3706,61 @@ if page == "🤖 AI ผู้ช่วย":
                         </div>
                         <div style="font-size:9px;color:#94a3b8;">ประกันติดตั้ง {r.get("w_install","")} | อะไหล่ {r.get("w_parts","")} | <i>เฉพาะซื้อพร้อมติดตั้งจากร้าน</i></div>
                     </div>""", unsafe_allow_html=True)
+
+                    # ── ปุ่มสั่งจอง ──
+                    if st.button(f"🛒 สั่งจอง {pm}", key=f"ai_book_{rank}", use_container_width=True, type="primary"):
+                        st.session_state[f"_ai_booking_{rank}"] = {"section": ps, "model": pm, "btu": pb, "price": pp, "w_install": r.get("w_install",""), "w_parts": r.get("w_parts",""), "w_comp": wc}
+
+                    # ── ฟอร์มกรอกข้อมูลจอง (แสดงเมื่อกดปุ่ม) ──
+                    _bk = st.session_state.get(f"_ai_booking_{rank}")
+                    if _bk:
+                        with st.container():
+                            st.markdown(f"""<div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:12px;padding:12px;margin:4px 0 12px;">
+                                <div style="font-size:15px;font-weight:700;color:#1e40af;">🛒 สั่งจอง: {_bk['section']} รุ่น {_bk['model']}</div>
+                                <div style="font-size:13px;color:#475569;">{_bk['btu']:,} BTU | ฿{_bk['price']:,} พร้อมติดตั้ง</div>
+                            </div>""", unsafe_allow_html=True)
+                            bk1, bk2 = st.columns(2)
+                            bk_name  = bk1.text_input("👤 ชื่อลูกค้า", key=f"bk_name_{rank}", placeholder="ชื่อ-นามสกุล")
+                            bk_phone = bk2.text_input("📞 เบอร์โทร", key=f"bk_phone_{rank}", placeholder="08X-XXXXXXX")
+                            bk_addr  = st.text_area("📍 ที่อยู่ติดตั้ง", key=f"bk_addr_{rank}", placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด", height=70)
+                            bk_note  = st.text_input("📌 หมายเหตุ (ถ้ามี)", key=f"bk_note_{rank}", placeholder="เช่น ติดตั้งชั้น 2, นัดวันเสาร์")
+
+                            bk_c1, bk_c2 = st.columns(2)
+                            if bk_c1.button("✅ ยืนยันสั่งจอง", key=f"bk_confirm_{rank}", use_container_width=True, type="primary"):
+                                if not bk_name.strip():
+                                    st.error("⚠️ กรุณากรอกชื่อลูกค้า")
+                                elif not bk_phone.strip():
+                                    st.error("⚠️ กรุณากรอกเบอร์โทร")
+                                elif not bk_addr.strip():
+                                    st.error("⚠️ กรุณากรอกที่อยู่ติดตั้ง")
+                                else:
+                                    from datetime import date as _dt_book
+                                    booking_rec = {
+                                        "date": _dt_book.today().strftime("%Y-%m-%d"),
+                                        "service_type": "🛒 สั่งจองแอร์ (AI แนะนำ)",
+                                        "customer_name": bk_name.strip(),
+                                        "customer_phone": bk_phone.strip(),
+                                        "customer_address": bk_addr.strip(),
+                                        "symptom": f"สนใจ: {_bk['section']} | รุ่น: {_bk['model']} | {_bk['btu']:,} BTU | ราคา: {_bk['price']:,} ฿",
+                                        "note": bk_note.strip(),
+                                        "price": _bk["price"],
+                                        "status": "📋 รอดำเนินการ",
+                                        "saved_by": st.session_state.get("username", "AI"),
+                                    }
+                                    log_service_job(booking_rec)
+                                    st.success(f"✅ สั่งจองสำเร็จ! {_bk['section']} รุ่น {_bk['model']}")
+                                    st.balloons()
+                                    try:
+                                        line_notify_queue(make_service_line_text(booking_rec))
+                                    except Exception:
+                                        pass
+                                    # ล้าง booking state
+                                    del st.session_state[f"_ai_booking_{rank}"]
+                                    st.rerun()
+
+                            if bk_c2.button("❌ ยกเลิก", key=f"bk_cancel_{rank}", use_container_width=True):
+                                del st.session_state[f"_ai_booking_{rank}"]
+                                st.rerun()
 
                 # AI เสริม (ถ้ามี key)
                 if _get_ai_key():
