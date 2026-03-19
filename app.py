@@ -709,20 +709,40 @@ def load_log() -> pd.DataFrame:
     return pd.DataFrame()
 
 def save_log(df: pd.DataFrame):
-    # ── Supabase: sync ทั้ง table (update status/receipt/paid ทีละ row) ──
+    # ── Supabase: update ทีละ row ──
     if _use_supabase():
         try:
             sb = _get_supabase()
             for _, r in df.iterrows():
                 row = r.to_dict()
                 sb_id = row.get("id")
+                if not sb_id:
+                    continue
                 update_data = {
-                    "status":      str(row.get("status", "")),
-                    "receipt_no":  str(row.get("receipt_no", "")),
-                    "paid_amount": int(row.get("paid_amount", 0)),
+                    "status":         str(row.get("status", "")),
+                    "receipt_no":     str(row.get("receipt_no", "")),
+                    "paid_amount":    int(row.get("paid_amount", 0)),
                 }
-                if sb_id:
+                # เพิ่ม payment_method + slip_image (ลอง update รวม → ถ้าคอลัมน์ไม่มี → ลองแยก)
+                pm = str(row.get("payment_method", ""))
+                slip = str(row.get("slip_image", ""))
+                if pm:
+                    update_data["payment_method"] = pm
+                if slip and len(slip) > 10:
+                    update_data["slip_image"] = slip
+                try:
                     sb.table("jobs").update(update_data).eq("id", int(sb_id)).execute()
+                except Exception:
+                    # ถ้า column ใหม่ยังไม่มี → ลองส่งแค่ 3 คอลัมน์หลัก
+                    basic = {
+                        "status":      str(row.get("status", "")),
+                        "receipt_no":  str(row.get("receipt_no", "")),
+                        "paid_amount": int(row.get("paid_amount", 0)),
+                    }
+                    try:
+                        sb.table("jobs").update(basic).eq("id", int(sb_id)).execute()
+                    except Exception as e2:
+                        st.warning(f"Supabase save_log: {e2}")
             return
         except Exception as e:
             st.warning(f"Supabase save_log: {e} — บันทึก CSV แทน")
@@ -2274,29 +2294,54 @@ elif page == "📋 จัดการงาน / สถานะ":
                     receipt_no  = e3.text_input("เลขที่ใบเสร็จ", value=str(job.get("receipt_no","")), key=f"rn_{idx}")
                     paid_amount = e4.number_input("จำนวนเงินที่รับ (฿)", value=int(job.get("paid_amount",job.get("net_total",0))), step=100, key=f"pa_{idx}")
                     # แนบสลิปโอนเงิน
-                    _existing_slip = str(job.get("slip_image",""))
-                    if _existing_slip:
+                    _existing_slip = str(job.get("slip_image","")).strip()
+                    if _existing_slip and len(_existing_slip) > 100 and _existing_slip not in ("nan","None","","-"):
                         import base64 as _b64s
                         try:
                             st.image(_b64s.b64decode(_existing_slip), caption="🧾 สลิปที่บันทึกไว้", width=250)
                         except Exception:
-                            pass
+                            st.caption("⚠️ ไม่สามารถแสดงสลิปได้")
                     slip_file = st.file_uploader("📎 แนบสลิปโอนเงิน", type=["jpg","jpeg","png"], key=f"slip_{idx}")
                     if slip_file:
                         st.image(slip_file, caption="สลิปใหม่ (กด อัปเดต เพื่อบันทึก)", width=250)
 
                     u1, u2, u3, u4, u5 = st.columns(5)
                     if u1.button("💾 อัปเดต", key=f"upd_{idx}", use_container_width=True, type="primary"):
+                        # 1. บันทึกสถานะ + ข้อมูลหลักก่อน (สำคัญสุด)
                         df_log.at[idx,"status"]      = new_status
                         df_log.at[idx,"receipt_no"]  = receipt_no
                         df_log.at[idx,"paid_amount"] = paid_amount
                         df_log.at[idx,"payment_method"] = pay_method
-                        # บันทึกสลิปเป็น base64
+
+                        # 2. บันทึกสลิป (แยก — ถ้าล้มเหลวไม่กระทบสถานะ)
+                        _slip_saved = False
                         if slip_file:
-                            import base64 as _b64s
-                            slip_file.seek(0)
-                            df_log.at[idx,"slip_image"] = _b64s.b64encode(slip_file.read()).decode()
+                            try:
+                                import base64 as _b64s
+                                from io import BytesIO as _BytesIO
+                                from PIL import Image as _PILImage
+                                slip_file.seek(0)
+                                img = _PILImage.open(slip_file)
+                                # ย่อรูปให้ไม่เกิน 800px (ป้องกัน base64 ใหญ่เกิน)
+                                max_dim = 800
+                                if max(img.size) > max_dim:
+                                    ratio = max_dim / max(img.size)
+                                    new_size = (int(img.size[0]*ratio), int(img.size[1]*ratio))
+                                    img = img.resize(new_size, _PILImage.LANCZOS)
+                                buf = _BytesIO()
+                                img.save(buf, format="JPEG", quality=70)
+                                b64 = _b64s.b64encode(buf.getvalue()).decode()
+                                df_log.at[idx,"slip_image"] = b64
+                                _slip_saved = True
+                            except Exception:
+                                pass  # ถ้าย่อรูปไม่ได้ → ข้ามสลิป บันทึกแค่สถานะ
+
                         save_log(df_log)
+
+                        if slip_file and not _slip_saved:
+                            st.warning("⚠️ บันทึกสถานะแล้ว แต่สลิปรูปใหญ่เกินไป ลองถ่ายใหม่ให้เล็กลง")
+                        else:
+                            st.success("อัปเดตแล้ว ✅")
                         _upd_job = job.to_dict()
                         _upd_job["status"] = new_status
                         _upd_job["paid_amount"] = paid_amount
@@ -2312,7 +2357,7 @@ elif page == "📋 จัดการงาน / สถานะ":
                                 line_notify_queue(notify_msg)
                         except Exception:
                             pass
-                        st.success("อัปเดตแล้ว ✅"); st.rerun()
+                        st.rerun()
 
                     if u2.button("🧾 ใบเสร็จ", key=f"rc_{idx}", use_container_width=True):
                         try:
