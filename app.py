@@ -1864,6 +1864,19 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {{
     gap: 10px !important;
     width: 100% !important;
 }}
+@media (max-width: 480px) {{
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"] {{
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }}
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="secondary"] {{
+        min-height: 75px !important;
+        font-size: 30px !important;
+        border-radius: 14px !important;
+    }}
+    .bs-header {{ padding: 12px 14px !important; }}
+    .bs-name {{ font-size: 17px !important; }}
+}}
 section[data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
     width: auto !important; min-width: 0 !important;
     max-width: none !important; flex: none !important;
@@ -1965,6 +1978,22 @@ section[data-testid="stMain"] [data-testid="stHorizontalBlock"] button[kind="sec
 
     # === STAT ROW (staff/admin only) — Streamlit buttons ===
     if _role2 != "customer":
+        # ── ยอดขายเดือนนี้ ──
+        _month_sales = 0
+        try:
+            _date_c = "created_at" if "created_at" in df_lg.columns else "date" if "date" in df_lg.columns else None
+            if _date_c and not df_lg.empty:
+                _dt = pd.to_datetime(df_lg[_date_c], errors="coerce")
+                _this_month = _dt.dt.to_period("M") == pd.Timestamp.now().to_period("M")
+                _month_sales = int(df_lg.loc[_this_month, "net_total"].sum()) if "net_total" in df_lg.columns else 0
+        except Exception:
+            pass
+        if _month_sales > 0:
+            st.markdown(f'''<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:14px;padding:10px 16px;margin-bottom:10px;text-align:center;border:1px solid #bbf7d0;">
+                <span style="font-size:11px;color:#047857;font-weight:600;">💰 ยอดขายเดือนนี้</span>
+                <span style="font-size:20px;font-weight:800;color:#047857;margin-left:12px;">฿{_month_sales:,.0f}</span>
+            </div>''', unsafe_allow_html=True)
+
         _stk_msg = f"⚠️ {_low_stk} ใกล้หมด" if _low_stk > 0 else "ปกติ"
         sc1, sc2, sc3 = st.columns(3)
         with sc1:
@@ -2771,11 +2800,18 @@ elif page == "📦 จัดการสต๊อก":
     m2.metric("มีสต๊อกปกติ",   in_s)
     m3.metric("⚠️ ใกล้หมด",   low_s)
     m4.metric("❌ สต๊อกหมด",   out_s)
-    st.info("แก้ไขจำนวนสต๊อกในตาราง แล้วกด **บันทึกสต๊อก**")
+    # ── มูลค่าสต็อกรวม ──
+    if "price_install" in df_all.columns and "stock_qty" in df_all.columns:
+        _vals = df_all["price_install"].fillna(0).astype(int) * df_all["stock_qty"].fillna(0).astype(int)
+        st.metric("💰 มูลค่าสต็อกรวม", f"฿{_vals.sum():,.0f}")
+
+    st.info("แก้ไขจำนวนสต๊อกในตาราง แล้วกด **บันทึกสต๊อก** (คอลัมน์ section/model ล็อคไว้ป้องกันแก้ผิด)")
     edit_cols = ["section","model","btu","price_install","stock_qty","w_install","w_parts","w_comp"]
     edited = st.data_editor(
         df_all[edit_cols].copy(), use_container_width=True, hide_index=True, num_rows="fixed",
         column_config={
+            "section":       st.column_config.TextColumn("section", disabled=True),
+            "model":         st.column_config.TextColumn("model", disabled=True),
             "stock_qty":     st.column_config.NumberColumn("สต๊อก",    min_value=0, step=1),
             "price_install": st.column_config.NumberColumn("ราคา (฿)", min_value=0, step=100),
             "btu":           st.column_config.NumberColumn("BTU",       min_value=0, step=100),
@@ -2839,6 +2875,28 @@ elif page == "📊 Dashboard":
             sd = df_log["status"].value_counts().reset_index()
             sd.columns = ["สถานะ","จำนวน"]
             st.bar_chart(sd.set_index("สถานะ"))
+
+    # ── กราฟยอดขายรายเดือน ──
+    st.subheader("📅 ยอดขายรายเดือน")
+    _date_col = "created_at" if "created_at" in df_log.columns else "date" if "date" in df_log.columns else None
+    if _date_col:
+        try:
+            df_log["_month"] = pd.to_datetime(df_log[_date_col], errors="coerce").dt.to_period("M").astype(str)
+            monthly = df_log.groupby("_month").agg(
+                จำนวนงาน=("net_total", "count"),
+                ยอดรวม=("net_total", "sum")
+            ).reset_index().rename(columns={"_month": "เดือน"})
+            monthly = monthly.sort_values("เดือน").tail(12)
+            ch_m1, ch_m2 = st.columns(2)
+            with ch_m1:
+                st.bar_chart(monthly.set_index("เดือน")[["ยอดรวม"]])
+            with ch_m2:
+                st.bar_chart(monthly.set_index("เดือน")[["จำนวนงาน"]])
+            df_log.drop(columns=["_month"], inplace=True, errors="ignore")
+        except Exception:
+            st.caption("ไม่สามารถสร้างกราฟรายเดือนได้")
+    else:
+        st.caption("ไม่มีข้อมูลวันที่")
 
     st.divider()
 
@@ -4457,7 +4515,14 @@ elif page == "⚙️ นำเข้า/ส่งออกข้อมูล":
         # ── ลบข้อมูลทั้งหมด (Danger Zone) ────────
         st.divider()
         with st.expander("🔴 Danger Zone — ลบข้อมูลทั้งหมด"):
-            st.error("⚠️ การลบข้อมูลไม่สามารถกู้คืนได้!")
+            st.error("⚠️ การลบข้อมูลไม่สามารถกู้คืนได้! **กรุณาดาวน์โหลด backup ก่อนลบ**")
+            # ── ปุ่ม backup ก่อนลบ ──
+            _df_backup = load_log()
+            if not _df_backup.empty:
+                _csv_bk = _df_backup.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+                st.download_button("💾 ดาวน์โหลด Backup ก่อนลบ", data=_csv_bk,
+                                   file_name=f"backup_jobs_{date.today().strftime('%Y%m%d')}.csv",
+                                   mime="text/csv", use_container_width=True)
             confirm_del = st.text_input("พิมพ์ 'ลบทั้งหมด' เพื่อยืนยัน")
             if st.button("🗑️ ลบประวัติงานทั้งหมด", use_container_width=True):
                 if confirm_del == "ลบทั้งหมด":
