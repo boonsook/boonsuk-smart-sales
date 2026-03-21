@@ -2877,14 +2877,36 @@ elif page == "📦 สินค้าทั่วไป":
 
     # ═══ TAB 3: Import ═══
     with tabs[2]:
-        st.subheader("📥 นำเข้าจาก CSV")
-        st.info("📝 CSV ควรมีคอลัมน์: barcode, name, category, price, cost, stock_qty, unit")
+        st.subheader("📥 นำเข้าจาก CSV / Excel")
+        st.info("📝 ไฟล์ควรมีคอลัมน์: barcode, name, category, price, cost, stock_qty, unit\n\n💡 ถ้าไม่มีคอลัมน์ barcode ระบบจะสร้างให้อัตโนมัติ")
 
-        uploaded_file = st.file_uploader("เลือกไฟล์ CSV", type="csv")
+        uploaded_file = st.file_uploader("เลือกไฟล์ CSV หรือ Excel", type=["csv", "xlsx", "xls"])
 
         if uploaded_file:
             try:
-                df_import = pd.read_csv(uploaded_file, encoding="utf-8-sig")
+                _fname = uploaded_file.name.lower()
+                if _fname.endswith(".csv"):
+                    df_import = pd.read_csv(uploaded_file, encoding="utf-8-sig")
+                else:
+                    df_import = pd.read_excel(uploaded_file)
+
+                # ถ้าไม่มี barcode → สร้างอัตโนมัติ
+                if "barcode" not in df_import.columns:
+                    import random
+                    df_import["barcode"] = [f"BS-{random.randint(100000,999999)}" for _ in range(len(df_import))]
+                    st.info("🔖 สร้างบาร์โค้ดอัตโนมัติให้แล้ว (ไม่พบคอลัมน์ barcode)")
+
+                # ถ้าไม่มี unit → ใส่ค่าเริ่มต้น
+                if "unit" not in df_import.columns:
+                    df_import["unit"] = "ชิ้น"
+
+                # ถ้าไม่มี category → ใส่ค่าเริ่มต้น
+                if "category" not in df_import.columns:
+                    df_import["category"] = "อื่นๆ"
+
+                # ถ้าไม่มี cost → ใส่ 0
+                if "cost" not in df_import.columns:
+                    df_import["cost"] = 0
                 st.dataframe(df_import, use_container_width=True)
 
                 if st.button("✅ นำเข้าข้อมูล", type="primary"):
