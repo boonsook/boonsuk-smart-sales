@@ -24,6 +24,11 @@ import urllib.parse
 import urllib.request
 import urllib.error
 from fpdf import FPDF
+import barcode as bc
+from barcode.writer import ImageWriter
+from io import BytesIO
+import base64
+import json
 
 # ── Auto-install missing packages ────────────
 def _ensure(pkg, import_name=None):
@@ -37,6 +42,7 @@ _ensure("openpyxl")
 _ensure("fpdf2", "fpdf")
 _ensure("supabase")
 _ensure("python-dotenv", "dotenv")
+_ensure("python-barcode", "barcode")
 
 # ──────────────────────────────────────────────
 # PAGE CONFIG
@@ -341,6 +347,22 @@ PRODUCTS = [
     {"section":"SAIJO DENKI Inverter PM2.5","model":"PM 25 INVERTER 12","btu":12000,"price_install":14900,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"5 ปี","stock_qty":5},
     {"section":"SAIJO DENKI Inverter PM2.5","model":"PM 25 INVERTER 18","btu":18000,"price_install":19900,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"5 ปี","stock_qty":5},
     {"section":"SAIJO DENKI Inverter PM2.5","model":"PM 25 INVERTER 25","btu":25000,"price_install":23900,"w_install":"1 ปี","w_parts":"1 ปี","w_comp":"5 ปี","stock_qty":5},
+]
+
+# ──────────────────────────────────────────────
+# POS CATEGORIES
+# ──────────────────────────────────────────────
+POS_CATEGORIES = [
+    "เครื่องใช้ไฟฟ้า",
+    "เครื่องซักผ้า",
+    "ตู้เย็น",
+    "ทีวี",
+    "พัดลม",
+    "หม้อหุงข้าว",
+    "เครื่องทำน้ำอุ่น",
+    "อะไหล่แอร์",
+    "อุปกรณ์ไฟฟ้า",
+    "อื่นๆ"
 ]
 
 # ──────────────────────────────────────────────
@@ -921,6 +943,141 @@ def save_log(df: pd.DataFrame):
             st.warning(f"Supabase save_log: {e} — บันทึก CSV แทน")
     # ── CSV fallback ──
     df.to_csv(LOG_CSV, index=False, encoding="utf-8-sig")
+
+# ──────────────────────────────────────────────
+# POS SYSTEM - SUPABASE FUNCTIONS
+# ──────────────────────────────────────────────
+
+@st.cache_data(ttl=30)
+def load_pos_products() -> pd.DataFrame:
+    """โหลดสินค้า POS จาก Supabase"""
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            rows = sb.table("pos_products").select("*").execute().data
+            if rows:
+                df = pd.DataFrame(rows)
+                # Ensure numeric columns
+                for col in ["price", "cost", "stock_qty"]:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+                df["stock_qty"] = df["stock_qty"].astype(int)
+                return df.sort_values("created_at", ascending=False)
+        except Exception as e:
+            st.warning(f"⚠️ โหลดข้อมูลสินค้า: {e}")
+    return pd.DataFrame()
+
+def save_pos_products(df: pd.DataFrame):
+    """บันทึกสินค้า POS (upsert)"""
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            cols = ["barcode", "name", "category", "price", "cost", "stock_qty", "unit"]
+            rows = []
+            for _, r in df[cols].iterrows():
+                row = r.to_dict()
+                # Type conversion
+                row = {
+                    k: (
+                        int(v) if k == "stock_qty" and isinstance(v, (int, float))
+                        else float(v) if k in ["price", "cost"] and isinstance(v, (int, float))
+                        else str(v)
+                    )
+                    for k, v in row.items()
+                }
+                rows.append(row)
+
+            # Upsert by barcode
+            if rows:
+                chunk_size = 50
+                for i in range(0, len(rows), chunk_size):
+                    sb.table("pos_products").upsert(rows[i:i+chunk_size], on_conflict="barcode").execute()
+            st.cache_data.clear()
+            st.success("✅ บันทึกสินค้าแล้ว")
+        except Exception as e:
+            st.error(f"❌ บันทึกสินค้า: {e}")
+    else:
+        st.warning("⚠️ ไม่ได้เชื่อมต่อ Supabase")
+
+@st.cache_data(ttl=15)
+def load_pos_sales() -> pd.DataFrame:
+    """โหลดบันทึกการขาย POS"""
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            rows = sb.table("pos_sales").select("*").order("created_at", desc=True).execute().data
+            if rows:
+                df = pd.DataFrame(rows)
+                for col in ["subtotal", "discount", "total"]:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+                return df
+        except Exception as e:
+            st.warning(f"⚠️ โหลดบันทึกขาย: {e}")
+    return pd.DataFrame()
+
+def save_pos_sale(sale_dict: dict):
+    """บันทึกข้อมูลการขาย 1 รายการ"""
+    if _use_supabase():
+        try:
+            sb = _get_supabase()
+            # Convert items to JSON string if needed
+            items = sale_dict.get("items_json")
+            if isinstance(items, (list, dict)):
+                items = json.dumps(items, ensure_ascii=False)
+
+            insert_data = {
+                "sale_no": str(sale_dict.get("sale_no", "")),
+                "items_json": str(items),
+                "subtotal": float(sale_dict.get("subtotal", 0)),
+                "discount": float(sale_dict.get("discount", 0)),
+                "total": float(sale_dict.get("total", 0)),
+                "payment_method": str(sale_dict.get("payment_method", "เงินสด")),
+                "cashier": str(sale_dict.get("cashier", st.session_state.get("full_name", "")))
+            }
+            sb.table("pos_sales").insert(insert_data).execute()
+            st.cache_data.clear()
+            return True
+        except Exception as e:
+            st.error(f"❌ บันทึกการขาย: {e}")
+            return False
+    return False
+
+# ──────────────────────────────────────────────
+# BARCODE GENERATION
+# ──────────────────────────────────────────────
+
+def generate_auto_barcode() -> str:
+    """สร้าง barcode อัตโนมัติ รูป BS-XXXXXX"""
+    import random
+    return f"BS-{random.randint(100000, 999999)}"
+
+def generate_barcode_image(barcode_str: str) -> str:
+    """สร้างบาร์โค้ด Code128 เป็น base64 image"""
+    try:
+        ean = bc.get_barcode_class('code128')
+        rv = BytesIO()
+        ean(barcode_str, writer=ImageWriter()).write(rv)
+        rv.seek(0)
+        img_base64 = base64.b64encode(rv.read()).decode()
+        return img_base64
+    except Exception:
+        return ""
+
+def display_barcode(barcode_str: str):
+    """แสดง barcode image ใน Streamlit"""
+    try:
+        img_b64 = generate_barcode_image(barcode_str)
+        if img_b64:
+            st.markdown(
+                f'<img src="data:image/png;base64,{img_b64}" style="max-width:200px;">',
+                unsafe_allow_html=True
+            )
+            st.caption(f"🔢 {barcode_str}")
+        else:
+            st.warning("⚠️ ไม่สามารถสร้างบาร์โค้ด")
+    except Exception as e:
+        st.warning(f"⚠️ {e}")
 
 def log_customer_job(quote: dict):
     record = {k: str(v).replace("\n"," | ") if isinstance(v, str) else v for k, v in quote.items()}
@@ -1767,6 +1924,8 @@ if page == "🏠 หน้าหลัก":
             ("🤖", "AI ผู้ช่วย",    "🤖 AI ผู้ช่วย",          "#6366f1","#e0e7ff"),
             ("🧮", "คำนวณ BTU",       "🧮 คำนวณ BTU",            "#f97316","#ffedd5"),
             ("⚠️", "Error Code",    "🔧 คลังเออเร่อแอร์",      "#dc2626","#fecaca"),
+            ("🏪", "POS ขาย",     "🏪 POS ขายสินค้า",    "#059669","#d1fae5"),
+            ("📦", "สินค้าทั่วไป", "📦 สินค้าทั่วไป",     "#7c3aed","#ede9fe"),
         ]
         if _role2 == "admin":
             menus_home.append(("⚙️", "นำเข้า/ส่งออก", "⚙️ นำเข้า/ส่งออกข้อมูล", "#475569","#f1f5f9"))
@@ -2281,6 +2440,476 @@ if page == "🧾 สร้างใบเสนอราคา":
 
 # ══════════════════════════════════════════════
 # PAGE: ติดตั้งแอร์ (ใหม่/เก่า)
+# ══════════════════════════════════════════════
+# PAGE: POS ขายสินค้า
+# ══════════════════════════════════════════════
+elif page == "🏪 POS ขายสินค้า":
+    st.title("🏪 POS ขายสินค้า")
+    _back_home()
+
+    # Initialize session state
+    if "pos_cart" not in st.session_state:
+        st.session_state["pos_cart"] = {}
+    if "pos_sale_no" not in st.session_state:
+        st.session_state["pos_sale_no"] = ""
+
+    # Load products
+    df_products = load_pos_products()
+
+    # === LEFT SIDE: BARCODE SCANNING & PRODUCT SEARCH ===
+    col_left, col_right = st.columns([2, 2])
+
+    with col_left:
+        st.subheader("🛒 สแกนสินค้า")
+
+        # Barcode scanner input (USB scanner types barcode + Enter)
+        barcode_input = st.text_input(
+            "📱 สแกนบาร์โค้ด (บาร์โค้ด/ค้นหา)",
+            placeholder="กรุณาสแกนบาร์โค้ดหรือพิมพ์ชื่อสินค้า...",
+            key="pos_barcode_input"
+        )
+
+        if barcode_input:
+            # Search by barcode or name
+            search_lower = barcode_input.lower()
+            matching = df_products[
+                (df_products["barcode"].astype(str).str.lower().str.contains(search_lower, na=False)) |
+                (df_products["name"].astype(str).str.lower().str.contains(search_lower, na=False))
+            ]
+
+            if not matching.empty:
+                product = matching.iloc[0]
+                barcode = str(product["barcode"])
+                name = str(product["name"])
+                price = float(product.get("price", 0))
+                stock = int(product.get("stock_qty", 0))
+
+                if stock > 0:
+                    # Add/update cart
+                    if barcode in st.session_state["pos_cart"]:
+                        st.session_state["pos_cart"][barcode]["qty"] += 1
+                    else:
+                        st.session_state["pos_cart"][barcode] = {
+                            "name": name,
+                            "price": price,
+                            "qty": 1,
+                            "barcode": barcode
+                        }
+                    st.success(f"✅ เพิ่ม {name} x1")
+                else:
+                    st.error(f"❌ สินค้า {name} หมดสต๊อก")
+            else:
+                st.error("❌ ไม่พบสินค้า")
+
+        st.divider()
+        st.subheader("🔍 ค้นหาสินค้า")
+
+        # Category filter
+        selected_cat = st.selectbox(
+            "หมวดหมู่",
+            ["ทั้งหมด"] + list(df_products["category"].unique()) if not df_products.empty else ["ทั้งหมด"]
+        )
+
+        # Search by name
+        search_name = st.text_input("ค้นหาชื่อ", placeholder="ส่วนหนึ่งของชื่อสินค้า")
+
+        if selected_cat != "ทั้งหมด":
+            df_filtered = df_products[df_products["category"] == selected_cat].copy()
+        else:
+            df_filtered = df_products.copy()
+
+        if search_name:
+            df_filtered = df_filtered[
+                df_filtered["name"].astype(str).str.lower().str.contains(search_name.lower(), na=False)
+            ]
+
+        if not df_filtered.empty:
+            st.markdown("#### 📦 สินค้าที่พบ")
+            for _, p in df_filtered.iterrows():
+                col_prod_name, col_prod_price, col_prod_btn = st.columns([2, 1, 1])
+                with col_prod_name:
+                    st.text(f"• {p['name']}")
+                with col_prod_price:
+                    st.text(f"{fmt_baht(p['price'])} บ.")
+                with col_prod_btn:
+                    if st.button("➕", key=f"add_{p['barcode']}"):
+                        if str(p["barcode"]) in st.session_state["pos_cart"]:
+                            st.session_state["pos_cart"][str(p["barcode"])]["qty"] += 1
+                        else:
+                            st.session_state["pos_cart"][str(p["barcode"])] = {
+                                "name": str(p["name"]),
+                                "price": float(p["price"]),
+                                "qty": 1,
+                                "barcode": str(p["barcode"])
+                            }
+                        st.rerun()
+
+    # === RIGHT SIDE: SHOPPING CART & CHECKOUT ===
+    with col_right:
+        st.subheader("🛍️ ตระกร้า")
+
+        if st.session_state["pos_cart"]:
+            # Display cart items
+            cart_items = st.session_state["pos_cart"]
+            subtotal = 0
+
+            for idx, (barcode, item) in enumerate(cart_items.items()):
+                col_item_name, col_item_qty, col_item_price, col_item_delete = st.columns([3, 1, 1, 1])
+
+                with col_item_name:
+                    st.text(f"{item['name']}")
+
+                with col_item_qty:
+                    new_qty = st.number_input(
+                        "จำนวน",
+                        min_value=0,
+                        max_value=999,
+                        value=item["qty"],
+                        key=f"qty_{idx}_{barcode}",
+                        label_visibility="collapsed"
+                    )
+                    if new_qty != item["qty"]:
+                        if new_qty == 0:
+                            del st.session_state["pos_cart"][barcode]
+                        else:
+                            st.session_state["pos_cart"][barcode]["qty"] = new_qty
+                        st.rerun()
+
+                with col_item_price:
+                    item_total = item["price"] * item["qty"]
+                    st.text(f"{fmt_baht(item_total)} บ.")
+                    subtotal += item_total
+
+                with col_item_delete:
+                    if st.button("🗑️", key=f"del_{idx}_{barcode}"):
+                        del st.session_state["pos_cart"][barcode]
+                        st.rerun()
+
+            st.divider()
+
+            # Pricing calculation
+            col_label1, col_value1 = st.columns([2, 1])
+            with col_label1:
+                st.text("ยอดรวม:")
+            with col_value1:
+                st.markdown(f"**{fmt_baht(subtotal)} บ.**")
+
+            # Discount input
+            discount = st.number_input(
+                "💰 ส่วนลด",
+                min_value=0.0,
+                max_value=float(subtotal),
+                value=0.0,
+                step=100.0
+            )
+
+            net_total = subtotal - discount
+
+            col_label2, col_value2 = st.columns([2, 1])
+            with col_label2:
+                st.markdown("**รวมสุทธิ:**")
+            with col_value2:
+                st.markdown(f"**{fmt_baht(net_total)} บ.**")
+
+            st.divider()
+
+            # Payment method
+            payment_method = st.radio(
+                "💳 วิธีการชำระเงิน",
+                ["เงินสด", "โอนเงิน", "บัตรเครดิต"],
+                horizontal=True
+            )
+
+            # Cash handling
+            if payment_method == "เงินสด":
+                cash_received = st.number_input(
+                    "ได้รับเงิน",
+                    min_value=0.0,
+                    value=float(net_total),
+                    step=100.0
+                )
+                change = cash_received - net_total
+
+                col_change1, col_change2 = st.columns([2, 1])
+                with col_change1:
+                    st.text("เงินทอน:")
+                with col_change2:
+                    st.markdown(
+                        f"**{fmt_baht(change)} บ.**" if change >= 0
+                        else f"**❌ ไม่พอ {fmt_baht(abs(change))} บ.**",
+                        unsafe_allow_html=True
+                    )
+
+            st.divider()
+
+            # Checkout button
+            col_checkout1, col_checkout2 = st.columns([1, 1])
+
+            with col_checkout1:
+                if st.button("✅ ชำระเงิน", use_container_width=True, type="primary"):
+                    # Generate sale number: POS-YYYYMMDD-XXXX
+                    from datetime import datetime
+                    today = datetime.now().strftime("%Y%m%d")
+                    sale_count = 1
+
+                    # Simple sequential number
+                    if "pos_sale_count" not in st.session_state:
+                        st.session_state["pos_sale_count"] = {}
+
+                    if today not in st.session_state["pos_sale_count"]:
+                        st.session_state["pos_sale_count"][today] = 1
+                    else:
+                        st.session_state["pos_sale_count"][today] += 1
+
+                    sale_no = f"POS-{today}-{st.session_state['pos_sale_count'][today]:04d}"
+
+                    # Prepare sale data
+                    items_list = []
+                    for barcode, item in st.session_state["pos_cart"].items():
+                        items_list.append({
+                            "barcode": barcode,
+                            "name": item["name"],
+                            "price": item["price"],
+                            "qty": item["qty"],
+                            "total": item["price"] * item["qty"]
+                        })
+
+                    sale_dict = {
+                        "sale_no": sale_no,
+                        "items_json": json.dumps(items_list, ensure_ascii=False),
+                        "subtotal": subtotal,
+                        "discount": discount,
+                        "total": net_total,
+                        "payment_method": payment_method,
+                        "cashier": st.session_state.get("full_name", st.session_state.get("username", ""))
+                    }
+
+                    # Save sale
+                    if save_pos_sale(sale_dict):
+                        # Deduct stock
+                        for barcode, item in st.session_state["pos_cart"].items():
+                            df_products.loc[df_products["barcode"] == barcode, "stock_qty"] -= item["qty"]
+
+                        save_pos_products(df_products)
+
+                        # Clear cart
+                        st.session_state["pos_cart"] = {}
+                        st.session_state["pos_sale_no"] = sale_no
+
+                        st.success(f"✅ บันทึกการขายแล้ว: {sale_no}")
+                        st.session_state["show_receipt"] = True
+
+            with col_checkout2:
+                if st.button("🗑️ ล้างตระกร้า", use_container_width=True):
+                    st.session_state["pos_cart"] = {}
+                    st.rerun()
+
+            # Receipt display
+            if st.session_state.get("show_receipt") and st.session_state.get("pos_sale_no"):
+                st.divider()
+                st.subheader("🧾 ใบเสร็จ")
+
+                receipt_html = f"""
+                <div style="border:1px solid #ccc; padding:12px; font-family:monospace; font-size:12px;">
+                    <div style="text-align:center; margin-bottom:8px;">
+                        <strong>ร้านบุญสุขอิเล็กทรอนิกส์</strong><br>
+                        <small>Smart Sales POS</small>
+                    </div>
+                    <hr style="margin:4px 0;">
+                    <div style="margin-bottom:8px;">
+                        <small><strong>เลขที่:</strong> {st.session_state['pos_sale_no']}</small><br>
+                        <small><strong>วันเวลา:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</small><br>
+                        <small><strong>พนักงาน:</strong> {st.session_state.get('full_name', 'N/A')}</small>
+                    </div>
+                    <hr style="margin:4px 0;">
+                    <div style="margin-bottom:8px; max-height:150px; overflow-y:auto;">
+                """
+
+                for item in items_list:
+                    receipt_html += f"""
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>{item['name']} x{item['qty']}</span>
+                            <span>{fmt_baht(item['total'])}</span>
+                        </div>
+                    """
+
+                receipt_html += f"""
+                    </div>
+                    <hr style="margin:4px 0;">
+                    <div style="margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>ยอดรวม:</span>
+                            <strong>{fmt_baht(subtotal)}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>ส่วนลด:</span>
+                            <span>{fmt_baht(discount)}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px;">
+                            <strong>รวมทั้งสิ้น:</strong>
+                            <strong>{fmt_baht(net_total)}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>วิธีชำระ:</span>
+                            <span>{payment_method}</span>
+                        </div>
+                    </div>
+                    <hr style="margin:4px 0;">
+                    <div style="text-align:center; margin-top:8px;">
+                        <small>ขอบคุณที่ใช้บริการ</small><br>
+                        <small>☎ 089-XXX-XXXX</small>
+                    </div>
+                </div>
+                """
+
+                st.markdown(receipt_html, unsafe_allow_html=True)
+
+                if st.button("✅ ถูกต้อง / ซ่อนใบเสร็จ"):
+                    st.session_state["show_receipt"] = False
+                    st.rerun()
+        else:
+            st.info("🛒 ตระกร้าว่างเปล่า")
+
+
+# ══════════════════════════════════════════════
+# PAGE: สินค้าทั่วไป (Product Management)
+# ══════════════════════════════════════════════
+elif page == "📦 สินค้าทั่วไป":
+    st.title("📦 จัดการสินค้าทั่วไป")
+    _back_home()
+
+    # Load products
+    df_products = load_pos_products()
+
+    tabs = st.tabs(["📊 ดูสินค้า", "➕ เพิ่มสินค้า", "📥 นำเข้า"])
+
+    # ═══ TAB 1: View Products ═══
+    with tabs[0]:
+        if not df_products.empty:
+            st.subheader("📦 รายการสินค้า")
+
+            # Filter by category
+            categories = ["ทั้งหมด"] + list(df_products["category"].unique())
+            selected_category = st.selectbox("ตัวกรองตามหมวดหมู่", categories)
+
+            if selected_category != "ทั้งหมด":
+                df_view = df_products[df_products["category"] == selected_category].copy()
+            else:
+                df_view = df_products.copy()
+
+            # Display products
+            for idx, row in df_view.iterrows():
+                with st.expander(f"📦 {row['name']} - {fmt_baht(row['price'])} บ. (สต๊อก: {row['stock_qty']})"):
+                    col1, col2 = st.columns([2, 1])
+
+                    with col1:
+                        st.write(f"**บาร์โค้ด:** {row['barcode']}")
+                        st.write(f"**ชื่อ:** {row['name']}")
+                        st.write(f"**หมวดหมู่:** {row['category']}")
+                        st.write(f"**ราคาขาย:** {fmt_baht(row['price'])} บ.")
+                        st.write(f"**ต้นทุน:** {fmt_baht(row['cost'])} บ.")
+                        st.write(f"**หน่วย:** {row['unit']}")
+                        st.write(f"**สต๊อก:** {row['stock_qty']}")
+
+                    with col2:
+                        display_barcode(row['barcode'])
+        else:
+            st.info("📦 ยังไม่มีสินค้า")
+
+    # ═══ TAB 2: Add Product ═══
+    with tabs[1]:
+        st.subheader("➕ เพิ่มสินค้าใหม่")
+
+        with st.form("add_product_form"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                barcode = st.text_input("📱 บาร์โค้ด (ไม่จำเป็น)")
+                name = st.text_input("ชื่อสินค้า", placeholder="เช่น หม้อหุงข้าว 3 ลิตร")
+                category = st.selectbox("หมวดหมู่", POS_CATEGORIES)
+                unit = st.text_input("หน่วยนับ", value="ชิ้น")
+
+            with col2:
+                price = st.number_input("ราคาขาย", min_value=0.0, step=100.0)
+                cost = st.number_input("ต้นทุน", min_value=0.0, step=100.0)
+                stock_qty = st.number_input("จำนวนสต๊อก", min_value=0, step=1)
+
+            col_submit, col_autogen = st.columns([2, 1])
+
+            with col_submit:
+                submitted = st.form_submit_button("✅ เพิ่มสินค้า", use_container_width=True, type="primary")
+
+            with col_autogen:
+                if st.form_submit_button("🔄 สร้างบาร์โค้ด"):
+                    st.session_state["auto_barcode"] = generate_auto_barcode()
+
+            if submitted:
+                # Auto-generate barcode if empty
+                if not barcode:
+                    barcode = generate_auto_barcode()
+
+                # Check if barcode exists
+                if not df_products.empty and barcode in df_products["barcode"].values:
+                    st.error(f"❌ บาร์โค้ด {barcode} มีอยู่แล้ว")
+                elif not name:
+                    st.error("❌ กรุณากรอกชื่อสินค้า")
+                else:
+                    # Add to dataframe
+                    new_row = {
+                        "barcode": barcode,
+                        "name": name,
+                        "category": category,
+                        "price": price,
+                        "cost": cost,
+                        "stock_qty": stock_qty,
+                        "unit": unit
+                    }
+
+                    df_new = pd.DataFrame([new_row])
+                    df_products = pd.concat([df_products, df_new], ignore_index=True)
+
+                    # Save
+                    save_pos_products(df_products)
+                    st.success(f"✅ เพิ่ม {name} (บาร์โค้ด: {barcode})")
+                    st.rerun()
+
+    # ═══ TAB 3: Import ═══
+    with tabs[2]:
+        st.subheader("📥 นำเข้าจาก CSV")
+        st.info("📝 CSV ควรมีคอลัมน์: barcode, name, category, price, cost, stock_qty, unit")
+
+        uploaded_file = st.file_uploader("เลือกไฟล์ CSV", type="csv")
+
+        if uploaded_file:
+            try:
+                df_import = pd.read_csv(uploaded_file, encoding="utf-8-sig")
+                st.dataframe(df_import, use_container_width=True)
+
+                if st.button("✅ นำเข้าข้อมูล", type="primary"):
+                    # Validate columns
+                    required_cols = ["barcode", "name", "category", "price", "cost", "stock_qty"]
+                    missing = [c for c in required_cols if c not in df_import.columns]
+
+                    if missing:
+                        st.error(f"❌ ขาดคอลัมน์: {', '.join(missing)}")
+                    else:
+                        # Type conversion
+                        for col in ["price", "cost"]:
+                            df_import[col] = pd.to_numeric(df_import[col], errors="coerce").fillna(0)
+                        df_import["stock_qty"] = pd.to_numeric(df_import["stock_qty"], errors="coerce").fillna(0).astype(int)
+                        df_import["unit"] = df_import.get("unit", "ชิ้น")
+
+                        # Combine with existing
+                        df_combined = pd.concat([df_products, df_import], ignore_index=True)
+                        df_combined = df_combined.drop_duplicates(subset="barcode", keep="last")
+
+                        save_pos_products(df_combined)
+                        st.success(f"✅ นำเข้า {len(df_import)} รายการแล้ว")
+                        st.rerun()
+            except Exception as e:
+                st.error(f"❌ ข้อผิดพลาด: {e}")
+
+
 # ══════════════════════════════════════════════
 elif page == "🏗️ ติดตั้งแอร์":
     st.title("🏗️ งานติดตั้งแอร์")
