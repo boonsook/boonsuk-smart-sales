@@ -2783,7 +2783,7 @@ elif page == "📦 สินค้าทั่วไป":
     # Load products
     df_products = load_pos_products()
 
-    tabs = st.tabs(["📊 ดูสินค้า", "➕ เพิ่มสินค้า", "📥 นำเข้า"])
+    tabs = st.tabs(["📊 ดูสินค้า", "➕ เพิ่มสินค้า", "📥 นำเข้า", "🖨️ ปริ้นบาร์โค้ด"])
 
     # ═══ TAB 1: View Products ═══
     with tabs[0]:
@@ -2815,6 +2815,33 @@ elif page == "📦 สินค้าทั่วไป":
 
                     with col2:
                         display_barcode(row['barcode'])
+
+                    # ── ปุ่มปริ้นบาร์โค้ดสติกเกอร์ ──
+                    if st.button(f"🖨️ ปริ้นบาร์โค้ด", key=f"print_bc_{idx}"):
+                        _bc_img = generate_barcode_image(str(row['barcode']))
+                        _print_html = f'''
+                        <html><head><style>
+                            @page {{ size: 50mm 30mm; margin: 1mm; }}
+                            body {{ margin: 0; padding: 2mm; font-family: Arial, sans-serif; text-align: center; }}
+                            .label {{ width: 46mm; text-align: center; }}
+                            .name {{ font-size: 9px; font-weight: bold; margin-bottom: 1mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+                            .price {{ font-size: 11px; font-weight: bold; margin-bottom: 1mm; }}
+                            .bc-img {{ max-width: 44mm; height: 15mm; }}
+                            .bc-text {{ font-size: 8px; }}
+                        </style></head><body>
+                        <div class="label">
+                            <div class="name">{row["name"]}</div>
+                            <div class="price">฿{int(row["price"]):,}</div>
+                            <img src="data:image/png;base64,{_bc_img}" class="bc-img">
+                            <div class="bc-text">{row["barcode"]}</div>
+                        </div>
+                        <script>window.print();</script>
+                        </body></html>
+                        '''
+                        import urllib.parse as _up
+                        _data_url = "data:text/html;charset=utf-8," + _up.quote(_print_html)
+                        st_html(f'<script>window.open("{_data_url}","_blank");</script>', height=0)
+
         else:
             st.info("📦 ยังไม่มีสินค้า")
 
@@ -2932,6 +2959,56 @@ elif page == "📦 สินค้าทั่วไป":
                         st.rerun()
             except Exception as e:
                 st.error(f"❌ ข้อผิดพลาด: {e}")
+
+    # ═══ TAB 4: Bulk Print Barcodes ═══
+    with tabs[3]:
+        st.subheader("🖨️ ปริ้นบาร์โค้ดสติกเกอร์")
+        if not df_products.empty:
+            st.info("เลือกสินค้าที่ต้องการปริ้นบาร์โค้ด แล้วกดปุ่มปริ้น")
+            _sel_products = st.multiselect(
+                "เลือกสินค้า",
+                options=df_products["barcode"].tolist(),
+                format_func=lambda x: f"{x} — {df_products[df_products['barcode']==x]['name'].iloc[0]}" if len(df_products[df_products['barcode']==x]) > 0 else x
+            )
+            _copies = st.number_input("จำนวนสติกเกอร์ต่อสินค้า", min_value=1, max_value=100, value=1)
+            _label_size = st.selectbox("ขนาดสติกเกอร์", ["50x30mm (มาตรฐาน)", "40x25mm (เล็ก)", "70x40mm (ใหญ่)"])
+
+            if st.button("🖨️ ปริ้นทั้งหมด", type="primary", use_container_width=True) and _sel_products:
+                _sizes = {"50x30mm (มาตรฐาน)":"50mm 30mm","40x25mm (เล็ก)":"40mm 25mm","70x40mm (ใหญ่)":"70mm 40mm"}
+                _sz = _sizes.get(_label_size, "50mm 30mm")
+                _labels_html = ""
+                for _bc in _sel_products:
+                    _row = df_products[df_products["barcode"] == _bc].iloc[0]
+                    _bc_img = generate_barcode_image(str(_bc))
+                    for _ in range(_copies):
+                        _labels_html += f'''
+                        <div class="label">
+                            <div class="name">{_row["name"]}</div>
+                            <div class="price">฿{int(_row["price"]):,}</div>
+                            <img src="data:image/png;base64,{_bc_img}" class="bc-img">
+                            <div class="bc-text">{_bc}</div>
+                        </div>
+                        '''
+                _print_html = f'''
+                <html><head><style>
+                    @page {{ size: {_sz}; margin: 1mm; }}
+                    body {{ margin: 0; padding: 0; font-family: Arial, sans-serif; }}
+                    .label {{ page-break-after: always; width: 100%; text-align: center; padding: 2mm; box-sizing: border-box; }}
+                    .label:last-child {{ page-break-after: auto; }}
+                    .name {{ font-size: 9px; font-weight: bold; margin-bottom: 1mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+                    .price {{ font-size: 12px; font-weight: bold; margin-bottom: 1mm; }}
+                    .bc-img {{ max-width: 90%; height: auto; max-height: 15mm; }}
+                    .bc-text {{ font-size: 8px; }}
+                </style></head><body>{_labels_html}
+                <script>window.print();</script>
+                </body></html>
+                '''
+                import urllib.parse as _up
+                _data_url = "data:text/html;charset=utf-8," + _up.quote(_print_html)
+                st_html(f'<script>window.open("{_data_url}","_blank");</script>', height=0)
+                st.success(f"✅ สร้างป้ายบาร์โค้ด {len(_sel_products) * _copies} ดวง เปิดหน้าปริ้นแล้ว")
+        else:
+            st.info("📦 ยังไม่มีสินค้า เพิ่มสินค้าก่อนแล้วมาปริ้นบาร์โค้ด")
 
 
 # ══════════════════════════════════════════════
