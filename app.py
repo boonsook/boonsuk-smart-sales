@@ -17,7 +17,7 @@ import hmac
 import zipfile
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as st_html
+from streamlit.components.v1 import html as st_html
 from datetime import date, datetime
 from urllib.parse import quote as urlquote
 import urllib.parse
@@ -5302,3 +5302,4 @@ elif page == "⚙️ นำเข้า/ส่งออกข้อมูล":
                             st.success("ลบไฟล์ CSV แล้ว ✅")
                 else:
                     st.warning("พิมพ์ 'ลบทั้งหมด' ให้ถูกต้องก่อนครับ")
+
