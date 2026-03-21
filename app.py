@@ -842,7 +842,7 @@ def save_stock(df: pd.DataFrame):
             #   CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_section_model ON stock(section, model);
             chunk_size = 50
             for i in range(0, len(rows), chunk_size):
-                sb.table("stock").upsert(rows[i:i+chunk_size]).execute()
+                sb.table("stock").upsert(rows[i:i+chunk_size], on_conflict="section,model").execute()
             st.cache_data.clear(); return
         except Exception as e:
             st.warning(f"Supabase save_stock: {e} — บันทึก CSV แทน")
