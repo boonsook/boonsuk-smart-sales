@@ -598,19 +598,16 @@ def inject_pwa():
         // ตรวจว่าติดตั้งแล้วหรือยัง
         var isStandalone = window.matchMedia('(display-mode: standalone)').matches
                        || window.navigator.standalone === true;
-        if (isStandalone) return; // ติดตั้งแล้ว ไม่ต้องแสดง
-
-        // ตรวจว่าเคยปิดแบนเนอร์ไปแล้วภายใน 3 วันหรือยัง
-        var dismissed = localStorage.getItem('pwa_dismissed');
-        if (dismissed && (Date.now() - parseInt(dismissed)) < 3*24*3600*1000) return;
+        if (isStandalone) return;
 
         var banner = document.getElementById('pwa-banner');
+        if (!banner) return;
         var ua = navigator.userAgent;
         var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
         var isAndroid = /Android/.test(ua);
+        var isMobile = isIOS || isAndroid;
 
-        // แสดงเฉพาะมือถือ
-        if (!isIOS && !isAndroid) return;
+        if (!isMobile) return;
 
         if (isIOS) {{
             document.getElementById('pwa-steps-ios').style.display = 'block';
@@ -618,12 +615,10 @@ def inject_pwa():
             document.getElementById('pwa-steps-android').style.display = 'block';
         }}
 
-        // แสดงหลังจาก 3 วินาที
-        setTimeout(function() {{
-            banner.style.display = 'block';
-        }}, 3000);
+        // แสดงทันที (ไม่ต้องรอ)
+        banner.style.display = 'block';
 
-        // ปุ่มปิด — จำไว้ 3 วัน
+        // ปุ่มปิด — จำไว้แค่ 1 ชม.
         document.querySelector('.pwa-close').onclick = function() {{
             banner.style.display = 'none';
             localStorage.setItem('pwa_dismissed', Date.now().toString());
@@ -2217,6 +2212,38 @@ if page == "🏠 หน้าหลัก":
 
     # ปิด wrapper เมนู
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # === INSTALL APP GUIDE (แสดงเสมอบนมือถือ) ===
+    st.markdown('''<div id="install-guide" style="display:none; background:linear-gradient(135deg,#eff6ff,#dbeafe);
+        border-radius:14px; padding:14px 16px; margin:10px 0; border:1px solid #93c5fd;">
+        <p style="font-size:14px; font-weight:700; color:#1e40af; margin:0 0 6px;">
+            📲 เพิ่มแอปลงหน้าจอมือถือ
+        </p>
+        <p id="ig-android" style="display:none; font-size:12px; color:#334155; margin:0; line-height:1.8;">
+            1. กดเมนู <b>⋮</b> (จุด 3 จุด) มุมขวาบน Chrome<br>
+            2. เลือก <b>"เพิ่มในหน้าจอหลัก"</b> หรือ <b>"Install app"</b><br>
+            3. กด <b>ติดตั้ง</b> → ไอคอนจะปรากฏบนหน้าจอ ✅
+        </p>
+        <p id="ig-ios" style="display:none; font-size:12px; color:#334155; margin:0; line-height:1.8;">
+            1. กดปุ่ม <b>แชร์</b> (□↑) ที่แถบล่าง Safari<br>
+            2. เลือก <b>"เพิ่มไปยังหน้าจอโฮม"</b><br>
+            3. กด <b>เพิ่ม</b> → ไอคอนจะปรากฏบนหน้าจอ ✅
+        </p>
+    </div>
+    <script>
+    (function(){
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        if (isStandalone) return;
+        var ua = navigator.userAgent;
+        var isIOS = /iPad|iPhone|iPod/.test(ua);
+        var isAndroid = /Android/.test(ua);
+        if (!isIOS && !isAndroid) return;
+        var g = document.getElementById('install-guide');
+        if (g) { g.style.display = 'block'; }
+        if (isIOS) { var e=document.getElementById('ig-ios'); if(e) e.style.display='block'; }
+        else { var e=document.getElementById('ig-android'); if(e) e.style.display='block'; }
+    })();
+    </script>''', unsafe_allow_html=True)
 
     # === FOOTER ===
     st.markdown(f'''<div style="text-align:center; margin-top:12px; padding:10px 0 4px;
