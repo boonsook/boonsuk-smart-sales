@@ -2781,9 +2781,18 @@ elif page == "📦 จัดการสต๊อก":
             "btu":           st.column_config.NumberColumn("BTU",       min_value=0, step=100),
         },
     )
-    if st.button("✅ บันทึกสต๊อก", use_container_width=True, type="primary"):
-        try: save_stock(clean_df(edited)); st.success("บันทึกสต๊อกแล้ว ✅")
-        except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+    col_save, col_reset = st.columns(2)
+    with col_save:
+        if st.button("✅ บันทึกสต๊อก", use_container_width=True, type="primary"):
+            try: save_stock(clean_df(edited)); st.success("บันทึกสต๊อกแล้ว ✅")
+            except Exception as e: st.error(f"ไม่สำเร็จ: {e}")
+    with col_reset:
+        if st.button("🔄 รีเซ็ตสต๊อกจากค่าเริ่มต้น", use_container_width=True, type="secondary"):
+            try:
+                df_reset = clean_df(pd.DataFrame(PRODUCTS))
+                save_stock(df_reset)
+                st.success("รีเซ็ตสต๊อกจากค่าเริ่มต้นแล้ว ✅ (กรุณา Refresh หน้า)")
+            except Exception as e: st.error(f"รีเซ็ตไม่สำเร็จ: {e}")
     if os.path.exists(STOCK_CSV):
         with open(STOCK_CSV,"rb") as f:
             st.download_button("⬇️ Export สต๊อก CSV", data=f.read(),
