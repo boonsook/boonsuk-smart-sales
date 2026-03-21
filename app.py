@@ -2917,6 +2917,38 @@ elif page == "📦 สินค้าทั่วไป":
                 else:
                     df_import = pd.read_excel(uploaded_file)
 
+                # ═══ แมปชื่อคอลัมน์ภาษาไทย → ภาษาอังกฤษ อัตโนมัติ ═══
+                _col_map = {
+                    # name
+                    "Produce Name": "name", "produce name": "name",
+                    "Product Name": "name", "product name": "name",
+                    "ชื่อสินค้า": "name", "ชื่อ": "name", "สินค้า": "name",
+                    "รายการ": "name", "รายการสินค้า": "name",
+                    # barcode
+                    "บาโค้ด": "barcode", "บาร์โค้ด": "barcode", "Barcode": "barcode",
+                    "รหัสบาร์โค้ด": "barcode", "รหัสสินค้า": "barcode",
+                    # price (ราคาขาย)
+                    "ราคาขาย": "price", "ราคา": "price", "Price": "price",
+                    "ราคาปลีก": "price", "ขาย": "price",
+                    # cost (ต้นทุน)
+                    "ต้นทุน": "cost", "ทุน": "cost", "Cost": "cost", "ราคาทุน": "cost",
+                    # stock_qty (จำนวน)
+                    "จำนวน": "stock_qty", "สต๊อก": "stock_qty", "สต็อก": "stock_qty",
+                    "Stock": "stock_qty", "stock": "stock_qty", "Qty": "stock_qty",
+                    "คงเหลือ": "stock_qty", "จำนวนคงเหลือ": "stock_qty",
+                    # category (หมวดหมู่)
+                    "หมวดหมู่": "category", "ประเภท": "category", "Category": "category",
+                    "กลุ่มสินค้า": "category",
+                    # unit (หน่วย)
+                    "หน่วย": "unit", "Unit": "unit", "หน่วยนับ": "unit",
+                }
+                # strip ช่องว่าง + rename
+                df_import.columns = df_import.columns.str.strip()
+                _rename = {k: v for k, v in _col_map.items() if k in df_import.columns}
+                if _rename:
+                    df_import = df_import.rename(columns=_rename)
+                    st.info(f"🔄 แมปคอลัมน์อัตโนมัติ: {', '.join(f'{k}→{v}' for k,v in _rename.items())}")
+
                 # ถ้าไม่มี barcode → สร้างอัตโนมัติ
                 if "barcode" not in df_import.columns:
                     import random
@@ -5270,4 +5302,3 @@ elif page == "⚙️ นำเข้า/ส่งออกข้อมูล":
                             st.success("ลบไฟล์ CSV แล้ว ✅")
                 else:
                     st.warning("พิมพ์ 'ลบทั้งหมด' ให้ถูกต้องก่อนครับ")
-
