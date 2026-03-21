@@ -1,8 +1,19 @@
 import os
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  📋 TODO: Refactor — แนะนำแยกไฟล์ในอนาคต                       ║
+# ║  config.py     → Constants, USERS, BTU_FACTORS                  ║
+# ║  database.py   → Supabase operations                            ║
+# ║  auth.py       → Login, session management                      ║
+# ║  pdf_utils.py  → PDF generation                                 ║
+# ║  line_api.py   → LINE notifications                             ║
+# ║  ai_helper.py  → AI assistant functions                         ║
+# ║  pages/        → แต่ละหน้าแยกเป็นไฟล์                           ║
+# ╚══════════════════════════════════════════════════════════════════╝
 import io
 import sys
 import subprocess
 import hashlib
+import hmac
 import zipfile
 import pandas as pd
 import streamlit as st
@@ -25,6 +36,7 @@ def _ensure(pkg, import_name=None):
 _ensure("openpyxl")
 _ensure("fpdf2", "fpdf")
 _ensure("supabase")
+_ensure("python-dotenv", "dotenv")
 
 # ──────────────────────────────────────────────
 # PAGE CONFIG
@@ -60,7 +72,7 @@ STORE_TAX_ID  = ""   # ← ใส่เลขผู้เสียภาษี�
 APP_URL       = "https://boonsuk-sales.onrender.com"  # ← URL แอป
 
 # ── LINE Messaging API ─────────────────────────
-LINE_TOKEN      = os.environ.get("LINE_TOKEN", "AyWhs0mygEoOobIt2R0A4UrnsUcmpZX5k//XeIHWVcFYITI6GYlv+Ir/5yWP61EgLBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51rbbsh12dtLXC7sGJfxI0x00svYC8EzZot8rBVzvET2QdB04t89/1O/w1cDnyilFU=")
+LINE_TOKEN      = os.environ.get("LINE_TOKEN", "fZlxRwWsfYxPboejy66QOjepq99FvoQ1GB/4PZbxl2bMxZMYYtihQ2eYJWWPedZ9LBeNB3n7lnevMwB9KICerCm2X8gj6pKbj45c+iPSW51KyKo4SaIm6HXcot6L3lHma9mZSsofIxxqiUZ3NSg6PgdB04t89/1O/w1cDnyilFU=")
 LINE_USER_ID    = os.environ.get("LINE_USER_ID", "U74ec0e30ffaca6ee45f62b4e0d467d93")
 LINE_GROUP_QUEUE = os.environ.get("LINE_GROUP_QUEUE", "Ca47d9e4b6a4b2efb1224d18ff3b1e086")   # ห้องคิวงาน
 LINE_GROUP_DONE  = os.environ.get("LINE_GROUP_DONE",  "C7e3b572241b6c5a8077106a63a0b419d")   # ห้องส่งงาน
@@ -81,12 +93,23 @@ LOG_CSV      = os.path.join(DATA_DIR, "boonsuk_customer_log.csv")
 SERVICE_CSV  = os.path.join(DATA_DIR, "boonsuk_service_log.csv")
 
 # ── ผู้ใช้งาน ──────────────────────────────────
-# เปลี่ยนรหัสผ่านได้โดยแก้ค่าใน USERS
+# รหัสผ่าน hash อ่านจาก .env file (ไม่ hardcode ในโค้ด)
 # สร้าง hash ใหม่: hashlib.sha256("รหัสผ่าน".encode()).hexdigest()
+from dotenv import load_dotenv
+load_dotenv()
+
 USERS = {
-    "admin": hashlib.sha256("boonsuk_2024".encode()).hexdigest(),
-    "staff": hashlib.sha256("staff_1234".encode()).hexdigest(),
+    "admin": os.getenv("ADMIN_PASSWORD_HASH", hashlib.sha256("boonsuk_2024".encode()).hexdigest()),
+    "staff": os.getenv("STAFF_PASSWORD_HASH", hashlib.sha256("staff_1234".encode()).hexdigest()),
 }
+
+# Secret key สำหรับ HMAC session signing
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "")
+if not SESSION_SECRET_KEY:
+    import secrets as _sec
+    SESSION_SECRET_KEY = _sec.token_hex(32)
+    import warnings
+    warnings.warn("⚠️ SESSION_SECRET_KEY ไม่ได้ตั้งค่าใน .env — ใช้ key ชั่วคราว (session จะหมดอายุเมื่อรีสตาร์ท)")
 
 JOB_STATUSES       = ["📋 รอดำเนินการ", "🔧 กำลังติดตั้ง", "✅ ติดตั้งแล้ว", "💰 รับเงินแล้ว", "❌ ยกเลิก"]
 LOW_STOCK_THRESHOLD = 2   # แจ้งเตือนเมื่อสต๊อก ≤ ค่านี้
@@ -95,103 +118,103 @@ LOW_STOCK_THRESHOLD = 2   # แจ้งเตือนเมื่อสต๊�
 # PRODUCT CATALOGUE
 # ──────────────────────────────────────────────
 PRODUCTS = [
-    {"section":"Midea ฟิกส์speed","model":"Asmg09c","btu":9000,"price_install":19000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Midea ฟิกส์speed","model":"Asmg12j","btu":12000,"price_install":21500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Midea ฟิกส์speed","model":"Asaa18j","btu":18000,"price_install":27500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Midea ฟิกส์speed","model":"Asaa24j","btu":24000,"price_install":37500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Midea ฟิกส์speed","model":"Asaa30j","btu":30000,"price_install":43000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asmg09jl","btu":8500,"price_install":15500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asmg12jl","btu":11900,"price_install":16500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa18jc","btu":17700,"price_install":23500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa24jc","btu":24200,"price_install":34500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa30cm","btu":27300,"price_install":40000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma09r32","btu":9100,"price_install":13800,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma12r32","btu":11500,"price_install":14500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma13r3","btu":13906,"price_install":16700,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma18r410","btu":18745,"price_install":23000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma24r410","btu":24508,"price_install":32000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma30r4","btu":28800,"price_install":35500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Explorer Inverter","model":"Tvgs010","btu":9000,"price_install":15800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Explorer Inverter","model":"Tvgs013","btu":12000,"price_install":18500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Explorer Inverter","model":"Tvgs016","btu":15000,"price_install":22500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Explorer Inverter","model":"Tvgs018","btu":18000,"price_install":26500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Explorer Inverter","model":"Tvgs024","btu":22000,"price_install":29500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Gemini Inverter","model":"Tvegb010","btu":9000,"price_install":15000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Gemini Inverter","model":"Tvegb013","btu":12000,"price_install":17000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Gemini Inverter","model":"Tvegb018","btu":18000,"price_install":23500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Gemini Inverter","model":"Tvegb024","btu":22000,"price_install":27000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Gemini Inverter","model":"Tvegb025","btu":24000,"price_install":31500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Carrier Astrony R32","model":"AAF010","btu":9000,"price_install":13000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Astrony R32","model":"AAF013","btu":12000,"price_install":14000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Astrony R32","model":"AAF018","btu":18000,"price_install":20500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Astrony R32","model":"AAF025","btu":25000,"price_install":26500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Everest R32","model":"Tsgs010","btu":9000,"price_install":14000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Everest R32","model":"Tsgs013","btu":12000,"price_install":15000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Everest R32","model":"Tsgs018","btu":18000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Carrier Everest R32","model":"Tsgs025","btu":24000,"price_install":27000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk10cvs","btu":9444,"price_install":15500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk13cvs","btu":12039,"price_install":18000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk19cvs","btu":19127,"price_install":29000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk25cvs","btu":25085,"price_install":38800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk10cvv","btu":9239,"price_install":15000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk13cvv","btu":11634,"price_install":17500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk15cvv","btu":14457,"price_install":20800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk18cvv","btu":17305,"price_install":25500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk10yw","btu":8683,"price_install":16800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk13yw","btu":11098,"price_install":21000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk15yw","btu":14457,"price_install":24000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk18yw","btu":17276,"price_install":28300,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk24yw","btu":23021,"price_install":38000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"Gree Fairy Series R32","model":"Gwc09acc","btu":9000,"price_install":13500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Fairy Series R32","model":"Gwc12acc","btu":12000,"price_install":14700,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Fairy Series R32","model":"Gwc18acc","btu":18000,"price_install":22500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Fairy Series R32","model":"Gwc24acc","btu":24000,"price_install":26500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III R32","model":"Gwc09yb3","btu":9000,"price_install":11800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III R32","model":"Gwc12yc3","btu":12000,"price_install":13500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III R32","model":"Gwc18yc3","btu":18000,"price_install":20500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III R32","model":"Gwc24yc3","btu":24000,"price_install":24000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III Inverter R32","model":"Gwc09qb","btu":9000,"price_install":16000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III Inverter R32","model":"Gwc12qb","btu":12000,"price_install":17000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III Inverter R32","model":"Gwc18qb","btu":18000,"price_install":24000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"Gree Amber III Inverter R32","model":"Gwc24qb","btu":24000,"price_install":27300,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบธรรมดา","model":"MVF-09","btu":9000,"price_install":11500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบธรรมดา","model":"MVF-12","btu":12000,"price_install":13000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบธรรมดา","model":"MVF-18","btu":18000,"price_install":18000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบธรรมดา","model":"MVF-25","btu":24000,"price_install":22500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-09INV","btu":9000,"price_install":14000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-12 INV","btu":12000,"price_install":15000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-18 INV","btu":18000,"price_install":19800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-25 INV","btu":24000,"price_install":26000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":0},
-    {"section":"DAIKIN SMASH (2018)","model":"FTM 09 PV2S","btu":9000,"price_install":14500,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    {"section":"DAIKIN SMASH (2018)","model":"FTM 13 PV2S","btu":12000,"price_install":17000,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    {"section":"DAIKIN SMASH (2018)","model":"FTM 15 PV2S","btu":15000,"price_install":20000,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    {"section":"DAIKIN SMASH (2018)","model":"FTM 18 PV2S","btu":18000,"price_install":25500,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    {"section":"DAIKIN SMASH (2018)","model":"FTM 24 PV2S","btu":24000,"price_install":35500,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    {"section":"DAIKIN SMASH (2018)","model":"FTM 28 PV2S","btu":28000,"price_install":37000,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":0},
-    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 09 TV2S","btu":9000,"price_install":15500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 13 TV2S","btu":12000,"price_install":18500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 15 TV2S","btu":15000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 18 TV2S","btu":18000,"price_install":27000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 24 TV2S","btu":24000,"price_install":37000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 09 TV2S","btu":9000,"price_install":19000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 13 TV2S","btu":12000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 15 TV2S","btu":18000,"price_install":28500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 18 TV2S","btu":24000,"price_install":40500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 24 TV2S","btu":28000,"price_install":43500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 09 VF","btu":9000,"price_install":15500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 13 VF","btu":13000,"price_install":18500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 15 VF","btu":15000,"price_install":22500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 18 VF","btu":18000,"price_install":27000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 24 VF","btu":24000,"price_install":40000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 09 VF","btu":9000,"price_install":16800,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 13 VF","btu":13000,"price_install":19800,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 15 VF","btu":15000,"price_install":23500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 18 VF","btu":18000,"price_install":28500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 09 VF","btu":9000,"price_install":17700,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 13 VF","btu":13000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 15 VF","btu":15000,"price_install":24500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 18 VF","btu":18000,"price_install":28500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
-    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 24 VF","btu":24000,"price_install":43500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":0},
+    {"section":"Midea ฟิกส์speed","model":"Asmg09c","btu":9000,"price_install":19000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Midea ฟิกส์speed","model":"Asmg12j","btu":12000,"price_install":21500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Midea ฟิกส์speed","model":"Asaa18j","btu":18000,"price_install":27500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Midea ฟิกส์speed","model":"Asaa24j","btu":24000,"price_install":37500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Midea ฟิกส์speed","model":"Asaa30j","btu":30000,"price_install":43000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asmg09jl","btu":8500,"price_install":15500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asmg12jl","btu":11900,"price_install":16500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa18jc","btu":17700,"price_install":23500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa24jc","btu":24200,"price_install":34500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu DC Inverter iPower II R410A","model":"Asaa30cm","btu":27300,"price_install":40000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma09r32","btu":9100,"price_install":13800,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma12r32","btu":11500,"price_install":14500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma13r3","btu":13906,"price_install":16700,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma18r410","btu":18745,"price_install":23000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma24r410","btu":24508,"price_install":32000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Fujitsu Excellence Fix Speed R32","model":"Asma30r4","btu":28800,"price_install":35500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Explorer Inverter","model":"Tvgs010","btu":9000,"price_install":15800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Explorer Inverter","model":"Tvgs013","btu":12000,"price_install":18500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Explorer Inverter","model":"Tvgs016","btu":15000,"price_install":22500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Explorer Inverter","model":"Tvgs018","btu":18000,"price_install":26500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Explorer Inverter","model":"Tvgs024","btu":22000,"price_install":29500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Gemini Inverter","model":"Tvegb010","btu":9000,"price_install":15000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Gemini Inverter","model":"Tvegb013","btu":12000,"price_install":17000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Gemini Inverter","model":"Tvegb018","btu":18000,"price_install":23500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Gemini Inverter","model":"Tvegb024","btu":22000,"price_install":27000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Gemini Inverter","model":"Tvegb025","btu":24000,"price_install":31500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Carrier Astrony R32","model":"AAF010","btu":9000,"price_install":13000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Astrony R32","model":"AAF013","btu":12000,"price_install":14000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Astrony R32","model":"AAF018","btu":18000,"price_install":20500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Astrony R32","model":"AAF025","btu":25000,"price_install":26500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Everest R32","model":"Tsgs010","btu":9000,"price_install":14000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Everest R32","model":"Tsgs013","btu":12000,"price_install":15000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Everest R32","model":"Tsgs018","btu":18000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Carrier Everest R32","model":"Tsgs025","btu":24000,"price_install":27000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"7 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk10cvs","btu":9444,"price_install":15500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk13cvs","btu":12039,"price_install":18000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk19cvs","btu":19127,"price_install":29000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Deluxe R32","model":"Srk25cvs","btu":25085,"price_install":38800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk10cvv","btu":9239,"price_install":15000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk13cvv","btu":11634,"price_install":17500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk15cvv","btu":14457,"price_install":20800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard R32","model":"Srk18cvv","btu":17305,"price_install":25500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk10yw","btu":8683,"price_install":16800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk13yw","btu":11098,"price_install":21000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk15yw","btu":14457,"price_install":24000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk18yw","btu":17276,"price_install":28300,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Mitsubishi Heavy Duty Standard Inverter R32","model":"Srk24yw","btu":23021,"price_install":38000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"Gree Fairy Series R32","model":"Gwc09acc","btu":9000,"price_install":13500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Fairy Series R32","model":"Gwc12acc","btu":12000,"price_install":14700,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Fairy Series R32","model":"Gwc18acc","btu":18000,"price_install":22500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Fairy Series R32","model":"Gwc24acc","btu":24000,"price_install":26500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III R32","model":"Gwc09yb3","btu":9000,"price_install":11800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III R32","model":"Gwc12yc3","btu":12000,"price_install":13500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III R32","model":"Gwc18yc3","btu":18000,"price_install":20500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III R32","model":"Gwc24yc3","btu":24000,"price_install":24000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III Inverter R32","model":"Gwc09qb","btu":9000,"price_install":16000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III Inverter R32","model":"Gwc12qb","btu":12000,"price_install":17000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III Inverter R32","model":"Gwc18qb","btu":18000,"price_install":24000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"Gree Amber III Inverter R32","model":"Gwc24qb","btu":24000,"price_install":27300,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"10 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบธรรมดา","model":"MVF-09","btu":9000,"price_install":11500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบธรรมดา","model":"MVF-12","btu":12000,"price_install":13000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบธรรมดา","model":"MVF-18","btu":18000,"price_install":18000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบธรรมดา","model":"MVF-25","btu":24000,"price_install":22500,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-09INV","btu":9000,"price_install":14000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-12 INV","btu":12000,"price_install":15000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-18 INV","btu":18000,"price_install":19800,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"MAVELL ระบบอินเวอร์เตอร์","model":"MWF-25 INV","btu":24000,"price_install":26000,"w_install":"5 ปี","w_parts":"5 ปี","w_comp":"12 ปี","stock_qty":5},
+    {"section":"DAIKIN SMASH (2018)","model":"FTM 09 PV2S","btu":9000,"price_install":14500,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":5},
+    {"section":"DAIKIN SMASH (2018)","model":"FTM 13 PV2S","btu":12000,"price_install":17000,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":5},
+    {"section":"DAIKIN SMASH (2018)","model":"FTM 15 PV2S","btu":15000,"price_install":20000,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":5},
+    {"section":"DAIKIN SMASH (2018)","model":"FTM 18 PV2S","btu":18000,"price_install":25500,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":5},
+    {"section":"DAIKIN SMASH (2018)","model":"FTM 24 PV2S","btu":24000,"price_install":35500,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":5},
+    {"section":"DAIKIN SMASH (2018)","model":"FTM 28 PV2S","btu":28000,"price_install":37000,"w_install":"5 ปี","w_parts":"1 ปี","w_comp":"3 ปี","stock_qty":5},
+    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 09 TV2S","btu":9000,"price_install":15500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 13 TV2S","btu":12000,"price_install":18500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 15 TV2S","btu":15000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 18 TV2S","btu":18000,"price_install":27000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SABAI INVERTER (2019)","model":"FTKQ 24 TV2S","btu":24000,"price_install":37000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 09 TV2S","btu":9000,"price_install":19000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 13 TV2S","btu":12000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 15 TV2S","btu":18000,"price_install":28500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 18 TV2S","btu":24000,"price_install":40500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"DAIKIN SUPER SMILE INVERTER","model":"FTKC 24 TV2S","btu":28000,"price_install":43500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 09 VF","btu":9000,"price_install":15500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 13 VF","btu":13000,"price_install":18500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 15 VF","btu":15000,"price_install":22500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 18 VF","btu":18000,"price_install":27000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI Mr.SLIM","model":"MS-GN 24 VF","btu":24000,"price_install":40000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 09 VF","btu":9000,"price_install":16800,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 13 VF","btu":13000,"price_install":19800,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 15 VF","btu":15000,"price_install":23500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI HAPPY INVERTER","model":"MSY-KP 18 VF","btu":18000,"price_install":28500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 09 VF","btu":9000,"price_install":17700,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 13 VF","btu":13000,"price_install":21000,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 15 VF","btu":15000,"price_install":24500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 18 VF","btu":18000,"price_install":28500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
+    {"section":"MITSUBISHI SLIM INVERTER","model":"MSY-JP 24 VF","btu":24000,"price_install":43500,"w_install":"5 ปี","w_parts":"3 ปี","w_comp":"5 ปี","stock_qty":5},
 ]
 
 # ──────────────────────────────────────────────
@@ -250,18 +273,30 @@ def suggest_capacity(btu):
 # LOGIN
 # ──────────────────────────────────────────────
 def _encode_session(data: dict) -> str:
+    """เข้ารหัส session data + HMAC signature"""
     import json, base64
-    raw = base64.urlsafe_b64encode(json.dumps(data, ensure_ascii=True).encode()).decode()
-    return raw.rstrip("=")
+    payload = json.dumps(data, ensure_ascii=True, separators=(',', ':'))
+    sig = hmac.new(SESSION_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).digest()
+    combined = payload.encode() + b'.' + sig
+    return base64.urlsafe_b64encode(combined).decode().rstrip('=')
 
 def _decode_session(token: str) -> dict:
+    """ถอด session token + ตรวจ HMAC signature"""
     import json, base64
     try:
         token = str(token).strip()
         pad = 4 - len(token) % 4
         if pad != 4:
             token += "=" * pad
-        return json.loads(base64.urlsafe_b64decode(token.encode()).decode())
+        combined = base64.urlsafe_b64decode(token.encode())
+        sep = combined.rfind(b'.')
+        if sep < 0:
+            return {}
+        payload, sig = combined[:sep], combined[sep+1:]
+        expected = hmac.new(SESSION_SECRET_KEY.encode(), payload, hashlib.sha256).digest()
+        if not hmac.compare_digest(sig, expected):
+            return {}
+        return json.loads(payload.decode())
     except Exception:
         return {}
 
@@ -627,7 +662,7 @@ def _use_supabase() -> bool:
 # ──────────────────────────────────────────────
 def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     defaults = {"section":"","model":"","w_install":"","w_parts":"","w_comp":"",
-                "btu":0,"price_install":0,"stock_qty":0}
+                "btu":0,"price_install":0,"stock_qty":5}
     for col, val in defaults.items():
         if col not in df.columns:
             df[col] = val
@@ -666,21 +701,22 @@ def load_stock() -> pd.DataFrame:
     return base
 
 def save_stock(df: pd.DataFrame):
+    """บันทึก stock ด้วย UPSERT — ไม่ลบข้อมูลเดิม, ปลอดภัยกว่า delete+insert"""
     cols = ["section","model","btu","price_install","w_install","w_parts","w_comp","stock_qty"]
-    # ── Supabase ──
+    # ── Supabase (upsert) ──
     if _use_supabase():
         try:
             sb = _get_supabase()
-            # ลบทั้งหมดก่อน แล้ว insert ใหม่ทั้งชุด
-            sb.table("stock").delete().neq("id", 0).execute()
             rows = []
             for _, r in df[cols].iterrows():
                 row = r.to_dict()
                 rows.append({k: (int(v) if isinstance(v, (int, float)) else str(v)) for k, v in row.items()})
-            # insert ทีละ 50 แถว เพื่อไม่ให้ timeout
-            chunk = 50
-            for i in range(0, len(rows), chunk):
-                sb.table("stock").insert(rows[i:i+chunk]).execute()
+            # upsert ทีละ 50 แถว — ถ้ามี (section,model) เดิมจะ update, ถ้าไม่มีจะ insert
+            # ⚠️ ต้องสร้าง UNIQUE INDEX บน (section, model) ใน Supabase ก่อน:
+            #   CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_section_model ON stock(section, model);
+            chunk_size = 50
+            for i in range(0, len(rows), chunk_size):
+                sb.table("stock").upsert(rows[i:i+chunk_size]).execute()
             st.cache_data.clear(); return
         except Exception as e:
             st.warning(f"Supabase save_stock: {e} — บันทึก CSV แทน")
