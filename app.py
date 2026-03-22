@@ -1865,8 +1865,6 @@ else:
         "🤖 AI ผู้ช่วย",
         "🧮 คำนวณ BTU",
         "🔧 คลังเออเร่อแอร์",
-        "🏪 POS ขายสินค้า",
-        "📦 สินค้าทั่วไป",
     ]
     if _role == "admin":
         _menus.append("⚙️ นำเข้า/ส่งออกข้อมูล")
@@ -2173,43 +2171,55 @@ if page == "🏠 หน้าหลัก":
                 <div style="font-size:9px;color:#94a3b8;">แอร์ {_ac_closed} | ซ่อม {_sv_closed}</div>
             </div>''', unsafe_allow_html=True)
 
-    # === MENU SECTION ===
+    # === MENU SECTION (pure HTML grid — works on mobile!) ===
     st.markdown('<p class="bs-section-title">📱 เมนูหลัก</p>', unsafe_allow_html=True)
 
-    # เปิด wrapper สำหรับ CSS เฉพาะเมนู
-    st.markdown('<div class="bs-menu-grid">', unsafe_allow_html=True)
+    _cards_html = ""
+    for _itm in menus_home:
+        _em, _lb, _tgt, _clr, _bg = _itm
+        _lo = _tgt == "__LOGOUT__"
+        _label_color = "#dc2626" if _lo else "#1e293b"
+        _nav_key = "__LOGOUT__" if _lo else _tgt
+        _cards_html += f'''
+        <div style="text-align:center;">
+            <button onclick="bsNav('{_nav_key}')" style="
+                width:100%; min-height:90px; border-radius:18px;
+                border:1px solid rgba(0,0,0,0.04); background:white;
+                box-shadow:0 2px 12px rgba(0,0,0,0.06);
+                font-size:36px; cursor:pointer; padding:12px 4px 6px;
+                line-height:1; transition:all 0.15s ease;
+                display:flex; align-items:center; justify-content:center;
+            ">{_em}</button>
+            <p style="text-align:center; font-size:13px; font-weight:700;
+                color:{_label_color}; margin:4px 0 10px; line-height:1.25;">{_lb}</p>
+        </div>'''
 
-    _padded = list(menus_home)
-    while len(_padded) % 3 != 0:
-        _padded.append(None)
-
-    for _rs in range(0, len(_padded), 3):
-        _cols = st.columns(3)
-        for _ci, _col in zip(range(3), _cols):
-            _itm = _padded[_rs + _ci]
-            with _col:
-                if _itm is None:
-                    st.empty()
-                else:
-                    _em, _lb, _tgt, _clr, _bg = _itm
-                    _lo = _tgt == "__LOGOUT__"
-                    _key = "hm_%d" % (_rs + _ci)
-                    if st.button(_em, key=_key, use_container_width=True):
-                        if _lo:
-                            for k in ["logged_in","username","role","full_name","user_phone","_current_page"]:
-                                st.session_state[k] = "" if k != "logged_in" else False
-                            st.query_params["s"] = ""
-                            try: del st.query_params["nav"]
-                            except: pass
-                            _run_js('try{localStorage.removeItem("bs_token")}catch(e){}')
-                        else:
-                            st.session_state["_current_page"] = _tgt
-                        st.rerun()
-                    _lc = "bs-menu-label bs-menu-label-logout" if _lo else "bs-menu-label"
-                    st.markdown('<p class="%s">%s</p>' % (_lc, _lb), unsafe_allow_html=True)
-
-    # ปิด wrapper เมนู
-    st.markdown('</div>', unsafe_allow_html=True)
+    _n_items = len(menus_home)
+    _grid_rows = (_n_items + 2) // 3  # ceiling division
+    _grid_height = _grid_rows * 130 + 40
+    _menu_html = f'''
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%;">
+        {_cards_html}
+    </div>
+    <script>
+    function bsNav(key) {{
+        var loc = (parent && parent.location) ? parent.location : window.location;
+        var u = new URL(loc.href);
+        if (key === '__LOGOUT__') {{
+            u.searchParams.delete('s');
+            u.searchParams.delete('nav');
+            u.searchParams.set('logout', '1');
+            try {{ parent.localStorage.removeItem("bs_token"); }} catch(e) {{}}
+            try {{ localStorage.removeItem("bs_token"); }} catch(e) {{}}
+        }} else {{
+            u.searchParams.set('nav', key);
+        }}
+        loc.href = u.toString();
+    }}
+    </script>
+    '''
+    from streamlit.components.v1 import html as _st_html
+    _st_html(_menu_html, height=_grid_height)
 
     # === INSTALL APP GUIDE (แสดงเสมอบนมือถือ) ===
     st.markdown('''<div id="install-guide" style="display:none; background:linear-gradient(135deg,#eff6ff,#dbeafe);
